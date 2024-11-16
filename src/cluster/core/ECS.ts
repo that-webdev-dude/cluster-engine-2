@@ -179,28 +179,11 @@ class Scene implements IScene {
  */
 class Game implements IGame {
   scenes: Map<string, IScene>;
-  input: any;
-  engine: IEngine;
-  display: IDisplay;
 
-  constructor({
-    HTMLContainerId,
-    height,
-    width,
-  }: {
-    HTMLContainerId: string;
-    height: number;
-    width: number;
-  }) {
+  constructor() {
     this.scenes = new Map<string, IScene>();
-    this.engine = new Engine();
-    this.display = new Display({
-      parentElementId: HTMLContainerId,
-      width,
-      height,
-    });
 
-    Mouse.element = this.display.view;
+    Mouse.element = Display.view;
   }
 
   public addScene(scene: IScene): Game {
@@ -214,24 +197,24 @@ class Game implements IGame {
   }
 
   public start(callback: (dt: number) => void): void {
-    this.engine.update = (dt: number, t: number) => {
+    Engine.update = (dt: number, t: number) => {
       this.scenes.forEach((scene) => {
         scene.update(dt, t);
       });
       Keyboard.update();
       Mouse.update();
-      this.display.clear();
+      Display.clear();
       callback(dt);
     };
 
     Assets.onReady(() => {
-      this.engine.start();
+      Engine.start();
     });
   }
 
   public stop(): void {
     // ... maybe some form of cleanup function here
-    this.engine.stop();
+    Engine.stop();
   }
 }
 
