@@ -13,6 +13,7 @@ interface IComponent {
 
 interface IEntity {
   id: string;
+  type: string;
   dead: boolean;
   active: boolean;
   components: Map<string, IComponent>;
@@ -53,12 +54,24 @@ class Container<T> implements IContainer<T> {
     this.children = new Set<T>();
   }
 
+  /** @deprecated */
   public add(child: T): Container<T> {
     this.children.add(child);
     return this;
   }
 
+  public addChild(child: T): Container<T> {
+    this.children.add(child);
+    return this;
+  }
+
+  /** @deprecated */
   public remove(child: T): Container<T> {
+    this.children.delete(child);
+    return this;
+  }
+
+  public removeChild(child: T): Container<T> {
     this.children.delete(child);
     return this;
   }
