@@ -2,23 +2,9 @@ interface IContainer<T> {
   children: Set<T>;
 }
 
-interface IEngine {
-  update: (dt: number, t: number) => void;
-  start: (callback?: (dt: number, t: number) => void) => void;
-  stop: () => void;
-}
-
 interface ISystem {
   type: string;
   update(entity: IEntity, dt?: number, t?: number): void;
-}
-
-interface IDisplay {
-  height: number;
-  width: number;
-  view: HTMLCanvasElement;
-  context: CanvasRenderingContext2D;
-  clear(): void;
 }
 
 interface IComponent {
@@ -27,11 +13,20 @@ interface IComponent {
 
 interface IEntity {
   id: string;
+  dead: boolean;
+  active: boolean;
   components: Map<string, IComponent>;
+  getComponent<T extends IComponent>(name: string): T | undefined;
+  addComponent(component: IComponent): IEntity;
+  removeComponent(name: string): IEntity;
+  hasComponent(name: string): boolean;
 }
 
 interface IScene {
   systems: Map<string, ISystem>;
+  type: string;
+  dead: boolean;
+  active: boolean;
   update(dt: number, t: number): void;
 }
 
@@ -43,8 +38,9 @@ interface IGame {
 import { Display } from "./Display";
 import { Engine } from "./Engine";
 import { Assets } from "./Assets";
-import { Keyboard, Mouse } from "./Input";
 import { UUID } from "../tools/UUID";
+import { Emitter } from "./Emitter";
+import { Keyboard, Mouse } from "./Input";
 
 /**
  * Container
@@ -79,6 +75,8 @@ class Container<T> implements IContainer<T> {
 class Entity extends Container<Entity> implements IEntity {
   readonly id: string;
   readonly components: Map<string, Component>;
+  public dead: boolean = false;
+  public active: boolean = true;
 
   constructor() {
     super();
@@ -144,6 +142,30 @@ class Scene implements IScene {
     this.layers = new Map<string, IEntity>();
   }
 
+  public get type(): string {
+    return this.constructor.name;
+  }
+
+  public get dead(): boolean {
+    return this.layers.size === 0;
+  }
+
+  public set dead(value: boolean) {
+    if (value) {
+      this.layers.clear();
+    }
+  }
+
+  public get active(): boolean {
+    // the scene is active if any of its layers are active
+    for (const layer of this.layers.values()) {
+      if (layer.active) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   addLayer(layer: IEntity): Scene {
     this.layers.set(layer.id, layer);
     return this;
@@ -165,9 +187,12 @@ class Scene implements IScene {
   }
 
   public update(dt: number, t: number): void {
-    this.systems.forEach((system) => {
-      this.layers.forEach((layer) => {
+    this.layers.forEach((layer) => {
+      this.systems.forEach((system) => {
         system.update(layer, dt, t);
+        if (layer.dead) {
+          this.layers.delete(layer.id);
+        }
       });
     });
   }
@@ -178,33 +203,63 @@ class Scene implements IScene {
  * @description A game is a class that holds a set of scenes.
  */
 class Game implements IGame {
-  scenes: Map<string, IScene>;
+  private _currentScene: IScene | null;
+  private _nextScene: IScene | null;
+  private _switching: boolean = false;
 
   constructor() {
-    this.scenes = new Map<string, IScene>();
-
+    this._currentScene = null;
+    this._nextScene = null;
+    this._switching = false;
     Mouse.element = Display.view;
   }
 
-  public addScene(scene: IScene): Game {
-    this.scenes.set(scene.constructor.name, scene);
-    return this;
+  public get currentScene(): IScene | null {
+    return this._currentScene;
   }
 
-  public removeScene(scene: IScene): Game {
-    this.scenes.delete(scene.constructor.name);
-    return this;
+  public get nextScene(): IScene | null {
+    return this._nextScene;
   }
 
-  public start(callback: (dt: number) => void): void {
+  public setScene(scene: IScene): void {
+    if (!this._currentScene) {
+      this._currentScene = scene;
+      return;
+    }
+    if (this._currentScene && !this._nextScene && !this._switching) {
+      this._nextScene = scene;
+      this._switching = true;
+    }
+  }
+
+  public start(callback: (dt: number, t: number) => void): void {
     Engine.update = (dt: number, t: number) => {
-      this.scenes.forEach((scene) => {
-        scene.update(dt, t);
-      });
+      Display.clear();
+
+      // Update the current scene
+      if (this._currentScene) {
+        this._currentScene.update(dt, t);
+      }
+
+      // If switching, also update the next scene
+      if (this._switching && this._nextScene) {
+        this._nextScene.update(dt, t);
+
+        // Check if the current scene is dead
+        if (this._currentScene?.dead) {
+          // Swap scenes
+          this._currentScene = this._nextScene;
+          this._nextScene = null;
+          this._switching = false; // Reset the switching flag
+        }
+      }
+
+      callback(dt, t);
+
+      Emitter.processEvents();
       Keyboard.update();
       Mouse.update();
-      Display.clear();
-      callback(dt);
     };
 
     Assets.onReady(() => {
@@ -213,9 +268,175 @@ class Game implements IGame {
   }
 
   public stop(): void {
-    // ... maybe some form of cleanup function here
-    Engine.stop();
+    Emitter.clear();
+    Engine.stop(); // ... maybe some form of cleanup function here
   }
 }
 
 export { Entity, Component, System, Scene, Game };
+
+/**
+ * Scene
+ * @description A scene is a class that holds a set of systems and entity containers (layers).
+ */
+interface IScene2 {
+  systems: Map<string, ISystem>;
+  type: string;
+  dead: boolean;
+  update(dt: number, t: number): void;
+  destroy(): void;
+  enter(): void;
+  exit(): void;
+  init(): void;
+}
+class Scene2 implements IScene2 {
+  readonly systems: Map<string, ISystem> = new Map<string, ISystem>();
+  readonly layers: Map<string, IEntity> = new Map<string, IEntity>();
+  private _ready: boolean = false;
+  public active: boolean = true;
+  protected onUpdate(dt: number, t: number): void {}
+  protected onDestroy(): void {}
+  protected onEnter(): void {}
+  protected onExit(): void {}
+  protected onInit(): void {}
+
+  public get type(): string {
+    return this.constructor.name;
+  }
+
+  public get dead(): boolean {
+    return this.layers.size === 0;
+  }
+
+  public set dead(value: boolean) {
+    if (value) {
+      this.layers.clear();
+    }
+  }
+
+  public update(dt: number, t: number): void {
+    if (this._ready && this.active) {
+      this.layers.forEach((layer) => {
+        this.systems.forEach((system) => {
+          system.update(layer, dt, t);
+          if (layer.dead) {
+            this.layers.delete(layer.id);
+          }
+        });
+      });
+      this.onUpdate(dt, t);
+    }
+  }
+
+  public destroy(): void {
+    this.onDestroy();
+    this.layers.clear();
+    this.systems.clear();
+  }
+
+  public enter(): void {
+    this.onEnter();
+  }
+
+  public exit(): void {
+    this.onExit();
+  }
+
+  public init(): void {
+    if (!this._ready) {
+      this._ready = true;
+      this.onInit();
+    }
+  }
+
+  addLayer(layer: IEntity): Scene2 {
+    this.layers.set(layer.id, layer);
+    return this;
+  }
+
+  removeLayer(layer: IEntity): Scene2 {
+    this.layers.delete(layer.id);
+    return this;
+  }
+
+  addSystem(system: ISystem): Scene2 {
+    this.systems.set(system.type, system);
+    return this;
+  }
+
+  removeSystem(system: ISystem): Scene2 {
+    this.systems.delete(system.type);
+    return this;
+  }
+}
+
+interface IGame2 {
+  start: (updateCb: (dt: number, t: number) => void) => void;
+  stop: () => void;
+}
+class Game2 implements IGame2 {
+  private _currentScene: IScene2 | null = null;
+  private _nextScene: IScene2 | null = null;
+  private _switching: boolean = false;
+
+  public setScene(scene: IScene2): void {
+    if (!this._currentScene) {
+      this._currentScene = scene;
+      this._currentScene.enter();
+      return;
+    }
+    if (!this._nextScene && !this._switching) {
+      this._nextScene = scene;
+      this._nextScene.enter();
+      this._switching = true;
+    }
+  }
+
+  public start(callback: (dt: number, t: number) => void): void {
+    Engine.update = (dt: number, t: number) => {
+      Display.clear();
+
+      // Update the current scene
+      if (this._currentScene) {
+        this._currentScene.update(dt, t);
+      }
+
+      // If switching, also update the next scene
+      if (this._switching && this._nextScene) {
+        this._nextScene.update(dt, t);
+
+        // Check if the current scene is dead
+        if (this._currentScene?.dead) {
+          // Swap scenes
+          this._currentScene.exit();
+          this._currentScene.destroy();
+          this._currentScene = this._nextScene;
+          this._nextScene = null;
+          this._switching = false; // Reset the switching flag
+        }
+      }
+
+      callback(dt, t);
+
+      Emitter.processEvents();
+      Keyboard.update();
+      Mouse.update();
+    };
+
+    Assets.onReady(() => {
+      Engine.start();
+    });
+  }
+
+  public stop(): void {
+    if (this._currentScene) {
+      this._currentScene.exit(); // Cleanly exit the current scene
+      this._currentScene.destroy(); // Destroy the current scene
+    }
+
+    Emitter.clear();
+    Engine.stop();
+  }
+}
+
+export { Scene2, Game2 };

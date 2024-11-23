@@ -60,7 +60,7 @@ class KeyboardInput {
   }
 
   public update(): void {
-    this._keys.clear();
+    // this._keys.clear();
   }
 
   public destroy(): void {
