@@ -1,11 +1,11 @@
 import { Vector } from "../tools/Vector";
 
 class KeyboardInput {
+  private static _instance: KeyboardInput;
   private _keys: Map<string, boolean> = new Map();
   private _preventDefaultKeys: Set<string> = new Set([
     // Add specific keys here
   ]);
-  private static _instance: KeyboardInput;
 
   public active: boolean = true;
 
@@ -60,7 +60,7 @@ class KeyboardInput {
   }
 
   public update(): void {
-    this._keys.clear();
+    // this._keys.clear();
   }
 
   public destroy(): void {

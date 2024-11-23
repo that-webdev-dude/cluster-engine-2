@@ -4,14 +4,15 @@ type DisplayOptions = {
   width?: number;
 };
 
-export class Display {
+class DisplayManager {
+  private static instance: DisplayManager;
   readonly height: number;
   readonly width: number;
   readonly view: HTMLCanvasElement;
   readonly context: CanvasRenderingContext2D;
 
   constructor({
-    parentElementId = "",
+    parentElementId = "#app",
     height = 640,
     width = 832,
   }: DisplayOptions = {}) {
@@ -60,9 +61,16 @@ export class Display {
     }
   }
 
+  public static getInstance(options?: DisplayOptions): DisplayManager {
+    if (!DisplayManager.instance) {
+      DisplayManager.instance = new DisplayManager(options);
+    }
+    return DisplayManager.instance;
+  }
+
   public clear() {
     this.context.clearRect(0, 0, this.width, this.height);
   }
 }
 
-export default Display;
+export const Display = DisplayManager.getInstance();

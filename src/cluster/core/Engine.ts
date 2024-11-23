@@ -4,7 +4,8 @@ type EngineOptions = {
   fps?: number;
 };
 
-export class Engine {
+class CEngine {
+  private static instance: CEngine;
   private _frameRequest: number | null;
   private _currentTime: number | null;
   private _elapsedTime: number;
@@ -24,6 +25,13 @@ export class Engine {
     this._updates = 0;
     this._update = updateFn;
     this._render = renderFn;
+  }
+
+  public static getInstance(config?: EngineOptions): CEngine {
+    if (!CEngine.instance) {
+      CEngine.instance = new CEngine(config);
+    }
+    return CEngine.instance;
   }
 
   set update(update: (dt: number, t: number) => void) {
@@ -50,7 +58,7 @@ export class Engine {
       this._elapsedTime -= this._timeStep;
       this._update(this._timeStep / 1000, this._currentTime / 1000);
       if (++this._updates > 2) {
-        console.warn("[Engine]: Too many updates!");
+        console.warn("[CEngine]: Too many updates!");
         break;
       }
       this._updated = true;
@@ -77,4 +85,4 @@ export class Engine {
   }
 }
 
-export default Engine;
+export const Engine = CEngine.getInstance();

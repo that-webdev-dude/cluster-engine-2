@@ -15,7 +15,7 @@ export interface Event {
   data?: any;
 }
 
-export class ImmediateEmitter implements Emitter {
+class ImmediateEmitter implements Emitter {
   private listeners: Map<string, EventListener<Event>[]> = new Map();
 
   on<T extends Event>(eventType: string, listener: EventListener<T>): void {
@@ -81,7 +81,7 @@ export class ImmediateEmitter implements Emitter {
   }
 }
 
-export class QueuedEmitter implements Emitter {
+class QueuedEmitter implements Emitter {
   private listeners: Map<string, EventListener<Event>[]> = new Map();
   private queue: Event[] = [];
 
@@ -159,8 +159,16 @@ export class QueuedEmitter implements Emitter {
 }
 
 export class EventEmitter implements Emitter {
+  private static instance: EventEmitter;
   private immediateEmitter: ImmediateEmitter = new ImmediateEmitter();
   private queuedEmitter: QueuedEmitter = new QueuedEmitter();
+
+  public static getInstance(): EventEmitter {
+    if (!EventEmitter.instance) {
+      EventEmitter.instance = new EventEmitter();
+    }
+    return EventEmitter.instance;
+  }
 
   on<T extends Event>(
     eventType: string,
@@ -245,3 +253,5 @@ export class EventEmitter implements Emitter {
     );
   }
 }
+
+export const Emitter = EventEmitter.getInstance();
