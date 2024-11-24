@@ -40,7 +40,7 @@ import { Display } from "./Display";
 import { Engine } from "./Engine";
 import { Assets } from "./Assets";
 import { UUID } from "../tools/UUID";
-import { Emitter } from "./Emitter";
+import { Store } from "./Store";
 import { Keyboard, Mouse } from "./Input";
 
 /**
@@ -219,11 +219,13 @@ class Game implements IGame {
   private _currentScene: IScene | null;
   private _nextScene: IScene | null;
   private _switching: boolean = false;
+  private _emitter: Store;
 
-  constructor() {
+  constructor(emitter: Store) {
     this._currentScene = null;
     this._nextScene = null;
     this._switching = false;
+    this._emitter = emitter;
     Mouse.element = Display.view;
   }
 
@@ -270,7 +272,8 @@ class Game implements IGame {
 
       callback(dt, t);
 
-      Emitter.processEvents();
+      this._emitter.processEvents();
+
       Keyboard.update();
       Mouse.update();
     };
@@ -281,7 +284,7 @@ class Game implements IGame {
   }
 
   public stop(): void {
-    Emitter.clear();
+    this._emitter.clear();
     Engine.stop(); // ... maybe some form of cleanup function here
   }
 }

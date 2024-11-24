@@ -1,21 +1,51 @@
 import * as Cluster from "./cluster";
 import * as Scenes from "./game/Scenes";
+import * as Evente from "./game/Events";
+import { Store } from "./game/Store";
+
+console.log(Store.get("score"));
+
+Store.dispatch("incrementScore", 100);
+
+console.log(Store.get("score"));
+
+// Move event listener setup before emitting the event
+Store.on(
+  "game-over",
+  () => {
+    console.log("game-over");
+  },
+  true
+);
+
+const event: Evente.GameOverEvent = { type: "game-over" };
+Store.emit(event, true);
 
 /**
  * game
  */
 class MyGame extends Cluster.Game {
   constructor() {
-    super();
-    this.setScene(new Scenes.TitleScene());
+    super(Store);
+    this.setScene(new Scenes.GameMenu());
 
-    Cluster.Emitter.on("game-play", () => {
-      const scene = new Scenes.GameScene();
+    Store.on("game-play", () => {
+      const scene = new Scenes.GamePlay();
       this.setScene(scene);
     });
 
-    Cluster.Emitter.on("game-over", () => {
-      const scene = new Scenes.TitleScene();
+    Store.on("game-over", () => {
+      const scene = new Scenes.GameOver();
+      this.setScene(scene);
+    });
+
+    Store.on("game-menu", () => {
+      const scene = new Scenes.GameMenu();
+      this.setScene(scene);
+    });
+
+    Store.on("game-win", () => {
+      const scene = new Scenes.GameWin();
       this.setScene(scene);
     });
   }

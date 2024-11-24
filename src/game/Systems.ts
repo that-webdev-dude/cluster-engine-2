@@ -61,7 +61,7 @@ export class RendererSystem extends Cluster.System {
       entity.getComponent<TextComponent>("TextComponent") || undefined;
 
     if (text) {
-      this.ctx.textAlign = "center";
+      this.ctx.textAlign = text.align;
       this.ctx.font = text.font;
       this.ctx.fillStyle = text.fill;
       this.ctx.fillText(text.value, 0, 0);

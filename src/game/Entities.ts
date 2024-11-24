@@ -71,7 +71,14 @@ export class Player extends Cluster.Entity {
 }
 
 export class Text extends Cluster.Entity {
-  constructor(x: number, y: number, value: string, font: string, fill: string) {
+  constructor(
+    x: number,
+    y: number,
+    value: string,
+    font: string,
+    fill: string,
+    align: CanvasTextAlign = "center"
+  ) {
     super();
 
     const position = new Components.PositionComponent();
@@ -82,6 +89,7 @@ export class Text extends Cluster.Entity {
     text.value = value;
     text.font = font;
     text.fill = fill;
+    text.align = align;
 
     this.addComponent(position);
     this.addComponent(text);

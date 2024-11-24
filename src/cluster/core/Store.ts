@@ -59,6 +59,7 @@ export class Store extends EventEmitter {
         }
 
         Reflect.set(state, key, value);
+        // this.emit("stateChange", this._state);
         this._status = STATUS.resting;
         return true;
       },
