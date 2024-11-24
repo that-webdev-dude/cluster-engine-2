@@ -1,10 +1,5 @@
 import * as Cluster from "../cluster";
 
-type Getter = (state: State) => any;
-type Mutation = (state: State, payload?: any) => void;
-type Action = (store: Cluster.Store, payload?: any) => void;
-type State = any;
-
 const state = {
   score: 100,
 };
@@ -19,11 +14,11 @@ const actions = {
 };
 
 const getters = {
-  score: (state: State) => state.score,
+  score: (state: any) => state.score,
 };
 
 const mutations = {
-  setScore(state: State, payload: number) {
+  setScore(state: any, payload: number) {
     state.score = payload;
   },
 };

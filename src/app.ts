@@ -1,25 +1,24 @@
 import * as Cluster from "./cluster";
 import * as Scenes from "./game/Scenes";
-import * as Evente from "./game/Events";
 import { Store } from "./game/Store";
 
-console.log(Store.get("score"));
+// console.log(Store.get("score"));
 
-Store.dispatch("incrementScore", 100);
+// Store.dispatch("incrementScore", 100);
 
-console.log(Store.get("score"));
+// console.log(Store.get("score"));
 
-// Move event listener setup before emitting the event
-Store.on(
-  "game-over",
-  () => {
-    console.log("game-over");
-  },
-  true
-);
+// // Move event listener setup before emitting the event
+// Store.on(
+//   "game-over",
+//   () => {
+//     console.log("game-over");
+//   },
+//   true
+// );
 
-const event: Evente.GameOverEvent = { type: "game-over" };
-Store.emit(event, true);
+// const event: Events.GameOverEvent = { type: "game-over" };
+// Store.emit(event, true);
 
 /**
  * game

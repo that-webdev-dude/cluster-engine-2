@@ -32,6 +32,7 @@ export class TextComponent extends Component {
   public font: string = "16px Arial";
   public fill: string = "black";
   public align: CanvasTextAlign = "center";
+  public stored: string = "";
 }
 
 export class TransitionComponent extends Component {

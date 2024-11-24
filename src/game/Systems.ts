@@ -1,15 +1,7 @@
 import * as Cluster from "../cluster";
 import * as Globals from "./Globals";
-import {
-  PositionComponent,
-  VelocityComponent,
-  SizeComponent,
-  StyleComponent,
-  AlphaComponent,
-  TextComponent,
-  PlayerComponent,
-  TransitionComponent,
-} from "./Components";
+import * as Components from "./Components";
+import { Store } from "./Store";
 
 /**
  * systems
@@ -29,9 +21,11 @@ export class RendererSystem extends Cluster.System {
     if (entity.dead) return;
 
     const position =
-      entity.getComponent<PositionComponent>("PositionComponent") || undefined;
+      entity.getComponent<Components.PositionComponent>("PositionComponent") ||
+      undefined;
     const alpha =
-      entity.getComponent<AlphaComponent>("AlphaComponent") || undefined;
+      entity.getComponent<Components.AlphaComponent>("AlphaComponent") ||
+      undefined;
 
     this.ctx.save();
 
@@ -45,9 +39,11 @@ export class RendererSystem extends Cluster.System {
 
     // render rectangle
     const size =
-      entity.getComponent<SizeComponent>("SizeComponent") || undefined;
+      entity.getComponent<Components.SizeComponent>("SizeComponent") ||
+      undefined;
     const style =
-      entity.getComponent<StyleComponent>("StyleComponent") || undefined;
+      entity.getComponent<Components.StyleComponent>("StyleComponent") ||
+      undefined;
 
     if (size && style) {
       this.ctx.fillStyle = style.fill;
@@ -58,9 +54,14 @@ export class RendererSystem extends Cluster.System {
 
     // render text
     const text =
-      entity.getComponent<TextComponent>("TextComponent") || undefined;
+      entity.getComponent<Components.TextComponent>("TextComponent") ||
+      undefined;
 
     if (text) {
+      // get stored value from store if required
+      if (text.stored) {
+        text.value = Store.get(text.stored);
+      }
       this.ctx.textAlign = text.align;
       this.ctx.font = text.font;
       this.ctx.fillStyle = text.fill;
@@ -80,8 +81,9 @@ export class RendererSystem extends Cluster.System {
 export class TransitionSystem extends Cluster.System {
   update(entity: Cluster.Entity, dt: number, t: number) {
     const transition =
-      entity.getComponent<TransitionComponent>("TransitionComponent") ||
-      undefined;
+      entity.getComponent<Components.TransitionComponent>(
+        "TransitionComponent"
+      ) || undefined;
 
     if (!transition) return;
 
@@ -91,7 +93,8 @@ export class TransitionSystem extends Cluster.System {
       transition.elapsed += dt;
       transition.progress = transition.elapsed / transition.duration;
 
-      const alpha = entity.getComponent<AlphaComponent>("AlphaComponent");
+      const alpha =
+        entity.getComponent<Components.AlphaComponent>("AlphaComponent");
       if (alpha) alpha.value = transition.progress;
 
       if (transition.progress >= 1) {
@@ -105,7 +108,8 @@ export class TransitionSystem extends Cluster.System {
       transition.elapsed += dt;
       transition.progress = transition.elapsed / transition.duration;
 
-      const alpha = entity.getComponent<AlphaComponent>("AlphaComponent");
+      const alpha =
+        entity.getComponent<Components.AlphaComponent>("AlphaComponent");
       if (alpha) alpha.value = 1 - transition.progress;
 
       if (transition.progress >= 1) {
@@ -122,14 +126,16 @@ export class PlayerSystem extends Cluster.System {
     if (entity.dead || !entity.active) return;
 
     // just move the player up and down for now. bounce on screen when player touches the edge.
-    const player = entity.getComponent<PlayerComponent>("PlayerComponent");
+    const player =
+      entity.getComponent<Components.PlayerComponent>("PlayerComponent");
 
     if (player) {
       const position =
-        entity.getComponent<PositionComponent>("PositionComponent");
+        entity.getComponent<Components.PositionComponent>("PositionComponent");
       const velocity =
-        entity.getComponent<VelocityComponent>("VelocityComponent");
-      const size = entity.getComponent<SizeComponent>("SizeComponent");
+        entity.getComponent<Components.VelocityComponent>("VelocityComponent");
+      const size =
+        entity.getComponent<Components.SizeComponent>("SizeComponent");
 
       if (position && velocity && size) {
         position.y += velocity.y * dt;
@@ -137,11 +143,17 @@ export class PlayerSystem extends Cluster.System {
         if (position.y < 0) {
           position.y = 0;
           velocity.y = -velocity.y;
+
+          // dispatch event
+          Store.dispatch("incrementScore", 1);
         }
 
         if (position.y + size.height > Globals.DISPLAY.height) {
           position.y = Globals.DISPLAY.height - size.height;
           velocity.y = -velocity.y;
+
+          // dispatch event
+          Store.dispatch("incrementScore", 1);
         }
       }
     }

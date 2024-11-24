@@ -77,7 +77,8 @@ export class Text extends Cluster.Entity {
     value: string,
     font: string,
     fill: string,
-    align: CanvasTextAlign = "center"
+    align: CanvasTextAlign = "center",
+    stored: string = ""
   ) {
     super();
 
@@ -90,6 +91,7 @@ export class Text extends Cluster.Entity {
     text.font = font;
     text.fill = fill;
     text.align = align;
+    text.stored = stored; // link to store value
 
     this.addComponent(position);
     this.addComponent(text);

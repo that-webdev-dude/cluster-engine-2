@@ -136,10 +136,11 @@ class GamePlayUILayer extends Cluster.Entity {
     const scoreText = new Entities.Text(
       16,
       16,
-      "Score: 0",
+      `Score: ${Store.get("score")}`,
       "16px 'Press Start 2P'",
       "white",
-      "left"
+      "left",
+      "score"
     );
 
     this.addChild(scoreText);
