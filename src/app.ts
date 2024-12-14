@@ -2,24 +2,6 @@ import * as Cluster from "./cluster";
 import * as Scenes from "./game/Scenes";
 import { Store } from "./game/Store";
 
-// console.log(Store.get("score"));
-
-// Store.dispatch("incrementScore", 100);
-
-// console.log(Store.get("score"));
-
-// // Move event listener setup before emitting the event
-// Store.on(
-//   "game-over",
-//   () => {
-//     console.log("game-over");
-//   },
-//   true
-// );
-
-// const event: Events.GameOverEvent = { type: "game-over" };
-// Store.emit(event, true);
-
 /**
  * game
  */
