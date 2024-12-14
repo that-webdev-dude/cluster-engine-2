@@ -1,158 +1,218 @@
-interface IContainer<T> {
-  children: Set<T>;
-}
-
-interface ISystem {
-  type: string;
-  update(entity: IEntity, dt?: number, t?: number): void;
-}
-
-interface IComponent {
-  type: string;
-}
-
-interface IEntity {
-  id: string;
-  type: string;
-  dead: boolean;
-  active: boolean;
-  components: Map<string, IComponent>;
-  getComponent<T extends IComponent>(name: string): T | undefined;
-  addComponent(component: IComponent): IEntity;
-  removeComponent(name: string): IEntity;
-  hasComponent(name: string): boolean;
-}
-
-interface IScene {
-  systems: Map<string, ISystem>;
-  type: string;
-  dead: boolean;
-  active: boolean;
-  update(dt: number, t: number): void;
-}
-
-interface IGame {
-  start: (updateCb: (dt: number) => void) => void;
-  stop: () => void;
-}
-
 import { Display } from "./Display";
 import { Engine } from "./Engine";
 import { Assets } from "./Assets";
-import { UUID } from "../tools/UUID";
 import { Store } from "./Store";
-import { Keyboard, Mouse } from "./Input";
+import { Mouse } from "./Input";
+import { Keyboard } from "./Input";
 
-/**
- * Container
- * @description A container is a generic class that holds a set of children.
+type ComponentType = string;
+
+type ComponentIndex = number;
+
+type EntityId = number;
+
+/** ComponentStore
+ * a class that holds a dictionary of component types and indices.
  */
-class Container<T> implements IContainer<T> {
-  readonly children: Set<T>;
+class ComponentStore {
+  private static _nextIndex: number = 1;
 
-  constructor() {
-    this.children = new Set<T>();
+  static dictionary: Map<ComponentType, ComponentIndex> = new Map();
+
+  static storage: Map<ComponentIndex, Map<EntityId, Component>> = new Map();
+
+  static register(type: ComponentType): ComponentIndex {
+    if (!ComponentStore.dictionary.has(type)) {
+      ComponentStore.dictionary.set(type, ComponentStore._nextIndex++);
+    }
+    return ComponentStore.dictionary.get(type)!;
   }
 
-  /** @deprecated */
-  public add(child: T): Container<T> {
-    this.children.add(child);
-    return this;
+  static addComponent(entityId: EntityId, component: Component): void {
+    const index = component.index;
+    if (!this.storage.has(index)) {
+      this.storage.set(index, new Map());
+    }
+    this.storage.get(index)!.set(entityId, component);
   }
 
-  public addChild(child: T): Container<T> {
-    this.children.add(child);
-    return this;
+  static getComponent<T>(
+    entityId: EntityId,
+    index: ComponentIndex
+  ): T | undefined {
+    return this.storage.get(index)?.get(entityId) as T | undefined;
   }
 
-  /** @deprecated */
-  public remove(child: T): Container<T> {
-    this.children.delete(child);
-    return this;
-  }
-
-  public removeChild(child: T): Container<T> {
-    this.children.delete(child);
-    return this;
-  }
-
-  public forEach(fn: (child: T) => void): void {
-    this.children.forEach(fn);
+  static removeComponent(entityId: EntityId, index: ComponentIndex): void {
+    this.storage.get(index)?.delete(entityId);
   }
 }
 
-/**
- * Entity
- * @description An entity is an id that holds a set of components and can have children entities.
+/** Entity
+ * an ID that holds a set of components and children entities.
  */
-class Entity extends Container<Entity> implements IEntity {
-  readonly id: string;
-  readonly components: Map<string, Component>;
-  public dead: boolean = false;
-  public active: boolean = true;
+class Entity {
+  private static _nextId: EntityId = 1;
+  private _id: EntityId;
+  private _mask: bigint;
+  private _type: string;
+  public dead: boolean;
+  public active: boolean;
+  public children: Set<Entity>;
 
   constructor() {
-    super();
-    this.id = UUID.generate();
-    this.components = new Map<string, Component>();
+    this._id = Entity._nextId++;
+    this._mask = BigInt(0);
+    this._type = this.constructor.name;
+    this.dead = false;
+    this.active = true;
+    this.children = new Set();
+  }
+
+  private _updateMask(): void {
+    this._mask = BigInt(0);
+    for (const [index, storage] of ComponentStore.storage) {
+      if (storage.has(this._id)) {
+        this._mask |= BigInt(1) << BigInt(index);
+      }
+    }
+  }
+
+  public get id(): number {
+    return this._id;
+  }
+
+  public get mask(): bigint {
+    return this._mask;
   }
 
   public get type(): string {
-    return this.constructor.name;
+    return this._type;
+  }
+
+  public get parent(): boolean {
+    return this.children.size > 0;
+  }
+
+  public getComponent<T>(type: ComponentType): T | undefined {
+    const index = ComponentStore.dictionary.get(type)!;
+    return ComponentStore.getComponent<T>(this._id, index);
   }
 
   public addComponent(component: Component): Entity {
-    this.components.set(component.type, component);
+    ComponentStore.addComponent(this._id, component);
+    this._updateMask();
     return this;
   }
 
-  public removeComponent(name: string): Entity {
-    this.components.delete(name);
+  public removeComponent(type: ComponentType): Entity {
+    const index = ComponentStore.dictionary.get(type)!;
+    ComponentStore.removeComponent(this._id, index);
+    this._updateMask();
     return this;
   }
 
-  public hasComponent(name: string): boolean {
-    return this.components.has(name);
+  public addComponents(...components: Component[]): Entity {
+    for (const component of components) {
+      this.addComponent(component);
+    }
+    return this;
   }
 
-  public getComponent<T extends Component>(name: string): T | undefined {
-    return this.components.get(name) as T;
+  public removeComponents(...components: Component[]): Entity {
+    for (const component of components) {
+      this.removeComponent(component.type);
+    }
+    return this;
+  }
+
+  public addChild(entity: Entity): Entity {
+    this.children.add(entity);
+    return this;
+  }
+
+  public removeChild(entity: Entity): Entity {
+    this.children.delete(entity);
+    return this;
+  }
+
+  public addChildren(...entities: Entity[]): Entity {
+    for (const entity of entities) {
+      this.addChild(entity);
+    }
+    return this;
+  }
+
+  public deleteChildren(...entities: Entity[]): Entity {
+    for (const entity of entities) {
+      this.removeChild(entity);
+    }
+    return this;
   }
 }
 
-/**
- * System
- * @description A system is a class that updates entities.
+/** Component
+ * an indexed type that holds raw data.
  */
-abstract class System implements ISystem {
-  public get type(): string {
-    return this.constructor.name;
-  }
-
-  public abstract update(entity: IEntity, dt: number, t: number): void;
-}
-
-/**
- * Component
- * @description A component is a class that holds raw data.
- */
-class Component implements IComponent {
-  public get type(): string {
-    return this.constructor.name;
-  }
-}
-
-/**
- * Scene
- * @description A scene is a class that holds a set of systems and entity containers (layers).
- */
-class Scene implements IScene {
-  readonly systems: Map<string, ISystem>;
-  readonly layers: Map<string, IEntity>;
+abstract class Component {
+  private _index: number;
+  private _type: string;
 
   constructor() {
-    this.systems = new Map<string, ISystem>();
-    this.layers = new Map<string, IEntity>();
+    this._index = ComponentStore.register(this.constructor.name);
+    this._type = this.constructor.name;
+  }
+
+  public get index(): number {
+    return this._index;
+  }
+
+  public get type(): string {
+    return this._type;
+  }
+}
+
+/** System
+ *  a class that updates entities.
+ */
+abstract class System {
+  private _mask: bigint;
+  private _type: string;
+
+  constructor(required: ComponentType[]) {
+    this._type = this.constructor.name;
+    this._mask = BigInt(0);
+    for (const type of required) {
+      if (!ComponentStore.dictionary.has(type)) {
+        throw new Error(`Component type "${type}" not found in dictionary.`);
+      }
+      const index = ComponentStore.dictionary.get(type)!;
+      this._mask |= BigInt(1) << BigInt(index);
+    }
+  }
+
+  public get type(): string {
+    return this._type;
+  }
+
+  public get mask(): bigint {
+    return this._mask;
+  }
+
+  public abstract update(entity: Entity, dt: number, t: number): void;
+}
+
+/** Scene
+ *  a class that holds a set of systems and entity containers (layers).
+ */
+class Scene {
+  readonly entities: Set<Entity>;
+  readonly systems: Set<System>;
+  active: boolean = true;
+
+  constructor() {
+    this.entities = new Set();
+    this.systems = new Set();
   }
 
   public get type(): string {
@@ -160,64 +220,60 @@ class Scene implements IScene {
   }
 
   public get dead(): boolean {
-    return this.layers.size === 0;
+    return this.entities.size === 0;
   }
 
   public set dead(value: boolean) {
     if (value) {
-      this.layers.clear();
+      this.entities.clear();
     }
   }
 
-  public get active(): boolean {
-    // the scene is active if any of its layers are active
-    for (const layer of this.layers.values()) {
-      if (layer.active) {
-        return true;
-      }
-    }
-    return false;
+  // alias for entities
+  public get layers(): Set<Entity> {
+    return this.entities;
   }
 
-  addLayer(layer: IEntity): Scene {
-    this.layers.set(layer.id, layer);
-    return this;
+  public addLayer(entity: Entity): void {
+    this.entities.add(entity);
   }
 
-  removeLayer(layer: IEntity): Scene {
-    this.layers.delete(layer.id);
-    return this;
+  public removeLayer(entity: Entity): void {
+    this.entities.delete(entity);
   }
 
-  addSystem(system: ISystem): Scene {
-    this.systems.set(system.type, system);
-    return this;
+  public addEntity(...entities: Entity[]): void {
+    entities.forEach((entity) => {
+      this.entities.add(entity);
+    });
   }
 
-  removeSystem(system: ISystem): Scene {
-    this.systems.delete(system.type);
-    return this;
+  public addSystem(system: System): void {
+    this.systems.add(system);
+  }
+
+  public removeSystem(system: System): void {
+    this.systems.delete(system);
   }
 
   public update(dt: number, t: number): void {
-    this.layers.forEach((layer) => {
+    this.entities.forEach((entity) => {
       this.systems.forEach((system) => {
-        system.update(layer, dt, t);
-        if (layer.dead) {
-          this.layers.delete(layer.id);
+        system.update(entity, dt, t);
+        if (entity.dead) {
+          this.entities.delete(entity);
         }
       });
     });
   }
 }
 
-/**
- * Game
- * @description A game is a class that holds a set of scenes.
+/** Game
+ * a class that holds the current and next scene.
  */
-class Game implements IGame {
-  private _currentScene: IScene | null;
-  private _nextScene: IScene | null;
+class Game {
+  private _currentScene: Scene | null;
+  private _nextScene: Scene | null;
   private _switching: boolean = false;
   private _emitter: Store;
 
@@ -229,15 +285,15 @@ class Game implements IGame {
     Mouse.element = Display.view;
   }
 
-  public get currentScene(): IScene | null {
+  public get currentScene(): Scene | null {
     return this._currentScene;
   }
 
-  public get nextScene(): IScene | null {
+  public get nextScene(): Scene | null {
     return this._nextScene;
   }
 
-  public setScene(scene: IScene): void {
+  public setScene(scene: Scene): void {
     if (!this._currentScene) {
       this._currentScene = scene;
       return;
