@@ -68,11 +68,9 @@ export class RendererSystem extends Cluster.System {
       this.ctx.fillText(text.value, 0, 0);
     }
 
-    if (entity.children.size > 0) {
-      entity.children.forEach((child) => {
-        this.update(child, dt, t);
-      });
-    }
+    entity.children.forEach((child) => {
+      this.update(child, dt, t);
+    });
 
     this.ctx.restore();
   }
@@ -102,7 +100,7 @@ export class TransitionSystem extends Cluster.System {
       if (alpha) alpha.value = transition.progress;
 
       if (transition.progress >= 1) {
-        entity.removeComponent("TransitionComponent");
+        entity.removeComponent(transition);
         entity.active = true; // activate entity after transition
         entity.dead = false;
       }
@@ -117,11 +115,15 @@ export class TransitionSystem extends Cluster.System {
       if (alpha) alpha.value = 1 - transition.progress;
 
       if (transition.progress >= 1) {
-        entity.removeComponent("TransitionComponent");
+        entity.removeComponent(transition);
         entity.active = true; // activate entity after transition
         entity.dead = true;
       }
     }
+
+    entity.children.forEach((child) => {
+      this.update(child, dt, t);
+    });
   }
 }
 
