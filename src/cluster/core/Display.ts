@@ -4,8 +4,8 @@ type DisplayOptions = {
   width?: number;
 };
 
-class DisplayManager {
-  private static instance: DisplayManager;
+class CDisplay {
+  private static instance: CDisplay;
   readonly height: number;
   readonly width: number;
   readonly view: HTMLCanvasElement;
@@ -61,11 +61,11 @@ class DisplayManager {
     }
   }
 
-  public static getInstance(options?: DisplayOptions): DisplayManager {
-    if (!DisplayManager.instance) {
-      DisplayManager.instance = new DisplayManager(options);
+  public static getInstance(options?: DisplayOptions): CDisplay {
+    if (!CDisplay.instance) {
+      CDisplay.instance = new CDisplay(options);
     }
-    return DisplayManager.instance;
+    return CDisplay.instance;
   }
 
   public clear() {
@@ -73,4 +73,4 @@ class DisplayManager {
   }
 }
 
-export const Display = DisplayManager.getInstance();
+export const Display = CDisplay.getInstance();

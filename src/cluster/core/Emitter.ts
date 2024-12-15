@@ -1,6 +1,6 @@
 export type EventListener<T extends Event> = (event: T) => void;
 
-export interface Emitter {
+interface Emitter {
   on<T extends Event>(eventType: string, listener: EventListener<T>): void;
   off<T extends Event>(eventType: string, listener: EventListener<T>): void;
   once<T extends Event>(eventType: string, listener: EventListener<T>): void;
