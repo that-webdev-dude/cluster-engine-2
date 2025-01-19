@@ -12,30 +12,45 @@ type ComponentIndex = number;
 type EntityId = number;
 
 /**
- *
- *
- * ComponentStore
- * a class that holds a dictionary of component types and indices.
- *
- *
+ * Storage for efficient entity-component data management.
+ * Indexing components with ComponentIndex instead of strings.
+ * Storing components in maps for constant-time lookups (O(1)).
+ * Caching system dependencies to avoid recalculating entity-component matches repeatedly.
  */
-class ComponentStore {
+class Storage {
   private static _nextIndex: number = 1;
 
+  // Retrieving data from a Map typically has a time complexity of O(1),
+  // meaning it takes constant time regardless of the number of items stored.
+  // This is why we say it supports "fast lookups."
   static dictionary: Map<ComponentType, ComponentIndex> = new Map();
 
+  // Component indexing is necessary to store and retrieve components fast.
+  // supports large numbers of components & fast lookups.
   static storage: Map<ComponentIndex, Map<EntityId, Component>> = new Map();
 
+  // The caching mechanism (Storage.cache) speeds up entity lookups by storing precomputed results,
+  // reducing the need to repeatedly scan or recalculate component data.
+  static cache: Map<System, Set<Entity>> = new Map();
+
+  // ...
+
+  // Track systems that depend on each component index
+  private static componentToSystems: Map<ComponentIndex, Set<System>> =
+    new Map();
+
+  // register a component type and return its index
   static register(type: ComponentType): ComponentIndex {
     if (!type) {
       throw new Error("Component type must be a non-empty string.");
     }
-    if (!ComponentStore.dictionary.has(type)) {
-      ComponentStore.dictionary.set(type, ComponentStore._nextIndex++);
+    if (!Storage.dictionary.has(type)) {
+      Storage.dictionary.set(type, Storage._nextIndex++);
     }
-    return ComponentStore.dictionary.get(type)!;
+    return Storage.dictionary.get(type)!;
   }
 
+  // why generic type? to ensure type safety when retrieving components
   static getComponent<T>(
     entityId: EntityId,
     index: ComponentIndex
@@ -49,6 +64,7 @@ class ComponentStore {
       this.storage.set(index, new Map());
     }
     this.storage.get(index)!.set(entityId, component);
+    this.invalidateCacheForComponent(index);
   }
 
   static removeComponent(entityId: EntityId, index: ComponentIndex): void {
@@ -59,35 +75,117 @@ class ComponentStore {
         this.storage.delete(index);
       }
     }
+    this.invalidateCacheForComponent(index);
+  }
+
+  // Register a system's dependencies when a system is created
+  static registerSystemDependencies(system: System): void {
+    for (const [type, index] of this.dictionary.entries()) {
+      if ((system.mask & (BigInt(1) << BigInt(index))) !== BigInt(0)) {
+        if (!this.componentToSystems.has(index)) {
+          this.componentToSystems.set(index, new Set());
+        }
+        this.componentToSystems.get(index)!.add(system);
+      }
+    }
+  }
+
+  // Invalidate only the cache entries for systems that depend on the given component index
+  static invalidateCacheForComponent(index: ComponentIndex): void {
+    const systems = this.componentToSystems.get(index);
+    if (systems) {
+      for (const system of systems) {
+        this.cache.delete(system);
+      }
+    }
+  }
+
+  // ...
+
+  static getFilteredEntities(layers: Set<Entity>, system: System): Set<Entity> {
+    if (this.cache.has(system)) {
+      return this.cache.get(system)!;
+    }
+
+    const entitySet = new Set<Entity>();
+
+    layers.forEach((layer) => {
+      if (layer.hasChildrenWithComponents(system.mask)) {
+        entitySet.add(layer);
+      }
+    });
+
+    this.cache.set(system, entitySet);
+
+    return entitySet;
+  }
+
+  static getFilteredEntitiesRecursive(
+    layers: Set<Entity>,
+    system: System
+  ): Set<Entity> {
+    if (this.cache.has(system)) {
+      return this.cache.get(system)!;
+    }
+
+    const entitySet = new Set<Entity>();
+
+    const traverse = (entity: Entity): void => {
+      if (entity.hasChildrenWithComponents(system.mask)) {
+        entitySet.add(entity);
+      }
+
+      entity.children.forEach((child) => traverse(child));
+    };
+
+    // Traverse each layer and its children
+    layers.forEach((layer) => traverse(layer));
+
+    this.cache.set(system, entitySet);
+
+    return entitySet;
+  }
+
+  // Delete an entity and remove all its components from the storage
+  static deleteEntity(entityId: EntityId): void {
+    for (const [index, components] of this.storage.entries()) {
+      if (components.has(entityId)) {
+        components.delete(entityId);
+        this.invalidateCacheForComponent(index);
+      }
+    }
   }
 }
 
-/**
- *
- *
- * Entity
- * an ID that holds a set of components and children entities.
- *
- *
- */
-class Entity {
+abstract class Entity {
   private static _nextId: EntityId = 1;
-  private _mask: bigint = BigInt(0);
-  private _dead: boolean = false;
-  readonly id: EntityId = Entity._nextId++;
-  readonly type: string = this.constructor.name;
-  public active: boolean;
-  public children: Set<Entity>;
 
-  constructor() {
+  private _id: EntityId;
+  private _active: boolean;
+  private _dead: boolean;
+  private _mask: bigint;
+  private _type: string;
+  private _children: Set<Entity>;
+
+  constructor(type?: string) {
+    this._id = Entity._nextId++;
+    this._type = type || this.constructor.name;
     this._mask = BigInt(0);
     this._dead = false;
-    this.active = true;
-    this.children = new Set();
+    this._active = true;
+    this._children = new Set();
   }
 
-  public get mask(): bigint {
-    return this._mask;
+  get id(): EntityId {
+    return this._id;
+  }
+
+  get active(): boolean {
+    return this._active;
+  }
+
+  set active(value: boolean) {
+    this._active = value;
   }
 
   get dead(): boolean {
@@ -95,94 +193,198 @@ class Entity {
   }
 
   set dead(value: boolean) {
-    // clear all components and ensure the ComponentStorage is updated
-    // then set the dead flag to true to self and all children
     this._dead = value;
-    if (value) {
-      this._mask = BigInt(0);
-      ComponentStore.storage.forEach((map) => {
-        map.delete(this.id);
-      });
-    }
-    this.children.forEach((child) => {
-      child.dead = value;
-    });
   }
 
-  public getComponent<T>(type: ComponentType): T | undefined {
-    const index = ComponentStore.dictionary.get(type);
+  get mask(): bigint {
+    return this._mask;
+  }
+
+  get type(): string {
+    return this._type;
+  }
+
+  get children(): Set<Entity> {
+    return this._children;
+  }
+
+  getComponent<T>(type: ComponentType): T | undefined {
+    const index = Storage.dictionary.get(type);
     if (index === undefined) {
       console.warn(`Component type "${type}" is not registered.`);
       return undefined;
     }
-    return ComponentStore.getComponent<T>(this.id, index);
+    return Storage.getComponent<T>(this.id, index);
   }
 
-  public addComponent(...components: Component[]): Entity {
+  addComponent(...components: Component[]): Entity {
     for (const component of components) {
-      ComponentStore.addComponent(this.id, component);
+      Storage.addComponent(this.id, component);
       this._mask |= BigInt(1) << BigInt(component.index);
     }
     return this;
   }
 
-  public removeComponent(...components: Component[]): Entity {
+  removeComponent(...components: Component[]): Entity {
     for (const component of components) {
-      ComponentStore.removeComponent(this.id, component.index);
+      Storage.removeComponent(this.id, component.index);
       this._mask &= ~(BigInt(1) << BigInt(component.index));
     }
     return this;
   }
 
-  public addChild(...entities: Entity[]): Entity {
+  addChild(...entities: Entity[]): Entity {
     for (const entity of entities) {
-      this.children.add(entity);
+      this._children.add(entity);
     }
     return this;
   }
 
-  public removeChild(...entities: Entity[]): Entity {
+  removeChild(...entities: Entity[]): Entity {
     for (const entity of entities) {
-      this.children.delete(entity);
+      this._children.delete(entity);
     }
     return this;
   }
+
+  hasChildrenWithComponents(mask: bigint): boolean {
+    if ((this.mask & mask) === mask) {
+      return true;
+    }
+    for (const child of this.children) {
+      if (child.hasChildrenWithComponents(mask)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  destroy(): void {
+    Storage.deleteEntity(this.id);
+    // Optionally, add other cleanup logic if necessary.
+  }
+
+  // Implement additional methods as needed
 }
 
-/**
- *
- *
- * Component
- * an indexed type that holds raw data.
- *
- *
- */
+// class Entity {
+//   private static _nextId: EntityId = 1;
+//   readonly id: EntityId = Entity._nextId++;
+//   readonly children: Set<Entity>;
+//   // ... other properties and methods
+//   readonly type: string;
+//   private _mask: bigint = BigInt(0);
+//   private _dead: boolean = false;
+//   public active: boolean;
+
+//   constructor(type?: string) {
+//     this.type = type || this.constructor.name;
+//     this._mask = BigInt(0);
+//     this._dead = false;
+//     this.active = true;
+//     this.children = new Set();
+//   }
+
+//   public get mask(): bigint {
+//     return this._mask;
+//   }
+
+//   public get dead(): boolean {
+//     return this._dead;
+//   }
+
+//   // TODO: Implement a deferred cleanup mechanism to ensure that the entity is not removed from the scene while it is being processed.
+//   // probably a defeerrd cleanup should be implemented here
+//   // to ensure that the entity is not removed from the scene while it is being processed
+//   public set dead(value: boolean) {
+//     // clear all components and ensure the ComponentStorage is updated
+//     // then set the dead flag to true to self and all children
+//     this._dead = value;
+//     if (value) {
+//       this._mask = BigInt(0);
+//       Storage.storage.forEach((map) => {
+//         map.delete(this.id);
+//       });
+//     }
+//     this.children.forEach((child) => {
+//       child.dead = value;
+//     });
+//   }
+
+//   public getComponent<T>(type: ComponentType): T | undefined {
+//     const index = Storage.dictionary.get(type);
+//     if (index === undefined) {
+//       console.warn(`Component type "${type}" is not registered.`);
+//       return undefined;
+//     }
+//     return Storage.getComponent<T>(this.id, index);
+//   }
+
+//   public addComponent(...components: Component[]): Entity {
+//     for (const component of components) {
+//       Storage.addComponent(this.id, component);
+//       this._mask |= BigInt(1) << BigInt(component.index);
+//     }
+//     return this;
+//   }
+
+//   public removeComponent(...components: Component[]): Entity {
+//     for (const component of components) {
+//       Storage.removeComponent(this.id, component.index);
+//       this._mask &= ~(BigInt(1) << BigInt(component.index));
+//     }
+//     return this;
+//   }
+
+//   public addChild(...entities: Entity[]): Entity {
+//     for (const entity of entities) {
+//       this.children.add(entity);
+//     }
+//     return this;
+//   }
+
+//   public removeChild(...entities: Entity[]): Entity {
+//     for (const entity of entities) {
+//       this.children.delete(entity);
+//     }
+//     return this;
+//   }
+
+//   public hasChildrenWithComponents(mask: bigint): boolean {
+//     if ((this.mask & mask) === mask) {
+//       return true;
+//     }
+//     for (const child of this.children) {
+//       if (child.hasChildrenWithComponents(mask)) {
+//         return true;
+//       }
+//     }
+//     return false;
+//   }
+
+//   public destroy(): void {
+//     Storage.deleteEntity(this.id);
+//     // Optionally, add other cleanup logic if necessary.
+//   }
+// }
+
 abstract class Component {
   readonly index: number;
   readonly type: string;
 
   constructor(type?: string) {
     this.type = type || this.constructor.name;
-    this.index = ComponentStore.register(this.type);
+    this.index = Storage.register(this.type);
   }
 }
 
-/**
- *
- *
- * System
- * a class that updates entities.
- *
- *
- */
 abstract class System {
-  readonly type: string = this.constructor.name;
   private _mask: bigint;
 
   constructor(required: ComponentType[]) {
     this._mask = BigInt(0);
     for (const type of required) {
-      const index = ComponentStore.dictionary.get(type);
+      const index = Storage.dictionary.get(type);
       if (index === undefined) {
         console.warn(
           `Component type "${type}" not found during system initialization.`
@@ -191,6 +393,9 @@ abstract class System {
       }
       this._mask |= BigInt(1) << BigInt(index);
     }
+
+    // Register the system's dependencies
+    Storage.registerSystemDependencies(this);
   }
 
   public get mask(): bigint {
@@ -200,26 +405,16 @@ abstract class System {
   public abstract update(entity: Entity, dt: number, t: number): void;
 }
 
-/**
- *
- *
- * Scene
- * a class that holds a set of systems and entity containers (layers).
- *
- *
- */
 class Scene {
   readonly layers: Set<Entity>;
   readonly systems: Set<System>;
+  readonly type: string;
   public active: boolean = true;
 
-  constructor() {
+  constructor(type?: string) {
+    this.type = type || this.constructor.name;
     this.layers = new Set();
     this.systems = new Set();
-  }
-
-  public get type(): string {
-    return this.constructor.name;
   }
 
   public get dead(): boolean {
@@ -229,51 +424,63 @@ class Scene {
   public set dead(value: boolean) {
     if (value) {
       this.layers.clear();
+      Storage.cache.clear(); // Clear the entire cache since the scene is being wiped.
     }
   }
 
-  public addLayer(layer: Entity): void {
-    this.layers.add(layer);
+  public addLayer(...layers: Entity[]): void {
+    for (const entity of layers) {
+      this.layers.add(entity);
+    }
+    this.invalidateAffectedSystems();
   }
 
-  public removeLayer(layer: Entity): void {
-    this.layers.delete(layer);
+  public removeLayer(...layers: Entity[]): void {
+    for (const entity of layers) {
+      this.layers.delete(entity);
+    }
+    this.invalidateAffectedSystems();
   }
 
-  public addSystem(system: System): void {
-    this.systems.add(system);
+  public addSystem(...systems: System[]): void {
+    for (const system of systems) {
+      this.systems.add(system);
+      Storage.registerSystemDependencies(system);
+    }
+    this.invalidateAffectedSystems();
   }
 
-  public removeSystem(system: System): void {
-    this.systems.delete(system);
+  public removeSystem(...systems: System[]): void {
+    for (const system of systems) {
+      this.systems.delete(system);
+    }
+    this.invalidateAffectedSystems();
   }
 
   private _cleanup(): void {
-    this.layers.forEach((layer) => {
-      if (layer.dead) {
-        this.layers.delete(layer);
-      }
-    });
+    [...this.layers]
+      .filter((layer) => layer.dead)
+      .forEach((layer) => this.layers.delete(layer));
+    this.invalidateAffectedSystems();
   }
 
   public update(dt: number, t: number): void {
-    this.layers.forEach((layer) => {
-      this.systems.forEach((system) => {
+    this.systems.forEach((system) => {
+      const qualifyingLayers = Storage.getFilteredEntities(this.layers, system);
+      qualifyingLayers.forEach((layer) => {
         system.update(layer, dt, t);
       });
     });
     this._cleanup();
   }
+
+  private invalidateAffectedSystems(): void {
+    for (const system of this.systems) {
+      Storage.cache.delete(system);
+    }
+  }
 }
 
-/**
- *
- *
- * Game
- * a class that holds the current and next scene.
- *
- *
- */
 class Game {
   private _currentScene: Scene | null;
   private _nextScene: Scene | null;
@@ -343,6 +550,7 @@ class Game {
     });
   }
 
+  // TODO: Implement a stop method to clean up resources and stop the game loop.
   public stop(): void {
     this._emitter.clear();
     Engine.stop(); // ... maybe some form of cleanup function here
