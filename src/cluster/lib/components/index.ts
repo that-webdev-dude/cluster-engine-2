@@ -1,9 +1,9 @@
-import { Component } from "../../core/ECS";
+import { Component } from "../../ecs/Component";
 import { Vector } from "../../tools/Vector";
 
 export class Position extends Component {
   constructor(public vector: Vector = new Vector()) {
-    super("Position");
+    super();
   }
 
   get x() {
@@ -22,7 +22,7 @@ export class Position extends Component {
 
 export class Velocity extends Component {
   constructor(public vector: Vector = new Vector()) {
-    super("Velocity");
+    super();
   }
 
   get x() {
@@ -41,7 +41,7 @@ export class Velocity extends Component {
 
 export class Acceleration extends Component {
   constructor(public vector: Vector = new Vector()) {
-    super("Acceleration");
+    super();
   }
 
   get x() {
@@ -60,67 +60,67 @@ export class Acceleration extends Component {
 
 export class Mass extends Component {
   constructor(public value: number = 1) {
-    super("Mass");
+    super();
   }
 }
 
 export class Force extends Component {
   constructor(public vector: Vector = new Vector()) {
-    super("Force");
+    super();
   }
 }
 
 export class Friction extends Component {
   constructor(public value: number = 0) {
-    super("Friction");
+    super();
   }
 }
 
 export class Drag extends Component {
   constructor(public value: number = 0) {
-    super("Drag");
+    super();
   }
 }
 
 export class Bounce extends Component {
   constructor(public value: number = 0) {
-    super("Bounce");
+    super();
   }
 }
 
 export class Gravity extends Component {
   constructor(public value: number = 0) {
-    super("Gravity");
+    super();
   }
 }
 
 export class Collider extends Component {
   constructor(public radius: number = 0) {
-    super("Collider");
+    super();
   }
 }
 
 export class Rectangle extends Component {
   constructor(public width: number = 0, public height: number = 0) {
-    super("Rectangle");
+    super();
   }
 }
 
 export class Size extends Component {
   constructor(public width: number = 0, public height: number = 0) {
-    super("Size");
+    super();
   }
 }
 
 export class Circle extends Component {
   constructor(public radius: number = 0) {
-    super("Circle");
+    super();
   }
 }
 
 export class Polygon extends Component {
   constructor(public points: Vector[] = []) {
-    super("Polygon");
+    super();
   }
 }
 
@@ -129,66 +129,66 @@ export class Line extends Component {
     public start: Vector = new Vector(),
     public end: Vector = new Vector()
   ) {
-    super("Line");
+    super();
   }
 }
 
 export class Path extends Component {
   constructor(public points: Vector[] = []) {
-    super("Path");
+    super();
   }
 }
 
 export class Image extends Component {
   constructor(public src: string = "") {
-    super("Image");
+    super();
   }
 }
 
 export class Text extends Component {
   constructor(public value: string = "") {
-    super("Text");
+    super();
   }
 }
 
 export class Font extends Component {
   constructor(public value: string = "") {
-    super("Font");
+    super();
   }
 }
 
 export class Align extends Component {
   constructor(public value: CanvasTextAlign = "center") {
-    super("Align");
+    super();
   }
 }
 
 export class Fill extends Component {
   constructor(public value: string = "") {
-    super("Fill");
+    super();
   }
 }
 
 export class Stroke extends Component {
   constructor(public value: string = "") {
-    super("Stroke");
+    super();
   }
 }
 
 export class Alpha extends Component {
   constructor(public value: number = 1) {
-    super("Alpha");
+    super();
   }
 }
 
 export class Zindex extends Component {
   constructor(public value: number = 0) {
-    super("Zindex");
+    super();
   }
 }
 
 export class Visibility extends Component {
   constructor(public value: boolean = true) {
-    super("Visibility");
+    super();
   }
 }
