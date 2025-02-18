@@ -61,6 +61,11 @@ class CDisplay {
     }
   }
 
+  public setSize(width: number, height: number) {
+    CDisplay.getInstance().view.width = width;
+    CDisplay.getInstance().view.height = height;
+  }
+
   public static getInstance(options?: DisplayOptions): CDisplay {
     if (!CDisplay.instance) {
       CDisplay.instance = new CDisplay(options);

@@ -24,7 +24,13 @@ export class Entity {
 
   private _components: ComponentMap;
 
+  private _batch: Set<Entity> = new Set();
+
   private _mask: Bitmask = new Bitmask();
+
+  public active: boolean = true;
+
+  public dead: boolean = false;
 
   constructor(type: string) {
     this._id = UUID.generate();
@@ -114,13 +120,46 @@ export class Entity {
     return [...this._children.types()];
   }
 
+  hasMask(mask: bigint, deepSearch: boolean = false): boolean {
+    if (this.mask & mask) return true;
+
+    if (deepSearch) {
+      for (const entity of this._children.values()) {
+        if (entity.hasMask(mask, deepSearch)) return true;
+      }
+    }
+
+    return false;
+  }
+
+  getBatch(mask: bigint): Set<Entity> {
+    // batch select all the entities that match the mask down the tree. is a recursive function
+    function getBatchRecursive(
+      entity: Entity,
+      batch: Set<Entity>,
+      mask: bigint
+    ) {
+      if ((entity._components.mask & mask) === mask) {
+        batch.add(entity);
+      }
+
+      entity.forEach((child) => {
+        getBatchRecursive(child, batch, mask);
+      });
+    }
+
+    this._batch.clear(); // cached batch is cleared before each call
+
+    getBatchRecursive(this, this._batch, mask);
+
+    return this._batch;
+  }
+
   prettyPrint(): string {
     function prettyPrintRecursive(entity: Entity): any {
       return {
         type: entity._type,
-        // dirty: entity._dirty,
         parent: entity._parent?._type || null,
-        // signature: Bitmask.maskToTypes(entity.signature()),
         mask: Bitmask.maskToTypes(entity.mask),
         components: [...entity._components.keys()],
         children: [...entity._children.values()].map(prettyPrintRecursive),

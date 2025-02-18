@@ -12,9 +12,11 @@ type ComponentType = string;
  */
 export abstract class System {
   readonly mask: bigint;
+  readonly name: string;
 
   constructor(required: ComponentType[] = []) {
     this.mask = Bitmask.typesToMask(required);
+    this.name = this.constructor.name;
   }
 
   public abstract update(entity: Entity, dt: number, t: number): void;

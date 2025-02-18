@@ -16,10 +16,16 @@ export { Mouse } from "./core/Input";
 
 export { Event } from "./core/Emitter";
 
+export { Assets } from "./core/Assets";
+
 // tools
 export { Cmath } from "./tools/Cmath";
 
 export { Vector } from "./tools/Vector";
 
+export { AnimationItem } from "./tools/Animation";
+
 // library
 export * as Components from "./lib/components/index";
+
+export * as Systems from "./lib/systems/index";

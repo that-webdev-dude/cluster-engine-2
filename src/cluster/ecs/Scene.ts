@@ -10,9 +10,9 @@ export class Scene {
 
   public dead: boolean = false;
 
-  addLayer(name: string, layer: Entity): Scene {
-    if (!this._layers.has(name)) {
-      this._layers.set(name, layer);
+  addLayer(layer: Entity): Scene {
+    if (!this._layers.has(layer.type)) {
+      this._layers.set(layer.type, layer);
     }
     return this;
   }
@@ -33,9 +33,9 @@ export class Scene {
     return this._layers.has(name);
   }
 
-  addSystem(name: string, system: System): Scene {
-    if (!this._systems.has(name)) {
-      this._systems.set(name, system);
+  addSystem(system: System): Scene {
+    if (!this._systems.has(system.name)) {
+      this._systems.set(system.name, system);
     }
     return this;
   }
@@ -59,7 +59,7 @@ export class Scene {
   update(dt: number, t: number): void {
     for (const layer of this._layers.values()) {
       for (const system of this._systems.values()) {
-        if (system.mask & layer.mask) {
+        if (layer.hasMask(system.mask, true)) {
           system.update(layer, dt, t);
         }
       }

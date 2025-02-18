@@ -8,6 +8,13 @@ import { Keyboard } from "../core/Input";
 
 Mouse.element = Display.view;
 
+interface GameConfig {
+  store: Store;
+  title: string;
+  width: number;
+  height: number;
+}
+
 export class Game {
   private _currentScene: Scene | null;
 
@@ -17,12 +24,21 @@ export class Game {
 
   private _emitter: Store;
 
-  constructor(emitter: Store) {
+  constructor({ store, title, width, height }: GameConfig) {
     this._currentScene = null;
     this._nextScene = null;
     this._switching = false;
-    this._emitter = emitter;
+    this._emitter = store;
+
+    Display.setSize(width, height);
   }
+
+  // constructor(emitter: Store) {
+  //   this._currentScene = null;
+  //   this._nextScene = null;
+  //   this._switching = false;
+  //   this._emitter = emitter;
+  // }
 
   get currentScene(): Scene | null {
     return this._currentScene;
@@ -32,15 +48,16 @@ export class Game {
     return this._nextScene;
   }
 
-  setScene(scene: Scene): void {
+  setScene(scene: Scene): Game {
     if (!this._currentScene) {
       this._currentScene = scene;
-      return;
+      return this;
     }
     if (this._currentScene && !this._nextScene && !this._switching) {
       this._nextScene = scene;
       this._switching = true;
     }
+    return this;
   }
 
   start(callback: (dt: number, t: number) => void): void {
@@ -71,6 +88,11 @@ export class Game {
 
       Keyboard.update();
       Mouse.update();
+
+      // stop the engine for debugging
+      if (Keyboard.key("KeyP")) {
+        Engine.stop();
+      }
     };
 
     Assets.onReady(() => {
