@@ -1,13 +1,14 @@
 import { Cmath } from "../../tools/Cmath";
 import { System } from "../../ecs/System";
-import { Entity } from "../../ecs/Entity";
+import { Storage } from "../../ecs/Storage";
+import { TreeNode } from "../../tools/Tree";
 import * as Components from "../components";
 
 export class RenderSystem extends System {
   context: CanvasRenderingContext2D;
 
   constructor() {
-    super([Components.Position.name]);
+    super();
 
     const canvas = document.querySelector("canvas");
 
@@ -16,17 +17,37 @@ export class RenderSystem extends System {
     this.context = canvas.getContext("2d") as CanvasRenderingContext2D;
   }
 
-  update(entity: Entity, dt: number, t: number) {
-    //     if (entity.dead) return;
+  private _updateTreeNode(
+    storage: Storage,
+    node: TreeNode<number>,
+    dt: number,
+    t: number
+  ) {
+    const entity = node.value;
+
+    // checki if the entity is alive
+    if (
+      storage.hasEntityComponent(entity, "Dead") ||
+      storage.hasEntityComponent(entity, "Sleep")
+    ) {
+      return;
+    }
 
     const positionComponent =
-      entity.getComponent<Components.Position>("Position") || undefined;
+      storage.getEntityComponent<Components.Position>(entity, "Position") ||
+      undefined;
+
+    const anchorComponent =
+      storage.getEntityComponent<Components.Anchor>(entity, "Anchor") ||
+      undefined;
 
     const angleComponent =
-      entity.getComponent<Components.Angle>("Angle") || undefined;
+      storage.getEntityComponent<Components.Angle>(entity, "Angle") ||
+      undefined;
 
     const alphaComponent =
-      entity.getComponent<Components.Alpha>("Alpha") || undefined;
+      storage.getEntityComponent<Components.Alpha>(entity, "Alpha") ||
+      undefined;
 
     this.context.save();
 
@@ -38,9 +59,14 @@ export class RenderSystem extends System {
       this.context.translate(positionComponent.x, positionComponent.y);
     }
 
+    if (anchorComponent) {
+      this.context.translate(anchorComponent.x, anchorComponent.y);
+    }
+
     if (angleComponent) {
       const pivotComponent =
-        entity.getComponent<Components.Pivot>("Pivot") || undefined;
+        storage.getEntityComponent<Components.Pivot>(entity, "Pivot") ||
+        undefined;
 
       if (pivotComponent) {
         this.context.translate(pivotComponent.x, pivotComponent.y);
@@ -53,19 +79,27 @@ export class RenderSystem extends System {
 
     // render Rectangles
     const fillComponent =
-      entity.getComponent<Components.Fill>("Fill") || undefined;
+      storage.getEntityComponent<Components.Fill>(entity, "Fill") || undefined;
 
     const strokeComponent =
-      entity.getComponent<Components.Stroke>("Stroke") || undefined;
+      storage.getEntityComponent<Components.Stroke>(entity, "Stroke") ||
+      undefined;
+
+    const shadowComponent =
+      storage.getEntityComponent<Components.Shadow>(entity, "Shadow") ||
+      undefined;
 
     const rectangleComponent =
-      entity.getComponent<Components.Rectangle>("Rectangle") ||
-      entity.getComponent<Components.Size>("Size") ||
+      storage.getEntityComponent<Components.Rectangle>(entity, "Rectangle") ||
+      storage.getEntityComponent<Components.Size>(entity, "Size") ||
       undefined;
 
     if (rectangleComponent) {
       this.context.fillStyle = fillComponent?.value || "";
       this.context.strokeStyle = strokeComponent?.value || "";
+      this.context.shadowBlur = shadowComponent?.blur || 0;
+      this.context.shadowColor = shadowComponent?.value || "transparent";
+      this.context.lineWidth = strokeComponent?.width || 1;
       this.context.strokeRect(
         0,
         0,
@@ -82,7 +116,8 @@ export class RenderSystem extends System {
 
     // render Circle
     const circleComponent =
-      entity.getComponent<Components.Circle>("Circle") || undefined;
+      storage.getEntityComponent<Components.Circle>(entity, "Circle") ||
+      undefined;
 
     if (circleComponent) {
       this.context.beginPath();
@@ -90,14 +125,21 @@ export class RenderSystem extends System {
       this.context.fillStyle = fillComponent?.value || "";
       this.context.fill();
       this.context.strokeStyle = strokeComponent?.value || "";
+      this.context.shadowBlur = shadowComponent?.blur || 0;
+      this.context.shadowColor = shadowComponent?.value || "transparent";
+      this.context.lineWidth = strokeComponent?.width || 1;
       this.context.stroke();
       this.context.closePath();
+
+      // debug center of circle
+      // this.context.fillStyle = "red";
+      // this.context.fillRect(-1, -1, 2, 2);
     }
 
     // render Polygon
     const polygonComponent =
-      entity.getComponent<Components.Polygon>("Polygon") ||
-      entity.getComponent<Components.Vertices>("Vertices") ||
+      storage.getEntityComponent<Components.Polygon>(entity, "Polygon") ||
+      storage.getEntityComponent<Components.Vertices>(entity, "Vertices") ||
       undefined;
 
     if (polygonComponent) {
@@ -116,19 +158,42 @@ export class RenderSystem extends System {
       this.context.fillStyle = fillComponent?.value || "";
       this.context.fill();
       this.context.strokeStyle = strokeComponent?.value || "";
+      this.context.shadowBlur = shadowComponent?.blur || 0;
+      this.context.shadowColor = shadowComponent?.value || "transparent";
+      this.context.lineWidth = strokeComponent?.width || 1;
       this.context.stroke();
+
+      // debug bounding box
+      // this.context.strokeStyle = "red";
+      // this.context.strokeRect(
+      //   0,
+      //   0,
+      //   polygonComponent.width,
+      //   polygonComponent.height
+      // );
+
+      // debug position
+      // this.context.fillStyle = "red";
+      // this.context.fillRect(-1, -1, 2, 2);
+
+      // const isParticle = storage.hasEntityComponent(entity, "Particle");
+      // if (isParticle && positionComponent) {
+      //   console.log(positionComponent.x, positionComponent.y);
+      // }
     }
 
     // render Text
     const textComponent =
-      entity.getComponent<Components.Text>("Text") || undefined;
+      storage.getEntityComponent<Components.Text>(entity, "Text") || undefined;
 
     if (textComponent) {
       const fontComponent =
-        entity.getComponent<Components.Font>("Font") || undefined;
+        storage.getEntityComponent<Components.Font>(entity, "Font") ||
+        undefined;
 
       const alignComponent =
-        entity.getComponent<Components.Align>("Align") || undefined;
+        storage.getEntityComponent<Components.Align>(entity, "Align") ||
+        undefined;
 
       // get stored value from store if required
       // if (textComponent.stored) {
@@ -142,7 +207,8 @@ export class RenderSystem extends System {
 
     //     render sprite
     const spriteComponent =
-      entity.getComponent<Components.Sprite>("Sprite") || undefined;
+      storage.getEntityComponent<Components.Sprite>(entity, "Sprite") ||
+      undefined;
 
     if (spriteComponent) {
       const { x, y } = spriteComponent.indexToCoords(spriteComponent.frame);
@@ -159,10 +225,32 @@ export class RenderSystem extends System {
       );
     }
 
-    entity.forEach((child) => {
-      this.update(child, dt, t);
+    // DEBUG AREA
+    // DEBUG THE PROPERTY RADIUS OF THE COLLISION COMPONENT
+    // const collisionComponent = storage.getEntityComponent<Components.Collision>(
+    //   entity,
+    //   "Collision"
+    // );
+    // if (collisionComponent && collisionComponent.radius) {
+    //   this.context.beginPath();
+    //   this.context.arc(0, 0, collisionComponent.radius, 0, Math.PI * 2, false);
+    //   this.context.strokeStyle = "red";
+    //   this.context.stroke();
+    //   this.context.closePath();
+    // }
+
+    // recursive call
+    node.children.forEach((child) => {
+      this._updateTreeNode(storage, child, dt, t);
     });
 
     this.context.restore();
+  }
+
+  update(storage: Storage, dt: number, t: number) {
+    const root = storage.getEntityNode(0);
+    if (!root) return;
+
+    this._updateTreeNode(storage, root, dt, t);
   }
 }

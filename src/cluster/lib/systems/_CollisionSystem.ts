@@ -1,48 +1,25 @@
 import { System } from "../../ecs/System";
-import { Entity } from "../../ecs/Entity";
 import { Vector } from "../..//tools/Vector";
 import { Cmath } from "../../tools/Cmath";
+import { Storage } from "../../ecs/Storage";
 import * as Components from "../components";
-
-type CollisionData = {
-  area: number;
-  entity: Entity;
-  normal: Vector;
-  vector: Vector;
-  overlap: Vector;
-};
-
-type CollisionHitbox = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
-type CollisionResolver = {
-  type: CollisionResolverType;
-  mask: number;
-};
-
-type CollisionResolverType =
-  | "bounce"
-  | "die"
-  | "stop"
-  | "sleep"
-  | "none"
-  | "slide";
-
-type EntityId = string;
+import {
+  CollisionData,
+  CollisionHitbox,
+  CollisionResolver,
+  CollisionResolverType,
+  EntityID,
+} from "../types";
 
 /** Collision system
  * @required  Transform, Collision
  * @emits entityDestroyed, systemStarted, systemUpdated,
  */
 export class CollisionSystem extends System {
-  private _entityCache: Map<CollisionResolverType, Set<EntityId>>;
+  private _entityCache: Map<CollisionResolverType, Set<EntityID>>;
 
   constructor() {
-    super(["Position", "Collision"]);
+    super([]);
     this._entityCache = new Map();
   }
 
@@ -116,8 +93,8 @@ export class CollisionSystem extends System {
     resolvers: CollisionResolver[],
     collisionA: Components.Collision,
     collisionB: Components.Collision,
-    entityA: Entity,
-    entityB: Entity,
+    entityA: EntityID,
+    entityB: EntityID,
     normal: Vector,
     vector: Vector,
     overlap: Vector
@@ -133,13 +110,14 @@ export class CollisionSystem extends System {
           vector,
           normal: normal,
           area: overlap.x * overlap.y,
+          done: resolver.done || (() => {}),
         });
 
         // cache the entity ids for later resolution
         if (!this._entityCache.has(resolver.type)) {
           this._entityCache.set(resolver.type, new Set());
         }
-        this._entityCache.get(resolver.type)?.add(entityA.id);
+        this._entityCache.get(resolver.type)?.add(entityA);
       }
     });
   }
@@ -198,33 +176,7 @@ export class CollisionSystem extends System {
     return new Vector(overlapX, overlapY);
   }
 
-  /** handles the sleep resolution making the entity inactive and emitting an event */
-  // private _handleSleepResolution(
-  //   entity: Cluster.Entity,
-  //   resolvers: Types.CollisionResolver[],
-  //   targetLayer: number
-  // ) {
-  //   const sleepResolverA = resolvers.find(
-  //     (resolver) => resolver.type === "sleep"
-  //   );
-  //   if (sleepResolverA && sleepResolverA.mask & targetLayer) {
-  //     entity.active = false;
-  //   }
-  // }
-
-  /* handles the die resolution, marking the entity as dead and emitting an event. */
-  // private _handleDieResolution(
-  //   entity: Cluster.Entity,
-  //   resolvers: Types.CollisionResolver[],
-  //   targetLayer: number
-  // ) {
-  //   const dieResolverA = resolvers.find((resolver) => resolver.type === "die");
-  //   if (dieResolverA && dieResolverA.mask & targetLayer) {
-  //     entity.dead = true;
-  //   }
-  // }
-
-  private _testCollision(
+  private _testAABBCollision(
     hitboundsA: CollisionHitbox,
     hitboundsB: CollisionHitbox
   ): boolean {
@@ -234,6 +186,16 @@ export class CollisionSystem extends System {
       hitboundsA.y < hitboundsB.y + hitboundsB.height &&
       hitboundsA.y + hitboundsA.height > hitboundsB.y
     );
+  }
+
+  private _testCircleCollision(
+    positionA: Vector,
+    radiusA: number,
+    positionB: Vector,
+    radiusB: number
+  ): boolean {
+    Cmath.distance(positionA, positionB);
+    return Cmath.distance(positionA, positionB) < radiusA + radiusB;
   }
 
   private _getHitbounds(
@@ -253,188 +215,329 @@ export class CollisionSystem extends System {
     collisionB: Components.Collision
   ) {
     return (
-      collisionA.layer & collisionB.mask ||
-      (collisionB.layer & collisionA.mask &&
+      (collisionA.layer & collisionB.mask) !== 0 ||
+      ((collisionB.layer & collisionA.mask) !== 0 &&
         collisionA.detectable &&
         collisionB.detectable)
     );
   }
 
-  update(entities: Entity, dt: number, t: number) {
-    const activeEntities = [...entities.getBatch(this.mask)].filter(
-      (entity) => !entity.dead && entity.active
-    );
+  update(layer: Storage, dt: number, t: number) {
+    const activeEntities = layer.getEntityBatch(["Collision", "Position"]);
+
+    if (activeEntities.length < 2) return;
 
     for (let i = 0; i < activeEntities.length; i++) {
       for (let j = i + 1; j < activeEntities.length; j++) {
         const entityA = activeEntities[i];
         const entityB = activeEntities[j];
 
-        const collisionA =
-          entityA.getComponent<Components.Collision>("Collision");
-        const collisionB =
-          entityB.getComponent<Components.Collision>("Collision");
+        if (!layer.hasEntity(entityA) || !layer.hasEntity(entityB)) continue;
 
-        if (!collisionA || !collisionB) continue;
+        const collisionA = layer.getEntityComponent<Components.Collision>(
+          entityA,
+          "Collision"
+        )!;
+
+        const collisionB = layer.getEntityComponent<Components.Collision>(
+          entityB,
+          "Collision"
+        )!;
 
         if (!this._validCollision(collisionA, collisionB)) {
           continue;
         }
 
-        const hitboxA = collisionA.hitbox;
-        const hitboxB = collisionB.hitbox;
+        const positionA = layer.getEntityComponent<Components.Position>(
+          entityA,
+          "Position"
+        )!.vector;
 
-        const positionA =
-          entityA.getComponent<Components.Position>("Position")?.vector;
-        const positionB =
-          entityB.getComponent<Components.Position>("Position")?.vector;
+        const positionB = layer.getEntityComponent<Components.Position>(
+          entityB,
+          "Position"
+        )!.vector;
 
-        if (!positionA || !positionB) continue;
+        // if an hitbox is provided we test for AABB collision
+        if (collisionA.hitbox && collisionB.hitbox) {
+          console.log("is an AABB collision");
+          const hitboxA = collisionA.hitbox;
+          const hitboxB = collisionB.hitbox;
 
-        const hitboundsA = this._getHitbounds(positionA, hitboxA);
-        const hitboundsB = this._getHitbounds(positionB, hitboxB);
+          const hitboundsA = this._getHitbounds(positionA, hitboxA);
+          const hitboundsB = this._getHitbounds(positionB, hitboxB);
 
-        // if an actual collision is detected
-        if (this._testCollision(hitboundsA, hitboundsB)) {
-          // emit the entity-hit event?
+          // if an actual collision is detected
+          if (this._testAABBCollision(hitboundsA, hitboundsB)) {
+            // emit the entity-hit event?
 
-          // no need to resolve collisions if there are no resolvers
-          const resolversA = collisionA.resolvers;
-          const resolversB = collisionB.resolvers;
+            // no need to resolve collisions if there are no resolvers
+            const resolversA = collisionA.resolvers;
+            const resolversB = collisionB.resolvers;
 
-          if (resolversA.length === 0 && resolversB.length === 0) continue;
+            if (resolversA.length === 0 && resolversB.length === 0) continue;
 
-          // at this point we start collecting data
-          const overlap = this._getCollisionOverlap(hitboundsA, hitboundsB);
+            // at this point we start collecting data
+            const overlap = this._getCollisionOverlap(hitboundsA, hitboundsB);
 
-          if (resolversA.length) {
-            const vectorA = this._getCollisionVector(hitboundsA, hitboundsB);
-            const normalA = this._getCollisionNormal(
-              hitboundsA,
-              hitboundsB,
-              overlap
-            );
-            this._processResolvers(
-              resolversA,
-              collisionA,
-              collisionB,
-              entityA,
-              entityB,
-              normalA,
-              vectorA,
-              overlap
-            );
+            if (resolversA.length) {
+              const vectorA = this._getCollisionVector(hitboundsA, hitboundsB);
+              const normalA = this._getCollisionNormal(
+                hitboundsA,
+                hitboundsB,
+                overlap
+              );
+              this._processResolvers(
+                resolversA,
+                collisionA,
+                collisionB,
+                entityA,
+                entityB,
+                normalA,
+                vectorA,
+                overlap
+              );
+            }
+
+            if (resolversB.length) {
+              const vectorB = this._getCollisionVector(hitboundsB, hitboundsA);
+              const normalB = this._getCollisionNormal(
+                hitboundsB,
+                hitboundsA,
+                overlap
+              );
+              this._processResolvers(
+                resolversB,
+                collisionB,
+                collisionA,
+                entityB,
+                entityA,
+                normalB,
+                vectorB,
+                overlap
+              );
+            }
           }
+          // if no hitbox is provided we test for circle collision if the collision.radius is provided
+        } else if (collisionA.radius && collisionB.radius) {
+          const radiusA = Math.abs(collisionA.radius);
+          const radiusB = Math.abs(collisionB.radius);
 
-          if (resolversB.length) {
-            const vectorB = this._getCollisionVector(hitboundsB, hitboundsA);
-            const normalB = this._getCollisionNormal(
-              hitboundsB,
-              hitboundsA,
-              overlap
-            );
-            this._processResolvers(
-              resolversB,
-              collisionB,
-              collisionA,
-              entityB,
-              entityA,
-              normalB,
-              vectorB,
-              overlap
-            );
+          // test for circle collision
+          if (
+            this._testCircleCollision(positionA, radiusA, positionB, radiusB)
+          ) {
+            // emit the entity-hit event?
+
+            // no need to resolve collisions if there are no resolvers
+            const resolversA = collisionA.resolvers;
+            const resolversB = collisionB.resolvers;
+
+            if (resolversA.length === 0 && resolversB.length === 0) continue;
+
+            const penetration =
+              radiusA + radiusB - Cmath.distance(positionA, positionB);
+
+            if (resolversA.length) {
+              const vectorA = Vector.connect(positionA, positionB);
+              const normalA = Vector.reverse(vectorA).normalize();
+              const overlap = Vector.scale(normalA, penetration);
+              this._processResolvers(
+                resolversA,
+                collisionA,
+                collisionB,
+                entityA,
+                entityB,
+                normalA,
+                vectorA,
+                overlap
+              );
+            }
+
+            if (resolversB.length) {
+              const vectorB = Vector.connect(positionB, positionA);
+              const normalB = Vector.reverse(vectorB).normalize();
+              const overlap = Vector.scale(normalB, penetration);
+              this._processResolvers(
+                resolversB,
+                collisionB,
+                collisionA,
+                entityB,
+                entityA,
+                normalB,
+                vectorB,
+                overlap
+              );
+            }
           }
+          // if either a hitbox or a radius is provided we throw an error
+        } else {
+          throw new Error(
+            "CollisionSystem: invalid collision configuration, either a hitbox or a radius must be provided"
+          );
         }
       }
+
+      // resolve the collisions
+      this._entityCache.forEach((entityIds, resolverType) => {
+        const resolutionEntities = activeEntities.filter((entity) => {
+          return entityIds.has(entity);
+        });
+
+        resolutionEntities.forEach((entity) => {
+          // if (!layer.hasEntity(entity)) return;
+
+          const collision = layer.getEntityComponent<Components.Collision>(
+            entity,
+            "Collision"
+          )!;
+
+          const position = layer.getEntityComponent<Components.Position>(
+            entity,
+            "Position"
+          )!.vector;
+
+          const velocity = layer.getEntityComponent<Components.Velocity>(
+            entity,
+            "Velocity"
+          )?.vector;
+
+          // if (!collision || !position) return;
+
+          const data = collision.data.get(resolverType);
+          if (!data || data.length === 0) return;
+
+          // resolve the AABB collision
+          if (collision.hitbox) {
+            // here first we separate the entities
+            // then we resolve the collision for each entity
+            const primaryCollision = this._getPrimaryCollision(data);
+            if (!primaryCollision) return;
+
+            let totalAdjustmentX =
+              primaryCollision.normal.x * primaryCollision.overlap.x;
+            let totalAdjustmentY =
+              primaryCollision.normal.y * primaryCollision.overlap.y;
+
+            // note: this is a simple resolution method that only considers the primary collision.
+            // In a more complex system, you may want to consider multiple collisions
+            // and resolve them in order of significance.
+            const secondaryCollision = this._getSecondaryCollision(
+              data,
+              primaryCollision
+            );
+            if (secondaryCollision) {
+              totalAdjustmentX +=
+                secondaryCollision.normal.x * secondaryCollision.overlap.x;
+              totalAdjustmentY +=
+                secondaryCollision.normal.y * secondaryCollision.overlap.y;
+            }
+
+            position.x += totalAdjustmentX;
+            position.y += totalAdjustmentY;
+
+            switch (resolverType) {
+              case "bounce":
+                if (!velocity) return;
+
+                if (primaryCollision.normal.x !== 0) {
+                  velocity.x *= -1;
+                }
+                if (primaryCollision.normal.y !== 0) {
+                  const vx = Cmath.clamp(
+                    primaryCollision.vector.normalize().x,
+                    -0.5,
+                    0.5
+                  );
+                  velocity.x = vx;
+                  velocity.y *= -1;
+                }
+                break;
+
+              case "die":
+                layer.destroyEntity(entity);
+                // emit here?
+                break;
+
+              case "sleep":
+                // entity.active = false;
+                // emit here?
+                break;
+
+              case "none":
+                break;
+
+              case "slide":
+                if (!velocity) return;
+
+                if (primaryCollision.normal.x !== 0) {
+                  velocity.x = 0;
+                }
+                if (primaryCollision.normal.y !== 0) {
+                  velocity.y = 0;
+                }
+                break;
+
+              default:
+                break;
+            }
+          } else if (collision.radius) {
+            // in the case of a circle collision the primary collision is the only one that matters
+            // the primary collision is the one with the largest overlap
+            const primaryCollision = data.sort(
+              (a, b) => b.overlap.magnitude - a.overlap.magnitude
+            )[0];
+
+            if (!primaryCollision) return;
+
+            // const penetration = primaryCollision.overlap.magnitude;
+
+            position.x += primaryCollision.overlap.x;
+            position.y += primaryCollision.overlap.y;
+
+            switch (resolverType) {
+              case "bounce":
+                if (!velocity) return;
+
+                const normal = primaryCollision.normal;
+                const dot = Vector.dot(velocity, normal);
+                velocity.x -= 2 * dot * normal.x;
+                velocity.y -= 2 * dot * normal.y;
+                break;
+
+              case "die":
+                layer.destroyEntity(entity);
+                primaryCollision.done();
+
+                break;
+
+              case "sleep":
+                // entity.active = false;
+                // emit here?
+                break;
+
+              case "none":
+                break;
+
+              case "slide":
+                if (!velocity) return;
+
+                const normalSlide = primaryCollision.normal;
+                const dotSlide = Vector.dot(velocity, normalSlide);
+                velocity.x -= dotSlide * normalSlide.x;
+                velocity.y -= dotSlide * normalSlide.y;
+                break;
+
+              default:
+                break;
+            }
+          }
+
+          collision.data.clear();
+        });
+      });
+
+      this._entityCache.clear();
     }
-
-    // resolve the collisions
-    this._entityCache.forEach((entityIds, resolverType) => {
-      const resolutionEntities = activeEntities.filter((entity) => {
-        return entityIds.has(entity.id);
-      });
-
-      resolutionEntities.forEach((entity) => {
-        const collision =
-          entity.getComponent<Components.Collision>("Collision");
-
-        const position =
-          entity.getComponent<Components.Position>("Position")?.vector;
-
-        if (!collision || !position) return;
-
-        const data = collision.data.get(resolverType);
-        if (!data || data.length === 0) return;
-
-        // here first we separate the entities
-        // then we resolve the collision for each entity
-        const primaryCollision = this._getPrimaryCollision(data);
-        if (!primaryCollision) return;
-
-        let totalAdjustmentX =
-          primaryCollision.normal.x * primaryCollision.overlap.x;
-        let totalAdjustmentY =
-          primaryCollision.normal.y * primaryCollision.overlap.y;
-
-        // note: this is a simple resolution method that only considers the primary collision.
-        // In a more complex system, you may want to consider multiple collisions
-        // and resolve them in order of significance.
-        const secondaryCollision = this._getSecondaryCollision(
-          data,
-          primaryCollision
-        );
-        if (secondaryCollision) {
-          totalAdjustmentX +=
-            secondaryCollision.normal.x * secondaryCollision.overlap.x;
-          totalAdjustmentY +=
-            secondaryCollision.normal.y * secondaryCollision.overlap.y;
-        }
-
-        position.x += totalAdjustmentX;
-        position.y += totalAdjustmentY;
-
-        switch (resolverType) {
-          case "bounce":
-            const velocity =
-              entity.getComponent<Components.Velocity>("Velocity");
-            if (!velocity) return;
-
-            if (primaryCollision.normal.x !== 0) {
-              velocity.vector.x *= -1;
-            }
-            if (primaryCollision.normal.y !== 0) {
-              const vx = Cmath.clamp(
-                primaryCollision.vector.normalize().x,
-                -0.5,
-                0.5
-              );
-              velocity.vector.x = vx;
-              velocity.vector.y *= -1;
-            }
-            break;
-
-          case "die":
-            entity.dead = true;
-
-            // emit here?
-
-            break;
-
-          case "sleep":
-            entity.active = false;
-            break;
-
-          case "none":
-            break;
-
-          default:
-            break;
-        }
-
-        collision.data.clear();
-      });
-    });
-
-    this._entityCache.clear();
   }
 }

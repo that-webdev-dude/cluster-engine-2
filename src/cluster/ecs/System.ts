@@ -1,5 +1,5 @@
 import { Bitmask } from "./Bitmask";
-import { Entity } from "./Entity";
+import { Storage } from "./Storage";
 
 type ComponentType = string;
 
@@ -15,9 +15,9 @@ export abstract class System {
   readonly name: string;
 
   constructor(required: ComponentType[] = []) {
-    this.mask = Bitmask.typesToMask(required);
+    this.mask = required.length ? Bitmask.typesToMask(required) : BigInt(0);
     this.name = this.constructor.name;
   }
 
-  public abstract update(entity: Entity, dt: number, t: number): void;
+  public abstract update(entity: Storage, dt: number, t: number): void;
 }

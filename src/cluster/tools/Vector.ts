@@ -70,6 +70,15 @@ export class Vector {
   }
 
   /**
+   * Reverses the direction of a vector.
+   * @param v1 - The vector to reverse.
+   * @returns A new Vector instance.
+   */
+  static reverse(v1: Vector): Vector {
+    return Vector.from(v1).reverse();
+  }
+
+  /**
    * Scales a vector by a scalar.
    * @param v1 - The vector to scale.
    * @param scalar - The scalar to scale the vector by.
@@ -172,9 +181,21 @@ export class Vector {
    * @returns The angle between the two vectors.
    */
   static angleBetween(v1: Vector, v2: Vector): number {
+    // Check for zero-length vector(s)
+    if (v1.magnitude === 0 || v2.magnitude === 0) {
+      // Angle is undefined if one of the vectors is zero; returning 0 by default.
+      return 0;
+      // Alternatively, you could throw an error:
+      // throw new Error('Cannot calculate the angle with a zero-length vector.');
+    }
+
     const dotProduct = this.dot(v1, v2);
     const magnitudeProduct = v1.magnitude * v2.magnitude;
-    return Math.acos(dotProduct / magnitudeProduct);
+    const cosineTheta = dotProduct / magnitudeProduct;
+
+    // Clamp cosineTheta to the range [-1, 1] to handle floating-point inaccuracies.
+    const clampedCosine = Math.max(-1, Math.min(1, cosineTheta));
+    return Math.acos(clampedCosine);
   }
 
   /**

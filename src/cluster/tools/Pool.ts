@@ -1,4 +1,4 @@
-// import { Entity } from "../core/ECS";
+// import { Entity } from "../ecs/Entity";
 
 // type EntityType = { active: boolean; dead: boolean };
 
