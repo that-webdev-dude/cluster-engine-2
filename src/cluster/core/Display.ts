@@ -7,7 +7,6 @@ const FULLSCREEN_SHORTCUT = "KeyF";
  * Display
  *
  * Responsible for creating and managing a canvas element for rendering graphics.
- * Exposes the canvas and its rendering context which can be either 2D or WebGL.
  */
 export class Display {
   // Singleton instance for global access.
@@ -19,8 +18,11 @@ export class Display {
   // The canvas element that will be used for drawing.
   private _canvas: HTMLCanvasElement = document.createElement("canvas");
 
-  // The rendering context of the canvas (either 2D or WebGL2).
-  private _context: CanvasRenderingContext2D | WebGL2RenderingContext;
+  // the canvas width
+  private _width: number = 800;
+
+  // the canvas height
+  private _height: number = 600;
 
   // Holds the event listener reference used for toggling fullscreen.
   private _fullscreenHandler: (event: KeyboardEvent) => void = () => {};
@@ -39,36 +41,11 @@ export class Display {
     parentID = "body",
     height = 600,
     width = 800,
-    type = "2d",
   }: {
     parentID?: string;
     height?: number;
     width?: number;
-    type?: "2d" | "webgl2";
   }) {
-    // Ensure the specified 2D or 3D context is available; otherwise, throw an error.
-    const context = this._canvas.getContext(type);
-    if (!context) {
-      throw new Error(`[Display]: Failed to get ${type} context.`);
-    }
-
-    // sanity check for the context type support
-    if (type === "webgl2" && !(context instanceof WebGL2RenderingContext)) {
-      throw new Error(
-        `[Display]: The specified context type is not supported by the browser.`
-      );
-    }
-    if (type === "2d" && !(context instanceof CanvasRenderingContext2D)) {
-      throw new Error(
-        `[Display]: The specified context type is not supported by the browser.`
-      );
-    }
-
-    // Assign the context to the class property.
-    this._context = context as
-      | CanvasRenderingContext2D
-      | WebGL2RenderingContext;
-
     // Try to locate the parent element using the provided selector.
     if (parentID) {
       let appElement = document.querySelector(parentID) as HTMLElement;
@@ -84,6 +61,10 @@ export class Display {
       // Set canvas dimensions.
       this._canvas.width = width;
       this._canvas.height = height;
+
+      // Cache the canvas dimensions.
+      this._width = width;
+      this._height = height;
 
       // Append the canvas element to the parent.
       appElement.appendChild(this._canvas);
@@ -104,51 +85,24 @@ export class Display {
   }
 
   /**
-   * Returns the rendering context of the canvas (either 2D or WebGL2).
-   */
-  get context(): CanvasRenderingContext2D | WebGL2RenderingContext {
-    return this._context;
-  }
-
-  /**
    * Returns the height of the canvas.
    */
   get height(): number {
-    return this._context.canvas.height;
+    return this._height;
   }
 
   /**
    * Returns the width of the canvas.
    */
   get width(): number {
-    return this._context.canvas.width;
+    return this._width;
   }
 
   /**
    * Performs initialization steps:
-   * - Set up rendering properties for the canvas context based on whether it's 2D or WebGL.
    * - Binds and registers the fullscreen toggle event handler.
    */
   private _initialize() {
-    // Set up canvas context rendering properties.
-    if (this._context instanceof WebGL2RenderingContext) {
-      // WebGL specific settings.
-      const gl = this._context;
-      // Set the clear color to black and fully opaque.
-      gl.clearColor(0, 0, 0, 1);
-      // Enable depth testing so that closer objects obscure farther ones.
-      gl.enable(gl.DEPTH_TEST);
-      // Set depth function to let nearer objects obscure further ones.
-      gl.depthFunc(gl.LEQUAL);
-      // Clear the color as well as the depth buffer.
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    } else {
-      // 2D context specific settings.
-      this._context.textBaseline = "top";
-      this._context.imageSmoothingEnabled = false;
-      this._context.imageSmoothingQuality = "high";
-    }
-
     // Bind and store the fullscreen handler.
     this._fullscreenHandler = this._handleFullscreen.bind(this);
     // Register the keypress event to listen for the fullscreen toggle key.
@@ -197,8 +151,6 @@ export class Display {
         `[Display]: Parent element with ID ${this._parentID} not found. Cannot remove canvas.`
       );
     }
-    // Nullify references to help with garbage collection.
-    this._context = null as unknown as CanvasRenderingContext2D;
     this._canvas = null as unknown as HTMLCanvasElement;
   }
 
