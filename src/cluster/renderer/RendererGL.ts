@@ -38,18 +38,31 @@ export class RendererGL {
       layout(location = 0) in vec2 a_position;
       layout(location = 1) in vec2 a_texcoord;
       layout(location = 2) in vec2 a_offset;
-      layout(location = 3) in vec4 a_rotScale; // x=rot, y=scaleX*w, z=scaleY*h, w unused
+      layout(location = 3) in vec4 a_rotScale;   // x=rot, y=scaleX*w, z=scaleY*h
       layout(location = 4) in vec4 a_texRegion;
+      layout(location = 5) in vec2 a_pivot;      // normalized [0..1]
+
       uniform mat4 u_projection;
       out vec2 v_texcoord;
+
       void main() {
         float r = a_rotScale.x;
         float c = cos(r), s = sin(r);
         mat2 rot = mat2(c, -s, s, c);
-        vec2 scaled = vec2(a_rotScale.y, a_rotScale.z) * a_position;
-        vec2 pos = rot * scaled + a_offset;
+
+        // world‐space size of this quad:
+        vec2 size = vec2(a_rotScale.y, a_rotScale.z);
+
+        // pivot in world pixels:
+        vec2 pivot = a_pivot * size;
+
+        // move quad so pivot is at origin, rotate, then move back + offset
+        vec2 localPos = a_position * size - pivot;
+        vec2 rotated  = rot * localPos;
+        vec2 pos      = rotated + a_offset + pivot;
+
         gl_Position = u_projection * vec4(pos, 0.0, 1.0);
-        v_texcoord = a_texcoord * a_texRegion.zw + a_texRegion.xy;
+        v_texcoord  = a_texcoord * a_texRegion.zw + a_texRegion.xy;
       }`;
     const fsSource = `#version 300 es
       precision mediump float;
@@ -128,7 +141,7 @@ export class RendererGL {
     const gl = this.gl;
     const tex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // flip Y to match CSS pixels
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
@@ -150,26 +163,35 @@ export class RendererGL {
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
 
-    const strideBytes = (2 + 4 + 4) * Float32Array.BYTES_PER_ELEMENT;
-    // Allocate once for maximum instances
-    gl.bufferData(
-      gl.ARRAY_BUFFER,
-      MAX_INSTANCES * strideBytes,
-      gl.DYNAMIC_DRAW
-    );
+    const stride = (2 + 4 + 4 + 2) * Float32Array.BYTES_PER_ELEMENT;
+    //            offset + rotScale + texRegion + pivot
+
+    gl.bufferData(gl.ARRAY_BUFFER, MAX_INSTANCES * stride, gl.DYNAMIC_DRAW);
 
     let offset = 0;
+    // a_offset @ loc 2
     gl.enableVertexAttribArray(2);
-    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, strideBytes, offset);
+    gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(2, 1);
     offset += 2 * Float32Array.BYTES_PER_ELEMENT;
+
+    // a_rotScale @ loc 3
     gl.enableVertexAttribArray(3);
-    gl.vertexAttribPointer(3, 4, gl.FLOAT, false, strideBytes, offset);
+    gl.vertexAttribPointer(3, 4, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(3, 1);
     offset += 4 * Float32Array.BYTES_PER_ELEMENT;
+
+    // a_texRegion @ loc 4
     gl.enableVertexAttribArray(4);
-    gl.vertexAttribPointer(4, 4, gl.FLOAT, false, strideBytes, offset);
+    gl.vertexAttribPointer(4, 4, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(4, 1);
+    offset += 4 * Float32Array.BYTES_PER_ELEMENT;
+
+    // a_pivot @ loc 5   ← new
+    gl.enableVertexAttribArray(5);
+    gl.vertexAttribPointer(5, 2, gl.FLOAT, false, stride, offset);
+    gl.vertexAttribDivisor(5, 1);
+    offset += 2 * Float32Array.BYTES_PER_ELEMENT;
 
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
