@@ -1,6 +1,6 @@
 const MAX_INSTANCES = 50000;
-// offset(2) + rotScale(4) + texRegion(4) + pivot(2) + extra offset(2)
-const FLOATS_PER_INSTANCE = 2 + 4 + 4 + 2 + 2;
+// offset(2) + rotScale(4) + texRegion(4) + pivot(2)
+const FLOATS_PER_INSTANCE = 2 + 4 + 4 + 2; // now 12 floats per instance
 
 export class RendererGL {
   private gl: WebGL2RenderingContext;
@@ -11,6 +11,7 @@ export class RendererGL {
   private projectionMatrix: Float32Array;
   private uProjectionLoc: WebGLUniformLocation;
   private uTextureLoc: WebGLUniformLocation;
+  private uGlobalOffsetLoc: WebGLUniformLocation;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -31,6 +32,13 @@ export class RendererGL {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
+    this.uGlobalOffsetLoc = gl.getUniformLocation(
+      this.program,
+      "u_globalOffset"
+    )!;
+    // default to zero offset
+    gl.uniform2f(this.uGlobalOffsetLoc, 0, 0);
+
     // Create VAO, texture, and instance buffer
     this.vao = this.initVAO();
     this.texture = this.setupTexture();
@@ -50,6 +58,12 @@ export class RendererGL {
     });
   }
 
+  setGlobalOffset(x: number, y: number) {
+    // make sure the program is bound before setting uniforms
+    this.gl.useProgram(this.program);
+    this.gl.uniform2f(this.uGlobalOffsetLoc, x, y);
+  }
+
   private resize(width: number, height: number) {
     const gl = this.gl;
     this.projectionMatrix = this.createOrtho(width, height);
@@ -66,7 +80,8 @@ export class RendererGL {
       layout(location = 3) in vec4 a_rotScale;
       layout(location = 4) in vec4 a_texRegion;
       layout(location = 5) in vec2 a_pivot;
-      layout(location = 6) in vec2 a_offset2;
+
+      uniform vec2 u_globalOffset;
 
       uniform mat4 u_projection;
       out vec2 v_texcoord;
@@ -81,7 +96,7 @@ export class RendererGL {
 
         vec2 localPos = a_position * size - pivot;
         vec2 rotated  = rot * localPos;
-        vec2 pos      = rotated + a_offset + a_offset2 + pivot;
+        vec2 pos      = rotated + a_offset + u_globalOffset + pivot;
 
         gl_Position = u_projection * vec4(pos, 0.0, 1.0);
         v_texcoord  = a_texcoord * a_texRegion.zw + a_texRegion.xy;
@@ -182,7 +197,7 @@ export class RendererGL {
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
 
-    const stride = FLOATS_PER_INSTANCE * Float32Array.BYTES_PER_ELEMENT;
+    const stride = FLOATS_PER_INSTANCE * Float32Array.BYTES_PER_ELEMENT; // now 12 * 4 = 48 bytes
     gl.bufferData(gl.ARRAY_BUFFER, MAX_INSTANCES * stride, gl.DYNAMIC_DRAW);
 
     let offset = 0;
@@ -209,11 +224,6 @@ export class RendererGL {
     gl.vertexAttribPointer(5, 2, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(5, 1);
     offset += 2 * Float32Array.BYTES_PER_ELEMENT;
-
-    // a_offset2 @ 6
-    gl.enableVertexAttribArray(6);
-    gl.vertexAttribPointer(6, 2, gl.FLOAT, false, stride, offset);
-    gl.vertexAttribDivisor(6, 1);
 
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
