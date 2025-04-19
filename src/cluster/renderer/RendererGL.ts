@@ -1,8 +1,6 @@
-/**
- * WebGL2 Instanced Renderer for batched sprites with packed rotation+scale in a vec4,
- * using bufferSubData for partial updates.
- */
-const MAX_INSTANCES = 100000; // Maximum number of instances to support without reallocating
+const MAX_INSTANCES = 50000;
+// offset(2) + rotScale(4) + texRegion(4) + pivot(2) + extra offset(2)
+const FLOATS_PER_INSTANCE = 2 + 4 + 4 + 2 + 2;
 
 export class RendererGL {
   private gl: WebGL2RenderingContext;
@@ -12,6 +10,7 @@ export class RendererGL {
   private instanceBuffer: WebGLBuffer;
   private projectionMatrix: Float32Array;
   private uProjectionLoc: WebGLUniformLocation;
+  private uTextureLoc: WebGLUniformLocation;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -21,15 +20,41 @@ export class RendererGL {
     if (!gl) throw new Error("WebGL2 not supported");
     this.gl = gl;
 
+    // Compile & link shaders
     this.program = this.createProgram();
-    gl.useProgram(this.program);
     this.uProjectionLoc = gl.getUniformLocation(this.program, "u_projection")!;
+    this.uTextureLoc = gl.getUniformLocation(this.program, "u_texture")!;
 
+    // Setup persistent GL state
+    gl.useProgram(this.program);
+    gl.uniform1i(this.uTextureLoc, 0); // sampler2D at texture unit 0
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+    // Create VAO, texture, and instance buffer
     this.vao = this.initVAO();
     this.texture = this.setupTexture();
     this.instanceBuffer = this.createInstanceBuffer();
 
+    // Compute and upload initial projection matrix
     this.projectionMatrix = this.createOrtho(canvas.width, canvas.height);
+    gl.uniformMatrix4fv(this.uProjectionLoc, false, this.projectionMatrix);
+
+    // Bind VAO and texture once
+    gl.bindVertexArray(this.vao);
+    gl.bindTexture(gl.TEXTURE_2D, this.texture);
+
+    // Handle canvas resizing
+    window.addEventListener("resize", () => {
+      this.resize(canvas.width, canvas.height);
+    });
+  }
+
+  private resize(width: number, height: number) {
+    const gl = this.gl;
+    this.projectionMatrix = this.createOrtho(width, height);
+    gl.viewport(0, 0, width, height);
+    gl.uniformMatrix4fv(this.uProjectionLoc, false, this.projectionMatrix);
   }
 
   private createProgram(): WebGLProgram {
@@ -38,9 +63,10 @@ export class RendererGL {
       layout(location = 0) in vec2 a_position;
       layout(location = 1) in vec2 a_texcoord;
       layout(location = 2) in vec2 a_offset;
-      layout(location = 3) in vec4 a_rotScale;   // x=rot, y=scaleX*w, z=scaleY*h
+      layout(location = 3) in vec4 a_rotScale;
       layout(location = 4) in vec4 a_texRegion;
-      layout(location = 5) in vec2 a_pivot;      // normalized [0..1]
+      layout(location = 5) in vec2 a_pivot;
+      layout(location = 6) in vec2 a_offset2;
 
       uniform mat4 u_projection;
       out vec2 v_texcoord;
@@ -50,20 +76,17 @@ export class RendererGL {
         float c = cos(r), s = sin(r);
         mat2 rot = mat2(c, -s, s, c);
 
-        // world‐space size of this quad:
-        vec2 size = vec2(a_rotScale.y, a_rotScale.z);
-
-        // pivot in world pixels:
+        vec2 size  = vec2(a_rotScale.y, a_rotScale.z);
         vec2 pivot = a_pivot * size;
 
-        // move quad so pivot is at origin, rotate, then move back + offset
         vec2 localPos = a_position * size - pivot;
         vec2 rotated  = rot * localPos;
-        vec2 pos      = rotated + a_offset + pivot;
+        vec2 pos      = rotated + a_offset + a_offset2 + pivot;
 
         gl_Position = u_projection * vec4(pos, 0.0, 1.0);
         v_texcoord  = a_texcoord * a_texRegion.zw + a_texRegion.xy;
       }`;
+
     const fsSource = `#version 300 es
       precision mediump float;
       in vec2 v_texcoord;
@@ -98,9 +121,8 @@ export class RendererGL {
     const vao = gl.createVertexArray()!;
     gl.bindVertexArray(vao);
 
-    // 1) Create and fill the vertex buffer
+    // Vertex quad: x,y,u,v
     const vertices = new Float32Array([
-      // x,  y,  u,  v
       0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1,
     ]);
     const vbo = gl.createBuffer()!;
@@ -108,10 +130,10 @@ export class RendererGL {
     gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
     const stride = 4 * Float32Array.BYTES_PER_ELEMENT;
-    // position @ location 0
+    // a_position @ 0
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, stride, 0);
-    // texcoord @ location 1
+    // a_texcoord @ 1
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(
       1,
@@ -122,16 +144,13 @@ export class RendererGL {
       2 * Float32Array.BYTES_PER_ELEMENT
     );
 
-    // 2) Create and fill the index buffer *while the VAO is still bound*
+    // Index buffer
     const indices = new Uint16Array([0, 1, 2, 0, 2, 3]);
     const ibo = gl.createBuffer()!;
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
-    // 3) Unbind VAO, but *do not* unbind ELEMENT_ARRAY_BUFFER here.
     gl.bindVertexArray(null);
-
-    // You can unbind the ARRAY_BUFFER if you like:
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
     return vao;
@@ -141,7 +160,7 @@ export class RendererGL {
     const gl = this.gl;
     const tex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // flip Y to match CSS pixels
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // align image origin with UVs
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
@@ -163,35 +182,38 @@ export class RendererGL {
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, buf);
 
-    const stride = (2 + 4 + 4 + 2) * Float32Array.BYTES_PER_ELEMENT;
-    //            offset + rotScale + texRegion + pivot
-
+    const stride = FLOATS_PER_INSTANCE * Float32Array.BYTES_PER_ELEMENT;
     gl.bufferData(gl.ARRAY_BUFFER, MAX_INSTANCES * stride, gl.DYNAMIC_DRAW);
 
     let offset = 0;
-    // a_offset @ loc 2
+    // a_offset @ 2
     gl.enableVertexAttribArray(2);
     gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(2, 1);
     offset += 2 * Float32Array.BYTES_PER_ELEMENT;
 
-    // a_rotScale @ loc 3
+    // a_rotScale @ 3
     gl.enableVertexAttribArray(3);
     gl.vertexAttribPointer(3, 4, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(3, 1);
     offset += 4 * Float32Array.BYTES_PER_ELEMENT;
 
-    // a_texRegion @ loc 4
+    // a_texRegion @ 4
     gl.enableVertexAttribArray(4);
     gl.vertexAttribPointer(4, 4, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(4, 1);
     offset += 4 * Float32Array.BYTES_PER_ELEMENT;
 
-    // a_pivot @ loc 5   ← new
+    // a_pivot @ 5
     gl.enableVertexAttribArray(5);
     gl.vertexAttribPointer(5, 2, gl.FLOAT, false, stride, offset);
     gl.vertexAttribDivisor(5, 1);
     offset += 2 * Float32Array.BYTES_PER_ELEMENT;
+
+    // a_offset2 @ 6
+    gl.enableVertexAttribArray(6);
+    gl.vertexAttribPointer(6, 2, gl.FLOAT, false, stride, offset);
+    gl.vertexAttribDivisor(6, 1);
 
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -222,24 +244,17 @@ export class RendererGL {
   public render(instanceData: { data: Float32Array; count: number }): void {
     const gl = this.gl;
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-    gl.clearColor(0, 0, 0, 0); // Set clear color to transparent
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // Enable blending for transparency
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-    const { data, count } = instanceData;
-
     gl.bindBuffer(gl.ARRAY_BUFFER, this.instanceBuffer);
-    // Partial update of instance data
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, data);
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, instanceData.data);
 
-    gl.useProgram(this.program);
-    gl.bindVertexArray(this.vao);
-    gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    gl.uniformMatrix4fv(this.uProjectionLoc, false, this.projectionMatrix);
-    gl.drawElementsInstanced(gl.TRIANGLES, 6, gl.UNSIGNED_SHORT, 0, count);
-    gl.bindVertexArray(null);
+    gl.drawElementsInstanced(
+      gl.TRIANGLES,
+      6,
+      gl.UNSIGNED_SHORT,
+      0,
+      instanceData.count
+    );
   }
 }

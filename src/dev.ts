@@ -14,8 +14,10 @@ interface SpriteInstance {
   frameY: number;
   frameWidth: number;
   frameHeight: number;
-  pivotX: number; // new: in pixels, relative to top‑left of the frame
-  pivotY: number; // new: in pixels
+  pivotX: number; // in pixels
+  pivotY: number; // in pixels
+  offsetX: number;
+  offsetY: number;
 }
 
 function dataPrep(
@@ -24,20 +26,20 @@ function dataPrep(
   imageHeight: number
 ): { data: Float32Array; count: number } {
   const count = instances.length;
-  const FLOATS_PER_SPRITE = 12; // was 10 → now +2 for pivot
+  const FLOATS_PER_SPRITE = 14;
   const data = new Float32Array(count * FLOATS_PER_SPRITE);
 
   for (let i = 0; i < count; i++) {
     const s = instances[i];
     const base = i * FLOATS_PER_SPRITE;
 
-    // UV calculation
+    // UVs
     const u = s.frameX / imageWidth;
     const v = s.frameY / imageHeight;
     const uw = s.frameWidth / imageWidth;
     const vh = s.frameHeight / imageHeight;
 
-    // normalized pivot in [0..1]
+    // normalized pivot
     const pivotNormX = s.pivotX / s.frameWidth;
     const pivotNormY = s.pivotY / s.frameHeight;
 
@@ -46,28 +48,30 @@ function dataPrep(
     data[base + 2] = s.rotation;
     data[base + 3] = s.scaleX * s.frameWidth;
     data[base + 4] = s.scaleY * s.frameHeight;
-    data[base + 5] = 0; // padding (still unused)
+    data[base + 5] = 0;
     data[base + 6] = u;
     data[base + 7] = v;
     data[base + 8] = uw;
     data[base + 9] = vh;
-    data[base + 10] = pivotNormX; // ← new
-    data[base + 11] = pivotNormY; // ← new
+    data[base + 10] = pivotNormX;
+    data[base + 11] = pivotNormY;
+    data[base + 12] = s.offsetX;
+    data[base + 13] = s.offsetY;
   }
 
   return { data, count };
 }
 
-function degreesToRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
+function degreesToRadians(deg: number): number {
+  return (deg * Math.PI) / 180;
 }
 
-// lets create a dataset of 10000 instances of 32x32 sprites
+// prepare one sprite instance for testing
 const instances: SpriteInstance[] = [];
-for (let i = 0; i < 1; i++) {
+for (let i = 0; i < 10; i++) {
   instances.push({
-    x: 100,
-    y: 100,
+    x: Math.random() * 800 - 32,
+    y: Math.random() * 600 - 32,
     rotation: degreesToRadians(0),
     scaleX: 1,
     scaleY: 1,
@@ -75,24 +79,26 @@ for (let i = 0; i < 1; i++) {
     frameY: 0,
     frameWidth: 32,
     frameHeight: 32,
-    pivotX: 16, // center of the sprite
-    pivotY: 16, // center of the sprite
+    pivotX: 16,
+    pivotY: 16,
+    offsetX: 0,
+    offsetY: 0,
   });
 }
 
-// preload the image
 const charactersImage = Assets.image(CharactersImageURL);
 
 export default () => {
-  // Usage example
+  const SPEED = 100; // pixels per second
+  const FLOATS_PER_SPRITE = 14;
+
   Assets.onReady(() => {
     const display = new Display({
       parentID: "#app",
-      width: 800,
-      height: 600,
+      width: 834,
+      height: 640,
     });
 
-    // ctrate the instanceData here
     const { data, count } = dataPrep(
       instances,
       charactersImage.width,
@@ -102,14 +108,19 @@ export default () => {
     const renderer = new RendererGL(display.view, charactersImage);
 
     const engine = new Engine(
-      () => {},
-      () => {
-        let start = performance.now();
+      (dt) => {
+        // move sprites by SPEED * deltaSeconds, ensuring smooth motion
+        // for (let i = 0; i < count; i++) {
+        //   const base = i * FLOATS_PER_SPRITE;
+        //   data[base + 0] += SPEED * dt;
+        // }
+      },
+      (_alpha) => {
+        // alpha unused with variable timestep
         renderer.render({ data, count });
-        let end = performance.now();
-        console.log("Render time: ", end - start, "ms");
       }
     );
+
     engine.start();
   });
 };
