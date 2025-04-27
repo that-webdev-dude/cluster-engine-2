@@ -58,6 +58,10 @@ module.exports = {
         test: /\.(woff|woff2|eot|ttf|otf)$/i,
         type: "asset/resource",
       },
+      {
+        test: /\.(glsl|vert|frag)$/,
+        type: "asset/source",
+      },
     ],
   },
 };

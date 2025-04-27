@@ -1,138 +1,78 @@
-import { EntityManager } from "./EntityManager";
-import { ComponentManager } from "./ComponentManager";
-import { SystemManager } from "./SystemManager";
-import { Entity } from "./Entity";
-import { Component, ComponentType, getMask } from "./Component";
-import { System } from "./System";
+// src/ecs/World.ts
+
+// A numeric ID for each entity
+export type Entity = number;
+
+// Component constructor type for registering and querying stores
+export type ComponentConstructor<T> = new (...args: any[]) => T;
 
 export class World {
-  readonly entities: EntityManager;
-  readonly components: ComponentManager;
-  readonly systems: SystemManager;
+  private nextEntity: Entity = 0;
+  private freeEntities: Entity[] = [];
+  private componentStores: Map<Function, Map<Entity, any>> = new Map();
 
-  constructor() {
-    this.entities = new EntityManager();
-    this.components = new ComponentManager(this.entities);
-    this.systems = new SystemManager();
-  }
-
-  // entity methods
+  /** Create a new entity or recycle a freed one */
   createEntity(): Entity {
-    return this.entities.create();
+    const entity =
+      this.freeEntities.length > 0
+        ? this.freeEntities.pop()! // reuse
+        : this.nextEntity++;
+    return entity;
   }
 
+  /** Destroy an entity and remove all its components */
   destroyEntity(entity: Entity): void {
-    // Optionally remove components here
-    this.entities.destroy(entity);
+    // mark ID for reuse
+    this.freeEntities.push(entity);
+    // remove any stored components
+    for (const store of this.componentStores.values()) {
+      store.delete(entity);
+    }
   }
 
-  getEntites(types: ComponentType[]): Entity[] {
-    return this.entities.query(getMask(types));
+  /** Attach a component instance to an entity */
+  addComponent<T>(entity: Entity, component: T): void {
+    const ctor = (component as any).constructor;
+    let store = this.componentStores.get(ctor) as Map<Entity, T>;
+    if (!store) {
+      store = new Map<Entity, T>();
+      this.componentStores.set(ctor, store);
+    }
+    store.set(entity, component);
   }
 
-  // component methods
-  registerComponent(type: ComponentType): void {
-    this.components.registerComponent(type);
+  /** Remove a component of the given type from an entity */
+  removeComponent<T>(entity: Entity, ctor: ComponentConstructor<T>): void {
+    this.componentStores.get(ctor)?.delete(entity);
   }
 
-  addComponent(
+  /** Get a component of the given type for an entity */
+  getComponent<T>(
     entity: Entity,
-    type: ComponentType,
-    component: Component
-  ): void {
-    this.components.addComponent(entity, type, component);
-  }
-
-  removeComponent(entity: Entity, type: ComponentType): void {
-    this.components.removeComponent(entity, type);
-  }
-
-  getComponent<T extends Component>(
-    entity: Entity,
-    type: ComponentType
+    ctor: ComponentConstructor<T>
   ): T | undefined {
-    return this.components.getComponent(entity, type);
+    return this.componentStores.get(ctor)?.get(entity);
   }
 
-  // system methods
-  addSystem(system: System): void {
-    this.systems.addSystem(system, this);
-  }
-
-  update(delta: number): void {
-    this.systems.updateSystems(delta);
-    this.entities.lazyCleanup(); // Cleanup recycled entities
+  /**
+   * Query all entities that have all of the specified component types
+   * Returns an array of matching Entity IDs
+   */
+  query(...ctors: ComponentConstructor<any>[]): Entity[] {
+    if (ctors.length === 0) {
+      return [];
+    }
+    const stores = ctors.map(
+      (ctor) => this.componentStores.get(ctor) ?? new Map()
+    );
+    // Start with the smallest set for efficiency
+    const smallest = stores.reduce((a, b) => (a.size < b.size ? a : b));
+    const result: Entity[] = [];
+    for (const e of smallest.keys()) {
+      if (stores.every((s) => s.has(e))) {
+        result.push(e);
+      }
+    }
+    return result;
   }
 }
-
-// export class World {
-//   readonly entities: EntityManager;
-//   readonly components: ComponentManager;
-//   readonly systems: SystemManager;
-
-//   constructor() {
-//     this.entities = new EntityManager();
-//     this.components = new ComponentManager(this.entities);
-//     this.systems = new SystemManager();
-//   }
-
-//   // entity methods
-//   createEntity(): Entity {
-//     return this.entities.create();
-//   }
-
-//   destroyEntity(entity: Entity): void {
-//     // Optionally remove components here
-//     this.entities.destroy(entity);
-//   }
-
-//   getEntites(types: ComponentType[]): Entity[] {
-//     return this.entities.query(getMask(types));
-//   }
-
-//   // component methods
-//   registerComponent(type: ComponentType): void {
-//     this.components.registerComponent(type);
-//     // this.components.registerComponent(type, schema);
-//   }
-
-//   addComponent(
-//     entity: Entity,
-//     type: ComponentType,
-//     component: Component
-//   ): void {
-//     // this.components.addComponent(entity, type, component);
-//     this.components.addComponent(type, entity, component);
-//   }
-
-//   removeComponent(entity: Entity, type: ComponentType): void {
-//     // this.components.removeComponent(entity, type);
-//     this.components.removeComponent(type, entity);
-//   }
-
-//   getComponent<T extends Component>(
-//     entity: Entity,
-//     type: ComponentType
-//   ): T | undefined {
-//     return this.components.getComponent(entity, type);
-//   }
-
-//   // system methods
-//   addSystem(system: System): void {
-//     this.systems.addSystem(system, this);
-//   }
-
-//   update(delta: number): void {
-//     this.systems.updateSystems(delta);
-//     this.entities.cleanup(); // Cleanup recycled entities
-//   }
-
-//   // getView(
-//   //   componentTypes: ComponentType[],
-//   //   entities: Entity[]
-//   // ): {
-//   //   [componentId: number]: { [field: string]: Float32Array | any[] };
-//   // } {
-//   //   return this.components.getView(componentTypes, entities);
-//   // }
-// }

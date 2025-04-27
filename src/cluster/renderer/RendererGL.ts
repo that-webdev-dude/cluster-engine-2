@@ -128,6 +128,7 @@ export class RendererGL {
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
       throw new Error(gl.getProgramInfoLog(program)!);
     }
+
     return program;
   }
 

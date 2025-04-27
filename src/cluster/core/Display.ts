@@ -1,3 +1,5 @@
+import * as Utils from "../utils";
+
 /**
  * constant definition for the fullscreen shortcut key.
  */
@@ -9,140 +11,161 @@ const FULLSCREEN_SHORTCUT = "KeyF";
  * Responsible for creating and managing a canvas element for rendering graphics.
  */
 export class Display {
-  // Singleton instance for global access.
   private static _instance: Display | null = null;
-
-  // Holds the CSS selector of the parent element to attach the canvas.
-  private _parentID: string = "body";
-
-  // The canvas element that will be used for drawing.
+  private _parentID: string;
   private _canvas: HTMLCanvasElement = document.createElement("canvas");
 
-  // the canvas width
-  private _width: number = 800;
+  // initial CSS dimensions
+  private _initialCssWidth: number;
+  private _initialCssHeight: number;
 
-  // the canvas height
-  private _height: number = 600;
+  // device pixel ratio
+  private _dpr: number = window.devicePixelRatio || 1;
 
-  // Holds the event listener reference used for toggling fullscreen.
+  // aspect ratio (width / height)
+  private _aspectRatio: number;
+
+  // current CSS and buffer sizes
+  private _cssWidth: number;
+  private _cssHeight: number;
+  private _bufWidth: number;
+  private _bufHeight: number;
+
+  // event handlers
   private _fullscreenHandler: (event: KeyboardEvent) => void = () => {};
+  private _resizeHandler: () => void = () => {};
 
-  /**
-   * Creates a new Display instance. Attaches a canvas element to the given parent element
-   * (or defaults to document.body) and initializes the rendering context.
-   *
-   * @param {Object} options Configuration options.
-   * @param {string} [options.parentID="body"] CSS selector for the parent element.
-   * @param {number} [options.height=600] Height of the canvas element.
-   * @param {number} [options.width=800] Width of the canvas element.
-   * @param {("2d" | "webgl")} [options.type="2d"] The type of rendering context: "2d" for CanvasRenderingContext2D or "webgl" for WebGL.
-   */
-  public constructor({
+  // callback on resize
+  public resizeCb: ((width: number, height: number) => void) | null = null;
+
+  constructor({
     parentID = "body",
-    height = 600,
     width = 800,
+    height = 600,
   }: {
     parentID?: string;
-    height?: number;
     width?: number;
+    height?: number;
   }) {
-    // Try to locate the parent element using the provided selector.
-    if (parentID) {
-      let appElement = document.querySelector(parentID) as HTMLElement;
-      this._parentID = parentID;
-      if (!appElement) {
-        console.warn(
-          `[Display]: Parent element with ID ${parentID} not found. Defaulting to body.`
-        );
-        appElement = document.body;
-        this._parentID = "body";
-      }
+    this._parentID = parentID;
+    this._initialCssWidth = width;
+    this._initialCssHeight = height;
+    this._aspectRatio = width / height;
 
-      // Set canvas dimensions.
-      this._canvas.width = width;
-      this._canvas.height = height;
+    // start CSS and buffer sizes equal to initial
+    this._cssWidth = width;
+    this._cssHeight = height;
+    this._bufWidth = Math.floor(width * this._dpr);
+    this._bufHeight = Math.floor(height * this._dpr);
 
-      // Cache the canvas dimensions.
-      this._width = width;
-      this._height = height;
-
-      // Append the canvas element to the parent.
-      appElement.appendChild(this._canvas);
+    // insert canvas into DOM
+    let appElement = document.querySelector(this._parentID) as HTMLElement;
+    if (!appElement) {
+      console.warn(
+        `[Display]: Parent element with ID ${this._parentID} not found. Defaulting to body.`
+      );
+      appElement = document.body;
+      this._parentID = "body";
     }
 
-    // Initialize additional settings and event listeners.
-    this._initialize();
+    // set initial buffer size
+    this._canvas.width = this._bufWidth;
+    this._canvas.height = this._bufHeight;
 
-    // Set the singleton instance.
+    // set initial CSS size
+    this._canvas.style.display = "block";
+    this._canvas.style.width = `${width}px`;
+    this._canvas.style.height = `${height}px`;
+
+    appElement.appendChild(this._canvas);
+
+    this._initialize();
     Display._instance = this;
   }
 
   /**
-   * Returns the canvas element.
+   * Accessors for CSS and buffer dimensions
    */
   get view(): HTMLCanvasElement {
     return this._canvas;
   }
-
-  /**
-   * Returns the height of the canvas.
-   */
-  get height(): number {
-    return this._height;
-  }
-
-  /**
-   * Returns the width of the canvas.
-   */
   get width(): number {
-    return this._width;
+    return this._bufWidth;
+  }
+  get height(): number {
+    return this._bufHeight;
+  }
+  get cssWidth(): number {
+    return this._cssWidth;
+  }
+  get cssHeight(): number {
+    return this._cssHeight;
+  }
+  get aspectRatio(): number {
+    return this._aspectRatio;
+  }
+  get dpr(): number {
+    return this._dpr;
   }
 
-  /**
-   * Performs initialization steps:
-   * - Binds and registers the fullscreen toggle event handler.
-   */
   private _initialize() {
-    // Bind and store the fullscreen handler.
+    // fullscreen key handler
     this._fullscreenHandler = this._handleFullscreen.bind(this);
-    // Register the keypress event to listen for the fullscreen toggle key.
     document.addEventListener("keypress", this._fullscreenHandler);
+
+    // resize handler (debounced)
+    this._resizeHandler = Utils.debounce(this._handleResize.bind(this), 100);
+    window.addEventListener("resize", this._resizeHandler);
+
+    // initial sizing
+    this._handleResize();
   }
 
-  /**
-   * Handles the keypress event and toggles fullscreen if the correct key is pressed.
-   *
-   * @param {KeyboardEvent} event The keypress event.
-   */
   private _handleFullscreen(event: KeyboardEvent) {
-    // Check if the pressed key matches the fullscreen shortcut.
     if (event.code === FULLSCREEN_SHORTCUT) {
       this._toggleFullScreen();
     }
   }
 
-  /**
-   * Toggles the fullscreen mode of the canvas.
-   * Enters fullscreen if not already active, or exits fullscreen if currently active.
-   */
+  private _handleResize() {
+    // measure container and clamp to initial size
+    const container = this.view.parentElement!.getBoundingClientRect();
+    let w = Math.min(container.width, this._initialCssWidth);
+    let h = w / this._aspectRatio;
+    if (h > Math.min(container.height, this._initialCssHeight)) {
+      h = Math.min(container.height, this._initialCssHeight);
+      w = h * this._aspectRatio;
+    }
+
+    // update CSS size
+    this._cssWidth = w;
+    this._cssHeight = h;
+    this._canvas.style.width = `${w}px`;
+    this._canvas.style.height = `${h}px`;
+
+    // update buffer size
+    const pw = Math.floor(w * this._dpr);
+    const ph = Math.floor(h * this._dpr);
+    this._canvas.width = pw;
+    this._canvas.height = ph;
+    this._bufWidth = pw;
+    this._bufHeight = ph;
+
+    // notify renderer
+    this.resizeCb?.(pw, ph);
+  }
+
   private _toggleFullScreen() {
     if (!document.fullscreenElement) {
       this._canvas.requestFullscreen();
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
+      document.exitFullscreen?.();
     }
   }
 
-  /**
-   * Cleans up resources by:
-   * - Removing the keypress event listener.
-   * - Detaching the canvas from the DOM.
-   * - Nulling the context and canvas to assist with garbage collection.
-   */
   public destroy() {
     document.removeEventListener("keypress", this._fullscreenHandler);
+    window.removeEventListener("resize", this._resizeHandler);
     const parent = document.querySelector(this._parentID);
     if (parent && this._canvas) {
       parent.removeChild(this._canvas);
@@ -151,13 +174,9 @@ export class Display {
         `[Display]: Parent element with ID ${this._parentID} not found. Cannot remove canvas.`
       );
     }
-    this._canvas = null as unknown as HTMLCanvasElement;
+    (this._canvas as unknown) = null;
   }
 
-  /**
-   * Returns the singleton instance of the Display.
-   * If it doesn't exist, a new instance is created with default options.
-   */
   public static getInstance(): Display {
     if (!Display._instance) {
       Display._instance = new Display({});
