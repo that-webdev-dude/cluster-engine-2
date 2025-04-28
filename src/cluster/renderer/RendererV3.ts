@@ -17,8 +17,11 @@ export class RendererV3 {
   private _depthEnabled = false;
   private _stencilEnabled = false;
 
+  // resize callbacks
+  private _resizeCallbacks: ((w: number, h: number) => void)[] = [];
+
   constructor(
-    private gl: WebGL2RenderingContext,
+    public gl: WebGL2RenderingContext,
     public background: RGBA = [0, 0, 0, 1]
   ) {
     this._bufWidth = gl.canvas.width;
@@ -55,7 +58,7 @@ export class RendererV3 {
     this.clear();
   }
 
-  private clear() {
+  public clear() {
     const [r, g, b, a] = this.background;
     this.gl.clearColor(r, g, b, a);
 
@@ -68,7 +71,21 @@ export class RendererV3 {
   public resize(w: number, h: number) {
     this._bufWidth = w;
     this._bufHeight = h;
+    this._aspectRatio = w / h;
     this.gl.viewport(0, 0, w, h);
+    // notify resize callbacks
+    this._resizeCallbacks.forEach((cb) => cb(w, h));
+  }
+
+  public onResize(cb: (w: number, h: number) => void) {
+    this._resizeCallbacks.push(cb);
+  }
+
+  public offResize(cb: (w: number, h: number) => void) {
+    const idx = this._resizeCallbacks.indexOf(cb);
+    if (idx >= 0) {
+      this._resizeCallbacks.splice(idx, 1);
+    }
   }
 
   public destroy() {
