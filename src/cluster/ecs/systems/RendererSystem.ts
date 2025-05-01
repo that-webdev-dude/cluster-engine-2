@@ -1,11 +1,16 @@
 // src/renderer/RenderSystem.ts
 
 import { World } from "../../ecs/World";
-import { TransformComponent, ColorComponent } from "../../ecs/components";
+import {
+  TransformComponent,
+  ColorComponent,
+  VisibleComponent,
+} from "../../ecs/components";
 import { RendererV3 } from "../../renderer/RendererV3";
 import { Pipeline } from "../../renderer/pipelines/Pipeline";
 import { InstancedQuadPSO } from "../../renderer/pipelines/Pipeline";
 import { PipelineManager } from "../../renderer/pipelines/PipelineManager";
+import { CameraComponent } from "../../ecs/components";
 
 export class RenderSystem {
   private pm: PipelineManager = new PipelineManager();
@@ -34,8 +39,19 @@ export class RenderSystem {
 
   /** Call this each frame to render all entities with Transform+Color */
   public update(): void {
-    const ents = this.world.query(TransformComponent, ColorComponent);
+    const ents = this.world.query(
+      TransformComponent,
+      VisibleComponent,
+      ColorComponent
+    );
     const count = ents.length;
+    if (count === 0) {
+      this.renderer.clear();
+      return; // nothing to draw
+    }
+
+    console.log("RenderSystem: drawing", count, "entities");
+
     const needed = count * this.quadPSO.floatsPerInstance;
 
     // 1) resize + pack CPU buffer
@@ -61,7 +77,7 @@ export class RenderSystem {
     // 3) clear + draw
     this.renderer.clear();
     // use pm.bind instead of direct pso.bind
-    this.pm.bind(this.gl, this.quadPSO);
+    this.quadPSO.bind(this.gl);
     this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, count);
     // no explicit unbind needed here if you’re going to draw
     // other PSOs later; at the very end of the frame you could:

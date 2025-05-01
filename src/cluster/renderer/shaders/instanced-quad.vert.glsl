@@ -6,6 +6,7 @@ layout (location = 3) in float a_rotation;
 layout (location = 4) in vec4 a_color;
 
 uniform vec2 u_resolution;
+
 out vec4 v_color;
 
 mat3 translation(vec2 t) {
@@ -22,6 +23,7 @@ mat3 scale(vec2 s) {
 void main() {
       // apply instance transforms to unit quad (0,0 -> 1,1)
     vec3 pos = translation(a_position) * rotation(a_rotation) * scale(a_scale) * vec3(a_quadPos, 1);
+
       // convert to clip space
     vec2 clip = ((pos.xy / u_resolution) * 2.0f - 1.0f) * vec2(1, -1);
     gl_Position = vec4(clip, 0, 1);
