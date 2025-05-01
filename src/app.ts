@@ -2,7 +2,7 @@
 
 import { Display } from "./cluster/core/Display";
 import { World } from "./cluster/ecs/World";
-import { Engine } from "./cluster/ecs/Engine";
+import { Engine } from "./cluster/core/Engine";
 import { TransformComponent, ColorComponent } from "./cluster/ecs/components";
 import { RendererV3 } from "./cluster/renderer/RendererV3";
 import { RenderSystem } from "./cluster/ecs/systems/RendererSystem";
@@ -10,6 +10,7 @@ import { InputSystem } from "./cluster/ecs/systems/InputSystem";
 import { MovementSystem } from "./cluster/ecs/systems/MovementSystem";
 import { CullingSystem } from "./cluster/ecs/systems/CullingSystem";
 import { CameraSystem } from "./cluster/ecs/systems/CameraSystem";
+import { InterpolationSystem } from "./cluster/ecs/systems/InterpolationSystem";
 
 export default () => {
   const display = new Display({
@@ -56,13 +57,32 @@ export default () => {
     world.addComponent(e, new ColorComponent(color));
   }
 
+  const inputSystem = new InputSystem(world);
+  const movementSystem = new MovementSystem(world);
+  const cameraSystem = new CameraSystem(world);
+  const cullingSystem = new CullingSystem(world);
+  const interpolationSystem = new InterpolationSystem(world);
+  const renderSystem = new RenderSystem(world, renderer);
+
+  cameraSystem.init();
+
   const engine = new Engine();
-  engine.addSystem(new InputSystem(world));
-  engine.addSystem(new MovementSystem(world));
-  engine.addSystem(new CameraSystem(world));
-  engine.addSystem(new CullingSystem(world));
-  engine.addSystem(new RenderSystem(world, renderer));
+  engine.addUpdateable(inputSystem);
+  engine.addUpdateable(movementSystem);
+  engine.addUpdateable(cameraSystem);
+  engine.addUpdateable(cullingSystem);
+  engine.addUpdateable(interpolationSystem);
+  engine.addRenderable(renderSystem);
+
   engine.start();
+
+  // const engine = new Engine();
+  // engine.addSystem(new InputSystem(world));
+  // engine.addSystem(new MovementSystem(world));
+  // engine.addSystem(new CameraSystem(world));
+  // engine.addSystem(new CullingSystem(world));
+  // engine.addSystem(new RenderSystem(world, renderer));
+  // engine.start();
 };
 
 // We’ve now got “brute-force” per-entity frustum culling in place, and it’ll work fine up to a few tens of thousands of quads. If you start pushing past ~50 k entities, you’ll see the cost of scanning every Transform each frame creep up.

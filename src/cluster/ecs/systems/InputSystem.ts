@@ -7,7 +7,7 @@ import { Mouse } from "../../core/Input";
 export class InputSystem implements System {
   constructor(private world: World) {}
 
-  update() {
+  update(delta: number) {
     Keyboard.update();
     Mouse.update();
   }

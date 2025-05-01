@@ -7,11 +7,30 @@
  * rotation: in radians
  */
 export class TransformComponent {
+  // current
+  public position: [number, number];
+  public scale: [number, number];
+  public rotation: number;
+
+  // previous
+  public prevPosition: [number, number];
+  public prevScale: [number, number];
+  public prevRotation: number;
+
   constructor(
-    public position: [number, number] = [0, 0],
-    public scale: [number, number] = [1, 1],
-    public rotation: number = 0
-  ) {}
+    position: [number, number] = [0, 0],
+    scale: [number, number] = [1, 1],
+    rotation: number = 0
+  ) {
+    this.position = [...position];
+    this.scale = [...scale];
+    this.rotation = rotation;
+
+    // start prev = curr
+    this.prevPosition = [...position];
+    this.prevScale = [...scale];
+    this.prevRotation = rotation;
+  }
 }
 
 /**

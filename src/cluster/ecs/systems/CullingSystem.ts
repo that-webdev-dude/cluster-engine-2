@@ -12,7 +12,7 @@ import {
 export class CullingSystem implements System {
   constructor(private world: World) {}
 
-  update() {
+  update(delta: number) {
     const cameraId = this.world.query(CameraComponent)[0]!;
     const camera = this.world.getComponent(cameraId, CameraComponent)!;
 

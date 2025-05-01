@@ -4,7 +4,7 @@ export class Game {
   private engine: Engine;
 
   constructor() {
-    this.engine = new Engine(this.update, this.render);
+    this.engine = new Engine();
   }
 
   private update = (delta: number): void => {

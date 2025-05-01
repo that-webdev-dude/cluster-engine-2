@@ -50,8 +50,6 @@ export class RenderSystem {
       return; // nothing to draw
     }
 
-    console.log("RenderSystem: drawing", count, "entities");
-
     const needed = count * this.quadPSO.floatsPerInstance;
 
     // 1) resize + pack CPU buffer
@@ -82,6 +80,57 @@ export class RenderSystem {
     // no explicit unbind needed here if you’re going to draw
     // other PSOs later; at the very end of the frame you could:
     // ...
+    this.pm.unbind(this.gl);
+  }
+
+  public render(alpha: number): void {
+    const ents = this.world.query(
+      TransformComponent,
+      VisibleComponent,
+      ColorComponent
+    );
+    const count = ents.length;
+    if (count === 0) {
+      this.renderer.clear();
+      return;
+    }
+
+    const floats = this.quadPSO.floatsPerInstance;
+    const needed = count * floats;
+    if (needed > this.capacityFloats) {
+      this.capacityFloats = needed;
+      this.instanceData = new Float32Array(needed);
+    }
+
+    // one pass: interpolate and pack
+    ents.forEach((e, i) => {
+      const t = this.world.getComponent(e, TransformComponent)!;
+      const c = this.world.getComponent(e, ColorComponent)!;
+      const b = i * floats;
+
+      // lerp helper
+      const mix = (a: number, b: number) => a + (b - a) * alpha;
+
+      // position
+      this.instanceData[b + 0] = mix(t.prevPosition[0], t.position[0]);
+      this.instanceData[b + 1] = mix(t.prevPosition[1], t.position[1]);
+
+      // scale
+      this.instanceData[b + 2] = mix(t.prevScale[0], t.scale[0]);
+      this.instanceData[b + 3] = mix(t.prevScale[1], t.scale[1]);
+
+      // rotation
+      this.instanceData[b + 4] = mix(t.prevRotation, t.rotation);
+
+      // color (no interp)
+      this.instanceData.set(c.color, b + 5);
+    });
+
+    // upload & draw as before
+    this.quadPSO.updateInstances!(this.gl, this.instanceData, count);
+    this.renderer.clear();
+    this.pm.bind(this.gl, this.quadPSO);
+    this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, count);
     this.pm.unbind(this.gl);
   }
 }

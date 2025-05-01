@@ -4,16 +4,18 @@
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 /**
- * Function type for updating the engine state.
- * @param delta - The time delta in seconds.
+ * IUpdateable interface defines an object that can be updated.
  */
-type UpdateFn = (delta: number) => void;
+interface IUpdateable {
+  update: (delta: number) => void;
+}
 
 /**
- * Function type for rendering.
- * @param alpha - The interpolation factor between updates.
+ * IRenderable interface defines an object that can be rendered.
  */
-type RenderFn = (alpha: number) => void;
+interface IRenderable {
+  render: (alpha: number) => void;
+}
 
 /**
  * Engine class implements a fixed timestep loop for updating and rendering.
@@ -28,8 +30,9 @@ export class Engine {
   private running: boolean = false;
   private rafId: number | null = null;
 
-  private update: UpdateFn;
-  private render: RenderFn;
+  // updateables and renderables arrays
+  private updateables: IUpdateable[] = [];
+  private renderables: IRenderable[] = [];
 
   // Debug utilities
   private frameCount: number = 0;
@@ -45,11 +48,30 @@ export class Engine {
    * @param render - Function to render the current state.
    * @param updatesPerSecond - The update frequency in Hz (default is 60).
    */
-  constructor(update: UpdateFn, render: RenderFn, updatesPerSecond = 60) {
-    this.update = update;
-    this.render = render;
+  constructor(updatesPerSecond = 60) {
     this.timestep = 1 / updatesPerSecond;
   }
+
+  /**
+   * Adds an updateable object to the engine.
+
+   * @param updateable - An object that implements the IUpdateable interface.
+   */
+  public addUpdateable(updateable: IUpdateable): void {
+    this.updateables.push(updateable);
+  }
+
+  /**
+   * Adds a renderable object to the engine.
+   *
+   * @param renderable - An object that implements the IRenderable interface.
+   */
+  public addRenderable(renderable: IRenderable): void {
+    this.renderables.push(renderable);
+  }
+
+  // TODO:
+  // implement the removeUpdateable and removeRenderable methods if needed here
 
   /**
    * Starts the engine's main loop.
@@ -136,12 +158,16 @@ export class Engine {
     this.frameCount++;
 
     while (this.accumulator >= this.timestep) {
-      this.update(this.timestep);
+      // this.update(this.timestep);
+      this.updateables.forEach((updateable) =>
+        updateable.update(this.timestep)
+      );
       this.accumulator -= this.timestep;
     }
 
     const alpha = this.accumulator / this.timestep;
-    this.render(alpha);
+    // this.render(alpha);
+    this.renderables.forEach((renderable) => renderable.render(alpha));
 
     if (DEBUG) this.updateFPS();
   };
@@ -167,8 +193,8 @@ export class Engine {
    * It also clears the update and render functions to prevent memory leaks.
    */
   public destroy(): void {
-    this.update = () => {};
-    this.render = () => {};
+    this.updateables = [];
+    this.renderables = [];
     this.resetTimers();
   }
 }
