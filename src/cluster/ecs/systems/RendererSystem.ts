@@ -1,11 +1,11 @@
 // src/renderer/RenderSystem.ts
 
-import { World } from "../ecs/World";
-import { TransformComponent, ColorComponent } from "../ecs/components";
-import { RendererV3 } from "./RendererV3";
-import { Pipeline } from "./pipelines/Pipeline";
-import { InstancedQuadPSO } from "./pipelines/Pipeline";
-import { PipelineManager } from "./pipelines/PipelineManager";
+import { World } from "../../ecs/World";
+import { TransformComponent, ColorComponent } from "../../ecs/components";
+import { RendererV3 } from "../../renderer/RendererV3";
+import { Pipeline } from "../../renderer/pipelines/Pipeline";
+import { InstancedQuadPSO } from "../../renderer/pipelines/Pipeline";
+import { PipelineManager } from "../../renderer/pipelines/PipelineManager";
 
 export class RenderSystem {
   private pm: PipelineManager = new PipelineManager();

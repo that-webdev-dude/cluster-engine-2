@@ -5,7 +5,7 @@ import { World } from "./cluster/ecs/World";
 import { Engine } from "./cluster/ecs/Engine";
 import { TransformComponent, ColorComponent } from "./cluster/ecs/components";
 import { RendererV3 } from "./cluster/renderer/RendererV3";
-import { RenderSystem } from "./cluster/renderer/RendererSystem";
+import { RenderSystem } from "./cluster/ecs/systems/RendererSystem";
 import { MovementSystem } from "./cluster/ecs/systems/MovementSystem";
 
 export default () => {
