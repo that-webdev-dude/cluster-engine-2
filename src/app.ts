@@ -37,7 +37,7 @@ export default () => {
   // grab the canvas
   const canvas = display.view as HTMLCanvasElement;
   // Populate the world with 1000 random quads
-  const count = 1000;
+  const count = 500;
   for (let i = 0; i < count; i++) {
     const e = world.createEntity();
     const x = Math.random() * canvas.width;
@@ -75,14 +75,6 @@ export default () => {
   engine.addRenderable(renderSystem);
 
   engine.start();
-
-  // const engine = new Engine();
-  // engine.addSystem(new InputSystem(world));
-  // engine.addSystem(new MovementSystem(world));
-  // engine.addSystem(new CameraSystem(world));
-  // engine.addSystem(new CullingSystem(world));
-  // engine.addSystem(new RenderSystem(world, renderer));
-  // engine.start();
 };
 
 // We’ve now got “brute-force” per-entity frustum culling in place, and it’ll work fine up to a few tens of thousands of quads. If you start pushing past ~50 k entities, you’ll see the cost of scanning every Transform each frame creep up.

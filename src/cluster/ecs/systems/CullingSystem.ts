@@ -9,6 +9,14 @@ import {
 
 // TODO:
 // implement more advanced spatial partitioning (uniform grid or quadtree) in CullingSystem for even faster frustum tests.
+// We’ve now got “brute-force” per-entity frustum culling in place, and it’ll work fine up to a few tens of thousands of quads.
+// If you start pushing past ~50 k entities, you’ll see the cost of scanning every Transform each frame creep up.
+// So, on the culling front you have two options:
+// Leave it as is if your performance is already acceptable.
+// Add spatial partitioning—for example:
+// A simple uniform grid: bin each entity into a cell based on its position/scale, then only test the handful of cells overlapping the camera’s bounds.
+// Or a quadtree/BVH: dynamically insert/remove entities into tree nodes so your per-frame cull only visits O(log N) nodes, not all N entities.
+// Either of those would slot into your CullingSystem with minimal changes: you just replace the “for every entity” loop with “for every entity in the visible cells/nodes.”
 export class CullingSystem implements System {
   constructor(private world: World) {}
 

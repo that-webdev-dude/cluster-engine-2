@@ -10,7 +10,6 @@ import { RendererV3 } from "../../renderer/RendererV3";
 import { Pipeline } from "../../renderer/pipelines/Pipeline";
 import { InstancedQuadPSO } from "../../renderer/pipelines/Pipeline";
 import { PipelineManager } from "../../renderer/pipelines/PipelineManager";
-import { CameraComponent } from "../../ecs/components";
 
 export class RenderSystem {
   private pm: PipelineManager = new PipelineManager();

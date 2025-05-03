@@ -1,3 +1,7 @@
+// TODO:
+// still not sure if updateables and renderables object are better than using
+// update and render functions callbacks
+
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
  */
