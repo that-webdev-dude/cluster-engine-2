@@ -10,6 +10,9 @@ import { RendererV3 } from "../../renderer/RendererV3";
 import { Pipeline } from "../../renderer/pipelines/Pipeline";
 import { InstancedQuadPSO } from "../../renderer/pipelines/Pipeline";
 import { PipelineManager } from "../../renderer/pipelines/PipelineManager";
+import { config } from "../../config";
+
+const { viewport } = config;
 
 export class RenderSystem {
   private pm: PipelineManager = new PipelineManager();
@@ -23,8 +26,8 @@ export class RenderSystem {
     this.gl = renderer.gl;
     this.quadPSO = Pipeline.createInstancedQuadPSO(
       renderer.gl,
-      renderer.width,
-      renderer.height
+      viewport.width,
+      viewport.height
     );
 
     // subscribe to canvas resize
@@ -33,7 +36,7 @@ export class RenderSystem {
     });
 
     // initialize onResize callback
-    this.quadPSO.onResize(this.renderer.width, this.renderer.height);
+    this.quadPSO.onResize(viewport.width, viewport.height);
   }
 
   /** Call this each frame to render all entities with Transform+Color */

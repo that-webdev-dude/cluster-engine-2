@@ -11,12 +11,15 @@ import { MovementSystem } from "./cluster/ecs/systems/MovementSystem";
 import { CullingSystem } from "./cluster/ecs/systems/CullingSystem";
 import { CameraSystem } from "./cluster/ecs/systems/CameraSystem";
 import { InterpolationSystem } from "./cluster/ecs/systems/InterpolationSystem";
+import { config } from "./cluster/config";
+
+const { viewport } = config;
 
 export default () => {
   const display = new Display({
     parentID: "#app",
-    width: 600,
-    height: 400,
+    width: viewport.width,
+    height: viewport.height,
   });
 
   const gl = display.view.getContext("webgl2", {
@@ -34,14 +37,12 @@ export default () => {
 
   const world = new World();
 
-  // grab the canvas
-  const canvas = display.view as HTMLCanvasElement;
   // Populate the world with 1000 random quads
   const count = 500;
   for (let i = 0; i < count; i++) {
     const e = world.createEntity();
-    const x = Math.random() * canvas.width;
-    const y = Math.random() * canvas.height;
+    const x = Math.random() * viewport.width;
+    const y = Math.random() * viewport.height;
     const size = 10 + Math.random() * 20;
     const rotation = Math.random() * Math.PI * 2;
     const color: [number, number, number, number] = [

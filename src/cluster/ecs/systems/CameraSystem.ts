@@ -4,6 +4,9 @@ import { World } from "../World";
 import { CameraComponent } from "../components";
 import { Keyboard } from "../../core/Input";
 import { Mouse } from "../../core/Input";
+import { config } from "../../config";
+
+const { viewport } = config;
 
 export class CameraSystem implements System {
   private lastMousePos: { x: number; y: number } | null = null;
@@ -17,10 +20,10 @@ export class CameraSystem implements System {
     if (cameras.length === 0) {
       const mainCamera = this.world.createEntity();
 
-      // TODO:
-      // the camera dimensions should really come from some global viewport variable
-      // for now it's just hardcoded to 800x600
-      this.world.addComponent(mainCamera, new CameraComponent(0, 0, 800, 600));
+      this.world.addComponent(
+        mainCamera,
+        new CameraComponent(0, 0, viewport.width, viewport.height, 1)
+      );
     }
   }
 

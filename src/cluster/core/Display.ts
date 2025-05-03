@@ -1,4 +1,7 @@
 import * as Utils from "../utils";
+import { config } from "../config";
+
+const { viewport } = config;
 
 /**
  * constant definition for the fullscreen shortcut key.
@@ -40,8 +43,8 @@ export class Display {
 
   constructor({
     parentID = "body",
-    width = 800,
-    height = 600,
+    width = viewport.width,
+    height = viewport.height,
   }: {
     parentID?: string;
     width?: number;
