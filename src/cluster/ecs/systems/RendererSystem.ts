@@ -5,6 +5,7 @@ import {
   TransformComponent,
   ColorComponent,
   VisibleComponent,
+  CameraComponent,
 } from "../../ecs/components";
 import { RendererV3 } from "../../renderer/RendererV3";
 import { Pipeline } from "../../renderer/pipelines/Pipeline";
@@ -91,6 +92,7 @@ export class RenderSystem {
       VisibleComponent,
       ColorComponent
     );
+
     const count = ents.length;
     if (count === 0) {
       this.renderer.clear();
@@ -132,6 +134,17 @@ export class RenderSystem {
     this.quadPSO.updateInstances!(this.gl, this.instanceData, count);
     this.renderer.clear();
     this.pm.bind(this.gl, this.quadPSO);
+
+    // **NEW**: upload camera offset here, not in setUniforms
+    const camId = this.world.query(CameraComponent)[0]!;
+    const cam = this.world.getComponent(camId, CameraComponent)!;
+    this.gl.uniform2f(
+      // you cached uCamLoc on the pipeline instance earlier
+      (this.quadPSO as any).uCamLoc,
+      cam.x,
+      cam.y
+    );
+
     this.gl.drawArraysInstanced(this.gl.TRIANGLES, 0, 6, count);
     this.pm.unbind(this.gl);
   }

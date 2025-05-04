@@ -1,52 +1,89 @@
 // src/ecs/systems/CullingSystem.ts
+// import { System } from "../System";
+// import { World } from "../World";
+// import {
+//   TransformComponent,
+//   CameraComponent,
+//   VisibleComponent,
+// } from "../components";
+// import { SpatialIndex } from "../../tools/SpatialPartitioning";
+
+// export class CullingSystem implements System {
+//   constructor(private world: World, private grid: SpatialIndex<number>) {}
+
+//   update(delta: number) {
+//     const cameraId = this.world.query(CameraComponent)[0]!;
+//     const camera = this.world.getComponent(cameraId, CameraComponent)!;
+
+//     // For simplicity, assume our quad’s AABB is [pos.x, pos.x + scale.x] etc.
+//     // const hits = this.world.query(TransformComponent);
+//     const hits = this.grid.queryRegion({
+//       minX: camera.x,
+//       minY: camera.y,
+//       maxX: camera.x + camera.width,
+//       maxY: camera.y + camera.height,
+//     });
+//     for (const e of hits) {
+//       const t = this.world.getComponent(e, TransformComponent)!;
+//       const halfW = t.scale[0];
+//       const halfH = t.scale[1];
+//       const xMin = t.position[0] - halfW;
+//       const xMax = t.position[0] + halfW;
+//       const yMin = t.position[1] - halfH;
+//       const yMax = t.position[1] + halfH;
+
+//       const visible =
+//         xMax >= camera.x &&
+//         xMin <= camera.x + camera.width &&
+//         yMax >= camera.y &&
+//         yMin <= camera.y + camera.height;
+
+//       const hasTag = !!this.world.getComponent(e, VisibleComponent);
+//       if (visible && !hasTag) {
+//         this.world.addComponent(e, new VisibleComponent());
+//       } else if (!visible && hasTag) {
+//         this.world.removeComponent(e, VisibleComponent);
+//       }
+//     }
+//   }
+// }
+
+// src/ecs/systems/CullingSystem.ts
+
 import { System } from "../System";
-import { World } from "../World";
-import {
-  TransformComponent,
-  CameraComponent,
-  VisibleComponent,
-} from "../components";
+import { World, Entity } from "../World";
+import { CameraComponent, VisibleComponent } from "../components";
+import { SpatialIndex, AABB } from "./../../tools/SpatialPartitioning";
+import { makeAABB } from "../utils";
 
-// TODO:
-// implement more advanced spatial partitioning (uniform grid or quadtree) in CullingSystem for even faster frustum tests.
-// We’ve now got “brute-force” per-entity frustum culling in place, and it’ll work fine up to a few tens of thousands of quads.
-// If you start pushing past ~50 k entities, you’ll see the cost of scanning every Transform each frame creep up.
-// So, on the culling front you have two options:
-// Leave it as is if your performance is already acceptable.
-// Add spatial partitioning—for example:
-// A simple uniform grid: bin each entity into a cell based on its position/scale, then only test the handful of cells overlapping the camera’s bounds.
-// Or a quadtree/BVH: dynamically insert/remove entities into tree nodes so your per-frame cull only visits O(log N) nodes, not all N entities.
-// Either of those would slot into your CullingSystem with minimal changes: you just replace the “for every entity” loop with “for every entity in the visible cells/nodes.”
 export class CullingSystem implements System {
-  constructor(private world: World) {}
+  constructor(private world: World, private grid: SpatialIndex<Entity>) {}
 
-  update(delta: number) {
-    const cameraId = this.world.query(CameraComponent)[0]!;
-    const camera = this.world.getComponent(cameraId, CameraComponent)!;
+  update() {
+    // 1) get camera AABB
+    const camId = this.world.query(CameraComponent)[0]!;
+    const cam = this.world.getComponent(camId, CameraComponent)!;
+    const camAABB: AABB = {
+      minX: cam.x,
+      minY: cam.y,
+      maxX: cam.x + cam.width,
+      maxY: cam.y + cam.height,
+    };
 
-    // For simplicity, assume our quad’s AABB is [pos.x, pos.x + scale.x] etc.
-    const all = this.world.query(TransformComponent);
-    for (const e of all) {
-      const t = this.world.getComponent(e, TransformComponent)!;
-      const halfW = t.scale[0];
-      const halfH = t.scale[1];
-      const xMin = t.position[0] - halfW;
-      const xMax = t.position[0] + halfW;
-      const yMin = t.position[1] - halfH;
-      const yMax = t.position[1] + halfH;
+    // 2) clear all previous Visible tags
+    for (const e of this.world.query(VisibleComponent)) {
+      this.world.removeComponent(e, VisibleComponent);
+    }
 
-      const visible =
-        xMax >= camera.x &&
-        xMin <= camera.x + camera.width &&
-        yMax >= camera.y &&
-        yMin <= camera.y + camera.height;
+    // 3) query only the cells overlapping the camera
+    const candidates = this.grid.queryRegion(camAABB);
 
-      const hasTag = !!this.world.getComponent(e, VisibleComponent);
-      if (visible && !hasTag) {
-        this.world.addComponent(e, new VisibleComponent());
-      } else if (!visible && hasTag) {
-        this.world.removeComponent(e, VisibleComponent);
-      }
+    // 4) for each candidate, you could do a precise AABB-vs-AABB if you like
+    for (const e of candidates) {
+      // optional fine-grained test:
+      // const box = makeAABB(this.world.getComponent(e, TransformComponent)!);
+      // if (!overlaps(box, camAABB)) continue;
+      this.world.addComponent(e, new VisibleComponent());
     }
   }
 }

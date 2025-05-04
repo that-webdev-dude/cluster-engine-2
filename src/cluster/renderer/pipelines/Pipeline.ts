@@ -117,6 +117,7 @@ class InstancedQuadPipeline extends Pipeline implements InstancedQuadPSO {
   public readonly floatsPerInstance: number;
   public readonly instanceBuffer: WebGLBuffer;
   private readonly uResLoc: WebGLUniformLocation;
+  private readonly uCamLoc: WebGLUniformLocation;
   private height: number;
   private width: number;
 
@@ -213,6 +214,8 @@ class InstancedQuadPipeline extends Pipeline implements InstancedQuadPSO {
 
     // cache u_resolution once
     this.uResLoc = gl.getUniformLocation(this.program, "u_resolution")!;
+    this.uCamLoc = gl.getUniformLocation(this.program, "u_camPos")!;
+
     this.instanceBuffer = instanceBuf;
     this.floatsPerInstance = FLOATS_PER_INSTANCE;
   }

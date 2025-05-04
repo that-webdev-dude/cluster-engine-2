@@ -11,7 +11,9 @@ import { MovementSystem } from "./cluster/ecs/systems/MovementSystem";
 import { CullingSystem } from "./cluster/ecs/systems/CullingSystem";
 import { CameraSystem } from "./cluster/ecs/systems/CameraSystem";
 import { InterpolationSystem } from "./cluster/ecs/systems/InterpolationSystem";
+import { UniformGrid, SparseGrid } from "./cluster/tools/SpatialPartitioning";
 import { config } from "./cluster/config";
+import { createTilemap, makeAABB } from "./cluster/ecs/utils";
 
 const { viewport } = config;
 
@@ -31,37 +33,55 @@ export default () => {
   if (!gl) throw new Error("WebGL2 not supported");
   const renderer = new RendererV3(gl);
 
-  display.resizeCb = (width, height) => {
-    renderer.resize(width, height);
-  };
+  display.resizeCb = (width, height) => renderer.resize(width, height);
 
   const world = new World();
 
-  // Populate the world with 1000 random quads
-  const count = 500;
-  for (let i = 0; i < count; i++) {
-    const e = world.createEntity();
-    const x = Math.random() * viewport.width;
-    const y = Math.random() * viewport.height;
-    const size = 10 + Math.random() * 20;
-    const rotation = Math.random() * Math.PI * 2;
-    const color: [number, number, number, number] = [
-      Math.random(),
-      Math.random(),
-      Math.random(),
-      1,
-    ];
-    world.addComponent(
-      e,
-      new TransformComponent([x, y], [size, size], rotation)
-    );
-    world.addComponent(e, new ColorComponent(color));
+  createTilemap(world, config.world.width, config.world.height, 32);
+
+  // 3) Build one shared spatial index (cell size = tile size*4)
+  const grid = new SparseGrid<number>(32 * 4);
+
+  // 4) Seed the grid with all tile entities
+  for (const e of world.query(TransformComponent)) {
+    const t = world.getComponent(e, TransformComponent)!;
+    grid.insert(e, makeAABB(t));
   }
 
+  // // // Populate the world with 1000 random quads
+  // const count = 100;
+  // for (let i = 0; i < count; i++) {
+  //   const e = world.createEntity();
+  //   const x = Math.random() * config.world.width;
+  //   const y = Math.random() * config.world.height;
+  //   const size = 10 + Math.random() * 20;
+  //   const rotation = Math.random() * Math.PI * 2;
+  //   const color: [number, number, number, number] = [
+  //     Math.random(),
+  //     Math.random(),
+  //     Math.random(),
+  //     1,
+  //   ];
+
+  //   const transform = new TransformComponent([x, y], [size, size], rotation);
+  //   world.addComponent(e, transform);
+  //   world.addComponent(e, new ColorComponent(color));
+
+  //   // Add the entity to the grid
+  //   grid.insert(e, {
+  //     minX: x,
+  //     minY: y,
+  //     maxX: x + size,
+  //     maxY: y + size,
+  //   });
+  // }
+
+  // console.log(grid);
+
   const inputSystem = new InputSystem(world);
-  const movementSystem = new MovementSystem(world);
+  const movementSystem = new MovementSystem(world, grid);
   const cameraSystem = new CameraSystem(world);
-  const cullingSystem = new CullingSystem(world);
+  const cullingSystem = new CullingSystem(world, grid);
   const interpolationSystem = new InterpolationSystem(world);
   const renderSystem = new RenderSystem(world, renderer);
 
@@ -73,6 +93,7 @@ export default () => {
   engine.addUpdateable(cameraSystem);
   engine.addUpdateable(cullingSystem);
   engine.addUpdateable(interpolationSystem);
+  // add the render system to the engine
   engine.addRenderable(renderSystem);
 
   engine.start();
