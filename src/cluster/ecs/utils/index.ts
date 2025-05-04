@@ -3,6 +3,7 @@
 import { World } from "../World";
 import { TransformComponent, ColorComponent } from "../components";
 import { AABB } from "../../tools/SpatialPartitioning";
+import { config } from "../../config";
 
 /**
  * Fills the world with a checkerboard of tile‐entities.
@@ -39,6 +40,34 @@ export function createTilemap(
 }
 
 /**
+ * Populate the world with a number of random quads
+ */
+export function createRandomQuads(
+  world: World,
+  mapW: number,
+  mapH: number,
+  count: number = 1000
+) {
+  for (let i = 0; i < count; i++) {
+    const e = world.createEntity();
+    const x = Math.random() * mapW;
+    const y = Math.random() * mapH;
+    const size = 10 + Math.random() * 20;
+    const rotation = Math.random() * Math.PI * 2;
+    const color: [number, number, number, number] = [
+      Math.random(),
+      Math.random(),
+      Math.random(),
+      1,
+    ];
+
+    const transform = new TransformComponent([x, y], [size, size], rotation);
+    world.addComponent(e, transform);
+    world.addComponent(e, new ColorComponent(color));
+  }
+}
+
+/**
  * Build a world‐space AABB for a unit quad [0,0→1,1] after
  * applying scale, rotation, then translation exactly as your shader does.
  * @param t  the transform component of the quad
@@ -46,6 +75,17 @@ export function createTilemap(
 export function makeAABB(t: TransformComponent): AABB {
   const [px, py] = t.position;
   const [sx, sy] = t.scale;
+
+  // if rotation is 0, we can skip the trig
+  if (t.rotation === 0) {
+    return {
+      minX: px,
+      minY: py,
+      maxX: px + sx,
+      maxY: py + sy,
+    };
+  }
+
   const θ = t.rotation;
   const c = Math.cos(θ),
     s = Math.sin(θ);
@@ -81,4 +121,16 @@ export function makeAABB(t: TransformComponent): AABB {
   }
 
   return { minX, minY, maxX, maxY };
+}
+
+/**
+ * AABB intersection test
+ */
+export function intersectsAABB(a: AABB, b: AABB): boolean {
+  return !(
+    b.minX > a.maxX ||
+    b.maxX < a.minX ||
+    b.minY > a.maxY ||
+    b.maxY < a.minY
+  );
 }

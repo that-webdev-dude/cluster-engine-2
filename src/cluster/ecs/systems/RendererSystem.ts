@@ -94,6 +94,7 @@ export class RenderSystem {
     );
 
     const count = ents.length;
+    console.log("count", count);
     if (count === 0) {
       this.renderer.clear();
       return;
