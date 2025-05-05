@@ -8,13 +8,6 @@ export class MovementSystem implements System {
   constructor(private world: World, private grid: SpatialIndex<number>) {}
 
   update(delta: number) {
-    // // simple demo: rotate every entity 90° per second
-    // const ents = this.world.query(TransformComponent);
-    // for (const e of ents) {
-    //   const t = this.world.getComponent(e, TransformComponent)!;
-    //   t.rotation += Math.PI * 0.5 * delta;
-    // }
-    // // update the grid with the new position and size if entity moved
     this.world.transformStorage.forEachChunk(
       (_p, _s, rot, _pp, _ps, _pr, ents, len) => {
         for (let i = 0; i < len; i++) {
@@ -22,5 +15,7 @@ export class MovementSystem implements System {
         }
       }
     );
+
+    // make sure whenever you move or scale an entity (in MovementSystem) you also call grid.update(e, makeAABB(...)). Otherwise queryRegion will return stale cells.
   }
 }

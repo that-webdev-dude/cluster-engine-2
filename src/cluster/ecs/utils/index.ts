@@ -72,12 +72,16 @@ export function createRandomQuads(
  * applying scale, rotation, then translation exactly as your shader does.
  * @param t  the transform component of the quad
  */
-export function makeAABB(t: TransformComponent): AABB {
-  const [px, py] = t.position;
-  const [sx, sy] = t.scale;
+export function makeAABB(
+  position: [number, number],
+  scale: [number, number],
+  rotation: number
+): AABB {
+  const [px, py] = position;
+  const [sx, sy] = scale;
 
   // if rotation is 0, we can skip the trig
-  if (t.rotation === 0) {
+  if (rotation === 0) {
     return {
       minX: px,
       minY: py,
@@ -86,7 +90,7 @@ export function makeAABB(t: TransformComponent): AABB {
     };
   }
 
-  const θ = t.rotation;
+  const θ = rotation;
   const c = Math.cos(θ),
     s = Math.sin(θ);
 

@@ -1,7 +1,10 @@
 // src/ecs/World.ts
 
 import { TransformComponent } from "./components";
+import { ColorComponent } from "./components";
 import { TransformStorage } from "./storage/TransformStorage";
+import { VisibilityStorage } from "./storage/VisibilityStorage";
+import { ColorStorage } from "./storage/ColorStorage";
 
 /**
  * A numeric ID for each entity in the ECS.
@@ -26,6 +29,10 @@ export class World {
    * Chunked, Struct-of-Arrays storage for all TransformComponents.
    */
   public readonly transformStorage = new TransformStorage();
+  public readonly colorStorage = new ColorStorage(this.transformStorage);
+  public readonly visibilityStorage = new VisibilityStorage(
+    this.transformStorage
+  );
 
   /**
    * Create a new entity ID, reusing freed IDs if available.
@@ -56,7 +63,7 @@ export class World {
    * Attach a component instance to an entity.
    * If it's a TransformComponent, also add to the specialized storage.
    */
-  addComponent<T>(entity: Entity, component: T): void {
+  public addComponent<T>(entity: Entity, component: T): void {
     const ctor = (component as any).constructor;
     let store = this.componentStores.get(ctor) as Map<Entity, T>;
     if (!store) {
@@ -65,12 +72,11 @@ export class World {
     }
     store.set(entity, component);
 
-    // specialized hook for TransformComponent
     if (component instanceof TransformComponent) {
-      this.transformStorage.add(
-        entity,
-        component as unknown as TransformComponent
-      );
+      this.transformStorage.add(entity, component);
+    }
+    if (component instanceof ColorComponent) {
+      this.colorStorage.add(entity, component);
     }
   }
 
@@ -78,10 +84,17 @@ export class World {
    * Remove a component of the given type from an entity.
    * If it's a TransformComponent, remove from specialized storage.
    */
-  removeComponent<T>(entity: Entity, ctor: ComponentConstructor<T>): void {
+  public removeComponent<T>(
+    entity: Entity,
+    ctor: ComponentConstructor<T>
+  ): void {
     this.componentStores.get(ctor)?.delete(entity);
+
     if (ctor === TransformComponent) {
       this.transformStorage.remove(entity);
+    }
+    if (ctor === ColorComponent) {
+      this.colorStorage.remove(entity);
     }
   }
 

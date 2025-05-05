@@ -21,19 +21,35 @@ export class CullingSystem implements System {
     };
 
     // 2) clear all previous Visible tags
-    for (const e of this.world.query(VisibleComponent)) {
-      this.world.removeComponent(e, VisibleComponent);
-    }
+    this.world.visibilityStorage.clear();
 
     // 3) query only the cells overlapping the camera
     const candidates = this.grid.queryRegion(camAABB);
 
-    // 4) for each candidate, you could do a precise AABB-vs-AABB if you like
     for (const e of candidates) {
-      // optional fine-grained test:
-      // const box = makeAABB(this.world.getComponent(e, TransformComponent)!);
-      // if (!overlaps(box, camAABB)) continue;
-      this.world.addComponent(e, new VisibleComponent());
+      const loc = this.world.transformStorage.getLocation(e);
+      if (!loc) continue;
+      const ts = this.world.transformStorage.getChunk(loc.chunk)!;
+      const index = loc.index;
+
+      const px = ts.positions[2 * index];
+      const py = ts.positions[2 * index + 1];
+      const sx = ts.scales[2 * index];
+      const sy = ts.scales[2 * index + 1];
+      const rot = ts.rotations[index];
+
+      const box = makeAABB([px, py], [sx, sy], rot);
+
+      // test intersection
+      if (
+        box.maxX >= camAABB.minX &&
+        box.minX <= camAABB.maxX &&
+        box.maxY >= camAABB.minY &&
+        box.minY <= camAABB.maxY
+      ) {
+        // **instead** of world.addComponent(e, VisibleComponent):
+        this.world.visibilityStorage.setVisible(e);
+      }
     }
   }
 }

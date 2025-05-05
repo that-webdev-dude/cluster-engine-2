@@ -48,7 +48,7 @@ export default () => {
   const world = new World();
 
   // createTilemap(world, config.world.width, config.world.height, 32);
-  createRandomQuads(world, config.world.width, config.world.height, 10000);
+  createRandomQuads(world, config.world.width, config.world.height, 5000);
 
   // 3) Build one shared spatial index over the *world* extents
   const worldBounds: AABB = {
@@ -67,7 +67,7 @@ export default () => {
   // 4) Seed the grid with all tile entities
   for (const e of world.query(TransformComponent)) {
     const t = world.getComponent(e, TransformComponent)!;
-    grid.insert(e, makeAABB(t));
+    grid.insert(e, makeAABB(t.position, t.scale, t.rotation));
   }
 
   const inputSystem = new InputSystem(world);

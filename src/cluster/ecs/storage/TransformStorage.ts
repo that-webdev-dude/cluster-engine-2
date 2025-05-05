@@ -42,6 +42,15 @@ export class TransformStorage {
   }
 
   /**
+   * Retrieves the chunk count (nuber of chunks allocated).
+   *
+   * @return The number of chunks allocated.
+   */
+  get chunkCount(): number {
+    return this.chunks.length;
+  }
+
+  /**
    * Adds a new TransformComponent for an entity into storage.
    * Copies initial current & previous values from the component.
    */
@@ -174,6 +183,26 @@ export class TransformStorage {
         );
       }
     }
+  }
+
+  /**
+   * Retrieves the location of an entity in the storage.
+   *
+   * @param entity - The entity to look up.
+   * @return The location of the entity in the storage or undefined if not found.
+   */
+  getLocation(entity: Entity): { chunk: number; index: number } | undefined {
+    return this.entityToLocation.get(entity);
+  }
+
+  /**
+   * Retrieves the chunk at the specified chunk index.
+   *
+   * @param chunk - The index of the chunk to retrieve.
+   * @return The chunk at the specified index or undefined if not found.
+   */
+  getChunk(chunk: number): TransformChunk | undefined {
+    return this.chunks[chunk];
   }
 
   /**
