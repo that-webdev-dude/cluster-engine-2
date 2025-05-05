@@ -154,6 +154,10 @@ export class Display {
     this._bufWidth = pw;
     this._bufHeight = ph;
 
+    console.log(
+      `[Display]: Resized canvas to ${this._bufWidth}x${this._bufHeight} (${this._cssWidth}x${this._cssHeight})`
+    );
+
     // notify renderer
     this.resizeCb?.(pw, ph);
   }

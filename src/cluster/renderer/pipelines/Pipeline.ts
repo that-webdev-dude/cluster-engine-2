@@ -240,6 +240,7 @@ class InstancedQuadPipeline extends Pipeline implements InstancedQuadPSO {
   public onResize(width: number, height: number): void {
     this.width = width;
     this.height = height;
+    console.log("InstancedQuadPipeline.onResize", width, height);
   }
 }
 

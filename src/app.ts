@@ -10,7 +10,7 @@ import { InputSystem } from "./cluster/ecs/systems/InputSystem";
 import { MovementSystem } from "./cluster/ecs/systems/MovementSystem";
 import { CullingSystem } from "./cluster/ecs/systems/CullingSystem";
 import { CameraSystem } from "./cluster/ecs/systems/CameraSystem";
-import { InterpolationSystem } from "./cluster/ecs/systems/InterpolationSystem";
+import { LerpSystem } from "./cluster/ecs/systems/LerpSystem";
 import {
   UniformGrid,
   SparseGrid,
@@ -47,8 +47,8 @@ export default () => {
 
   const world = new World();
 
-  createTilemap(world, config.world.width, config.world.height, 32);
-  // createRandomQuads(world, config.world.width, config.world.height, 1000);
+  // createTilemap(world, config.world.width, config.world.height, 32);
+  createRandomQuads(world, config.world.width, config.world.height, 10000);
 
   // 3) Build one shared spatial index over the *world* extents
   const worldBounds: AABB = {
@@ -74,18 +74,18 @@ export default () => {
   const movementSystem = new MovementSystem(world, grid);
   const cameraSystem = new CameraSystem(world);
   const cullingSystem = new CullingSystem(world, grid);
-  const interpolationSystem = new InterpolationSystem(world);
+  const lerpStstem = new LerpSystem(world);
   const renderSystem = new RenderSystem(world, renderer);
 
   cameraSystem.init();
 
   const engine = new Engine();
   // add the updateable systems to the engine
+  engine.addUpdateable(lerpStstem); // this needs to be first to snapshot prev values
   engine.addUpdateable(inputSystem);
   engine.addUpdateable(movementSystem);
   engine.addUpdateable(cameraSystem);
   engine.addUpdateable(cullingSystem);
-  engine.addUpdateable(interpolationSystem);
   // add the render system to the engine
   engine.addRenderable(renderSystem);
 

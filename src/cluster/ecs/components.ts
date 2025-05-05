@@ -2,6 +2,7 @@
 
 /**
  * A component that holds an entity's transform in 2D space.
+ *
  * position: [x, y]
  * scale:    [sx, sy]
  * rotation: in radians
