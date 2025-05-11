@@ -91,27 +91,3 @@ export default () => {
 
   engine.start();
 };
-
-// If you’d rather move on, here’s what comes next in our roadmap:
-// Chunked processing & web-worker buffer‐fills (still in Phase 3):
-// Split your archetype arrays into fixed‐size chunks (e.g. 256 entities each), run each chunk’s instance-data packing in parallel (or just in tight loops), and then memcpy chunk by chunk into your big Float32Array.
-
-// Phase 4: Advanced GPU‐driven paths
-
-// Transform feedback so the GPU computes per-instance matrices (no CPU pack at all).
-
-// Texture‐buffer lookups for instance data, feeding a small index buffer to drawElementsInstanced.
-
-// (Down the line) indirect draws in WebGPU.
-
-// New render pipelines (e.g. textured sprites, particles) to prove the plug-in system.
-
-// Let me know which you’d like to tackle:
-
-// Add a uniform-grid culling layer?
-
-// Chunked + possibly multi-threaded instance buffer fill?
-
-// Jump ahead to GPU‐side techniques?
-
-// Or start building a second pipeline (e.g. sprites)?
