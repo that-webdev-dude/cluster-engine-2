@@ -1,7 +1,6 @@
 import { Renderer } from "./cluster/gl/Renderer";
 import { RectData } from "./cluster/gl/pipelines/rectData";
 import { RectPipeline } from "./cluster/gl/pipelines/rect";
-import { Storage } from "./cluster/ecs/Storage";
 
 // --- ECS world simulation for 2D rectangles ---
 interface Position {

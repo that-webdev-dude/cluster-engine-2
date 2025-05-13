@@ -1,13 +1,14 @@
 // Storage.ts
 
 import { Entity } from "./Entity"; // alias for `number`
-import { ComponentSchema, SchemaBuilder } from "../../schema";
+import { Schema } from "./Schema";
+import { ComponentLayout } from "./Component";
 
 // Helpers for turning field names into “prevXxx”
 type PrevFieldName<K extends string> = `prev${Capitalize<K>}`;
 
 // A strongly-typed chunk: one Float32Array per field (and its “prev”)
-export type Chunk<S extends ComponentSchema> = {
+export type Chunk<S extends Schema> = {
     entities: Entity[];
     length: number;
 } & {
@@ -17,9 +18,9 @@ export type Chunk<S extends ComponentSchema> = {
 };
 
 /**
- * Generic, chunked SoA storage driven by a ComponentSchema.
+ * Generic, chunked SoA storage driven by a Schema.
  */
-export class Storage<S extends ComponentSchema> {
+export class Storage<S extends Schema> {
     private chunks: Array<Chunk<S>> = [];
     private entityToLocation = new Map<
         Entity,
@@ -37,7 +38,7 @@ export class Storage<S extends ComponentSchema> {
         private readonly schema: S
     ) {
         // Build byte-layout (offsets, total stride) once
-        this.layout = new SchemaBuilder(schema, "std140").build();
+        this.layout = new ComponentLayout(schema, "std140").build();
         // Field names in declaration order
         this.fields = Object.keys(this.layout.layout) as any;
     }
