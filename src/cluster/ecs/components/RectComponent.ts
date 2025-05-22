@@ -1,8 +1,8 @@
 import { Schema } from "../Schema";
 import { ComponentFactory, ComponentLayout } from "../Component";
 
-export const TransformComponentSchema = {
-    name: "Transform",
+export const RectComponentSchema = {
+    name: "Rect",
     fields: {
         position: {
             type: "float",
@@ -19,23 +19,16 @@ export const TransformComponentSchema = {
             count: 1,
             default: 0,
         },
+        color: {
+            type: "float",
+            count: 4,
+            default: [1, 1, 1, 1],
+        },
     },
 } satisfies Schema;
 
-export const TransformComponent = new ComponentFactory(
-    TransformComponentSchema
-);
-
-/**
- * {
- *  stride: 16,
- *  layout: {
- *          position: {offset: 0, size: 8},
- *          scale: {offset: 8, size: 8},
- *          rotation: {offset: 16, size: 4}
- *      }
- *  }
- */
-export const TransformComponentLayout = new ComponentLayout(
-    TransformComponentSchema
+export const RectComponentLayout = new ComponentLayout(
+    RectComponentSchema
 ).build();
+
+export const RectComponent = new ComponentFactory(RectComponentSchema);

@@ -103,6 +103,8 @@ export class ComponentFactory<S extends Schema> {
 
         inst.name = this.schema.name; // tag the instance with the schema name
 
+        // inst.active = true; // default to active
+
         // force TS to see entries as [key, field] tuples
         const entries = Object.entries(this.schema.fields) as Array<
             [

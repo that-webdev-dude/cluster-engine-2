@@ -149,6 +149,32 @@ export class Storage<S extends Schema> {
         }
     }
 
+    read(entity: Entity): { [K in keyof S["fields"]]: any } | undefined {
+        const loc = this.entityToLocation.get(entity);
+        if (!loc) return;
+
+        const chunk = this.chunks[loc.chunk];
+        const idx = loc.index;
+        const result: { [K in keyof S["fields"]]: any } = {} as any;
+
+        for (const field of this.fields) {
+            const { size } = this.layout.layout[field];
+            const floatsPerEntity = size / 4;
+            const base = idx * floatsPerEntity;
+            const arr = chunk[field];
+
+            if (floatsPerEntity > 1) {
+                result[field] = Array.from(
+                    arr.subarray(base, base + floatsPerEntity)
+                );
+            } else {
+                result[field] = arr[base];
+            }
+        }
+
+        return result;
+    }
+
     snapshotPrev(): void {
         for (const chunk of this.chunks) {
             const n = chunk.length;
