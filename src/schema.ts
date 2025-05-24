@@ -1,64 +1,105 @@
-import {
-    TransformComponent,
-    TransformComponentSchema,
-    TransformComponentLayout,
-} from "./cluster/ecs/components/TransformComponent";
-import { World } from "./cluster/ecs/World";
+/**
+ * Recursive type to build a tuple of a given size.
+ *
+ * @template Element - The type of the elements in the tuple.
+ * @template Size - The desired size of the tuple.
+ * @template Result - The accumulator for the recursive type, defaulting to an empty array.
+ */
+type BuildTuple<
+    Element,
+    Size extends number,
+    Result extends Element[] = []
+> = Result["length"] extends Size
+    ? Result
+    : BuildTuple<Element, Size, [...Result, Element]>;
 
-// USAGE
-const world = new World();
+type Tuple<Element, Size extends number> = BuildTuple<Element, Size>;
 
-function createRandomEntities(count: number = 256) {
-    for (let i = 0; i < count; i++) {
-        const entity = world.createEntity();
-        const transform = TransformComponent.create();
-        console.log("TransformComponent", transform);
-        const px = Math.random() * 100;
-        const py = Math.random() * 100;
-        const sx = Math.random() * 10;
-        const sy = Math.random() * 10;
-        const r = ((Math.random() * 360) / 180) * Math.PI;
-        transform.position = [px, py];
-        transform.scale = [sx, sy];
-        transform.rotation = r;
-
-        world.addEntityComponent(entity, transform);
-    }
+function createTuple<const Size extends number>(
+    size: Size
+): BuildTuple<number, Size> {
+    return new Array(size).fill(0) as BuildTuple<number, Size>;
 }
 
-// const ENTITY_COUNT = 256 * 1;
-const ENTITY_COUNT = 1;
+type SchemaFieldType = "float32" | "int32" | "uint8" | "uint32";
 
-const FPS = 60;
-const FRAME_TIME = 1000 / FPS;
+interface Schema {
+    name: string;
+    fields: Record<
+        string,
+        {
+            type: SchemaFieldType;
+            size: number;
+        }
+    >;
+}
 
-createRandomEntities(ENTITY_COUNT);
+/**
+ * Recursively builds a tuple of `Element` repeated `Size` times.
+ */
+type BuildTuple<
+    Element,
+    Size extends number,
+    Acc extends Element[] = []
+> = Acc["length"] extends Size
+    ? Acc
+    : BuildTuple<Element, Size, [...Acc, Element]>;
 
-const transformStorage = world.getComponentStorage<
-    typeof TransformComponentSchema
->(TransformComponentSchema.name);
+/**
+ * If `Size` is the literal `0` → `number`, otherwise → tuple of length `Size`.
+ */
+type FieldValue<Size extends number> = Size extends 0
+    ? number
+    : BuildTuple<number, Size>;
 
-console.log(transformStorage);
-
-const startTime = performance.now();
-transformStorage.forEachChunk((chunk) => {
-    const { position, scale, rotation } = chunk;
-    for (let i = 0; i < chunk.length; i++) {
-        // console.log(i);
-        const px = position[i * 2 + 0];
-        const py = position[i * 2 + 1];
-        const sx = scale[i * 2 + 0];
-        const sy = scale[i * 2 + 1];
-        const r = rotation[i];
-
-        // console.log(transformStorage.read(chunk.entities[i]));
-
-        // ... do something with the data
+/**
+ * Take any object whose `fields` values have a literal `size: number`.
+ * We infer that shape as `F`, then build the return type from it.
+ */
+function createObject<
+    const F extends Record<string, { type: SchemaFieldType; size: number }>
+>(schema: {
+    name: string;
+    fields: F;
+}): {
+    name: string;
+    fields: {
+        [K in keyof F]: FieldValue<F[K]["size"]>;
+    };
+} {
+    const out: any = { name: schema.name, fields: {} };
+    for (const key in schema.fields) {
+        const { size } = schema.fields[key];
+        out.fields[key] =
+            size <= 0
+                ? 0
+                : (new Array(size).fill(0) as BuildTuple<number, typeof size>);
     }
-});
-const endTime = performance.now();
-console.log(
-    `Iterating over ${ENTITY_COUNT} entities took ${endTime - startTime}ms`
-);
+    return out;
+}
+
+const mySchema: Schema = {
+    name: "MySchema",
+    fields: {
+        x: {
+            type: "float32",
+            size: 1,
+        },
+        y: {
+            type: "uint8",
+            size: 1,
+        },
+        visible: {
+            type: "int32",
+            size: 2,
+        },
+    },
+} as const;
+
+const myComponent = createObject(mySchema);
+console.log(" myComponent:", myComponent.fields.visible);
+myComponent.fields.visible[0] = 1; // Type '1' is not assignable to type 'undefined'.ts(2322)
+myComponent.fields.visible[1] = 2; // Type '2' is not assignable to type 'undefined'.ts(2322)
+myComponent.fields.visible[2] = 3; // Type '3' is not assignable to type 'undefined'.ts(2322)
 
 export default () => {};

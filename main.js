@@ -1,8 +1,8 @@
 import "./src/styles/style.scss";
 // import app from "./src/app.ts";
-import archetype from "./src/archetype.ts";
+import schema from "./src/schema.ts";
 
 window.onload = () => {
     // app();
-    archetype();
+    schema();
 };

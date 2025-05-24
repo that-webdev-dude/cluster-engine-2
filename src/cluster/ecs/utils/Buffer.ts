@@ -1,5 +1,5 @@
-import { Schema } from "./cluster/ecs/Schema";
-import { ComponentLayout, ComponentFactory } from "./cluster/ecs/Component";
+import { Schema } from "../Schema";
+import { Component, ComponentLayout, ComponentFactory } from "../Component";
 
 type NumericArray =
     | Float32Array
@@ -103,60 +103,64 @@ function swapNumericArray<T extends NumericArray>(
     arr.set(slice, j);
 }
 
-// export type Component<S extends Schema> = {
-//     name: S["name"];
-// } & {
-//     [K in keyof S["fields"]]: S["fields"][K]["count"] extends 1
-//         ? number // or MutableDefault<…> if you really need defaults
-//         : number[]; // fixed-length by convention
-// };
+const PositionComponentSchema: Schema = {
+    name: "Position",
+    fields: {
+        x: {
+            type: "float",
+            count: 1,
+            default: 11,
+        },
+        y: {
+            type: "float",
+            count: 1,
+            default: 11,
+        },
+    },
+} satisfies Schema;
 
-// type MutableDefault<T> = T extends readonly any[]
-//     ? number[]
-//     : number;
+const VelocityComponentSchema: Schema = {
+    name: "Velocity",
+    fields: {
+        x: {
+            type: "float",
+            count: 1,
+            default: 22,
+        },
+        y: {
+            type: "float",
+            count: 1,
+            default: 22,
+        },
+    },
+} satisfies Schema;
 
-// export type Component<S extends Schema> = {
-//     name: S["name"];
-// } & {
-//     [K in keyof S["fields"]]: S["fields"][K]["count"] extends 1
-//         ? MutableDefault<S["fields"][K]["default"]>
-//         : MutableDefault<S["fields"][K]["default"]>;
-// };
+const PositionComponent = new ComponentFactory(
+    PositionComponentSchema
+).create();
+const VelocityComponent = new ComponentFactory(
+    VelocityComponentSchema
+).create();
 
-// 1) A single helper to turn your schema‐default into the right instance type:
-type MutableDefault<T> =
-    // if your schema default was readonly or mutable array → mutable U[]
-    T extends ReadonlyArray<infer U>
-        ? U[]
-        : // if it was a boolean literal
-        T extends boolean
-        ? boolean
-        : // otherwise (number or numeric literal) → number
-        T extends number
-        ? number
-        : // (you could add “never” here for safety)
-          never;
+const PositionComponentLayout = new ComponentLayout(
+    PositionComponentSchema
+).build();
+const VelocityComponentLayout = new ComponentLayout(
+    VelocityComponentSchema,
+    "packed"
+).build();
 
-// 2) Your Component type: strip readonly on each field and apply MutableDefault
-export type Component<S extends Schema> = {
-    name: S["name"];
-} & {
-    -readonly [K in keyof S["fields"]]: MutableDefault<
-        S["fields"][K]["default"]
-    >;
-};
-
-class DataBuffer<S extends Schema> {
+class DataBuffer {
     private _capacity: number = 4;
     private _length: number = 0;
     private _stride: number = 0;
     private _buffer: Float32Array = new Float32Array(0);
 
     // bookkeeping
+    private _idToIndex: (number | null)[] = [];
     private _indexToId: (number | null)[] = [];
-    private _idToIndex: Map<number, number> = new Map();
 
-    constructor(private _schema: S) {
+    constructor(private _schema: Schema) {
         this._stride = Object.entries(this._schema.fields).reduce(
             (acc, [_, value]) => {
                 return acc + value.count;
@@ -164,34 +168,11 @@ class DataBuffer<S extends Schema> {
             0
         );
 
+        this._idToIndex = Array(this._capacity).fill(null);
         this._indexToId = Array(this._capacity).fill(null);
-        this._idToIndex = new Map<number, number>();
     }
 
-    get length() {
-        return this._length;
-    }
-
-    get capacity() {
-        return this._capacity;
-    }
-
-    private _validateId(id: number) {
-        // must be an integer
-        if (!Number.isInteger(id)) {
-            throw new Error(`ID ${id} is not an integer`);
-        }
-        // must be non negative
-        if (id < 0) {
-            throw new Error(`ID ${id} is negative`);
-        }
-        // should no exist in the buffer
-        if (this._idToIndex.has(id)) {
-            throw new Error(`ID ${id} already exists in buffer`);
-        }
-    }
-
-    private _validateComponent(component: Component<S>) {
+    private _validateComponent(component: Component<Schema>) {
         // the component must have matching name and keys to the schema
         if (!(this._schema.name === component.name)) {
             throw new Error(
@@ -206,23 +187,22 @@ class DataBuffer<S extends Schema> {
                 );
             }
             // ... other checks here
-            if (
-                this._schema.fields[key].count !==
-                (Array.isArray(component[key]) ? component[key].length : 1)
-            ) {
-                throw new Error(
-                    `Component ${key} has wrong count in schema ${this._schema.name}`
-                );
-            }
         });
     }
 
-    addRecord(id: number, component: Component<S>) {
+    addRecord(id: number, component: Component<Schema>) {
+        if (id < 0 || id >= this._capacity) {
+            throw new Error(
+                `ID ${id} out of bounds (0..${this._capacity - 1})`
+            );
+        }
+        if (this._idToIndex[id] != null) {
+            throw new Error(`ID ${id} already exists in buffer`);
+        }
         if (this._length >= this._capacity) {
             throw new Error(`Buffer full (capacity=${this._capacity})`);
         }
 
-        this._validateId(id);
         this._validateComponent(component);
 
         if (this._buffer.length === 0) {
@@ -244,18 +224,14 @@ class DataBuffer<S extends Schema> {
             }
         });
 
-        this._idToIndex.set(id, this._length);
+        this._idToIndex[id] = this._length;
         this._indexToId[this._length] = id;
         this._length++;
     }
 
     removeRecord(id: number) {
-        if (!this._idToIndex.has(id)) {
-            throw new Error(`ID ${id} not found in buffer`);
-        }
-
-        // 1) retrieve the index of the ID to remove
-        const idx = this._idToIndex.get(id);
+        // 1) validate
+        const idx = this._idToIndex[id];
         if (idx == null) {
             throw new Error(`ID ${id} not found`);
         }
@@ -269,7 +245,7 @@ class DataBuffer<S extends Schema> {
 
             // update the moved entity’s maps
             const movedId = this._indexToId[lastIdx]!;
-            this._idToIndex.set(movedId, idx);
+            this._idToIndex[movedId] = idx;
             this._indexToId[idx] = movedId;
         }
 
@@ -278,7 +254,7 @@ class DataBuffer<S extends Schema> {
         this._buffer.subarray(base, base + this._stride).fill(NaN);
 
         // 4) null out both maps for removed ID & old last index
-        this._idToIndex.delete(id);
+        this._idToIndex[id] = null;
         this._indexToId[lastIdx] = null;
 
         // 5) shrink length
@@ -287,92 +263,96 @@ class DataBuffer<S extends Schema> {
 }
 
 export default () => {
-    const PositionComponentSchema = {
-        name: "Position",
+    // 1) Tiny schema, stride = 2
+    const TestSchema: Schema = {
+        name: "Test",
         fields: {
-            x: {
-                type: "float",
-                count: 1,
-                default: 11,
-            },
-            y: {
-                type: "float",
-                count: 1,
-                default: 11,
-            },
-        },
-    } as const satisfies Schema;
-
-    const VelocityComponentSchema = {
-        name: "Velocity",
-        fields: {
-            x: {
-                type: "float",
-                count: 1,
-                default: 22,
-            },
-            y: {
-                type: "float",
-                count: 1,
-                default: 22,
-            },
-        },
-    } as const satisfies Schema;
-
-    // const DummyComponentSchema = {
-    //     name: "Dummy",
-    //     fields: {
-    //         x: {
-    //             type: "float",
-    //             count: 2,
-    //             default: [0, 0],
-    //         },
-    //         y: {
-    //             type: "float",
-    //             count: 1,
-    //             default: 0,
-    //         },
-    //     },
-    // } satisfies Schema;
-
-    const PositionComponent = new ComponentFactory(
-        PositionComponentSchema
-    ).create();
-    const VelocityComponent = new ComponentFactory(
-        VelocityComponentSchema
-    ).create();
-
-    const PositionComponentLayout = new ComponentLayout(
-        PositionComponentSchema
-    ).build();
-    const VelocityComponentLayout = new ComponentLayout(
-        VelocityComponentSchema
-    ).build();
-
-    // const buff = new DataBuffer(DummyComponentSchema);
-
-    // ✗ Compiler error: wrong field name:
-    // buff.addRecord(2, { name: "Dummy", x: [0, 0], y: 4 }); // THIS SHOULD BE OK BUT THE COMPILER IS GIVING AN ERROR
-
-    const DummyComponentSchema = {
-        name: "Dummy",
-        fields: {
-            x: { type: "float", count: 2, default: [0, 0] }, // inferred default: number[]
-            y: { type: "float", count: 1, default: 0 }, // inferred default: number
-            flag: { type: "bool", count: 1, default: true }, // inferred default: boolean
+            a: { type: "float", count: 1, default: 0 },
+            b: { type: "float", count: 1, default: 0 },
         },
     } satisfies Schema;
 
-    type DC = Component<typeof DummyComponentSchema>;
-    // DC = {
-    //   name:   "Dummy";
-    //   x:      number[];   // mutable
-    //   y:      number;     // mutable
-    //   flag:   boolean;    // mutable
-    // }
+    type TestComp = { name: string; a: number; b: number };
 
-    // const inst = new ComponentFactory(DummyComponentSchema).create();
-    // inst.x = [1, 2]; // ✅ OK
-    // inst.y = 42; // ✅ OK
-    // inst.flag = false; // ✅ OK
+    // simple factory
+    const makeComp = (a: number, b: number): TestComp => ({
+        name: "Test",
+        a,
+        b,
+    });
+
+    // in-file assert helper
+    function assert(cond: boolean, msg?: string): asserts cond {
+        if (!cond) throw new Error(msg || "Assertion failed");
+    }
+
+    function testRemoveZero() {
+        const db = new DataBuffer(TestSchema) as any; // hack to reach privates
+
+        for (let id = 0; id < 4; id++) {
+            db.addRecord(id, makeComp(id, id + 0.5));
+        }
+        // buffer: [0,0.5, 1,1.5, 2,2.5, 3,3.5]
+
+        db.removeRecord(0);
+
+        const buf: Float32Array = db._buffer;
+        const idToIdx: (number | null)[] = db._idToIndex;
+        const idxToId: (number | null)[] = db._indexToId;
+        const len: number = db._length;
+        const stride = 2;
+
+        // slot 0 got [3,3.5]
+        assert(buf[0] === 3, `buf[0] was ${buf[0]}`);
+        assert(buf[1] === 3.5, `buf[1] was ${buf[1]}`);
+
+        // old last slot cleared
+        assert(Number.isNaN(buf[6]), `buf[6] was ${buf[6]}`);
+        assert(Number.isNaN(buf[7]), `buf[7] was ${buf[7]}`);
+
+        // maps
+        assert(idToIdx[0] === null, `idToIdx[0] = ${idToIdx[0]}`);
+        assert(idToIdx[3] === 0, `idToIdx[3] = ${idToIdx[3]}`);
+        assert(idxToId[0] === 3, `idxToId[0] = ${idxToId[0]}`);
+        assert(idxToId[3] === null, `idxToId[3] = ${idxToId[3]}`);
+
+        // length
+        assert(len === 3, `length = ${len}`);
+        console.log("✅ testRemoveZero passed");
+    }
+
+    function testRemoveMiddle() {
+        const db = new DataBuffer(TestSchema) as any;
+        for (let id = 0; id < 4; id++) {
+            db.addRecord(id, makeComp(id, id + 0.5));
+        }
+
+        db.removeRecord(2);
+
+        const buf: Float32Array = db._buffer;
+        const idToIdx: (number | null)[] = db._idToIndex;
+        const idxToId: (number | null)[] = db._indexToId;
+        const len: number = db._length;
+
+        // slot 2 → [3,3.5], slot 3 cleared
+        assert(buf[4] === 3 && buf[5] === 3.5, `slot2=[${buf[4]},${buf[5]}]`);
+        assert(Number.isNaN(buf[6]) && Number.isNaN(buf[7]), "slot3 not NaN");
+
+        // maps
+        assert(idToIdx[2] === null, `idToIdx[2]=${idToIdx[2]}`);
+        assert(idToIdx[3] === 2, `idToIdx[3]=${idToIdx[3]}`);
+        assert(idxToId[2] === 3, `idxToId[2]=${idxToId[2]}`);
+        assert(idxToId[3] === null, `idxToId[3]=${idxToId[3]}`);
+
+        assert(len === 3, `length=${len}`);
+        console.log("✅ testRemoveMiddle passed");
+    }
+
+    function main() {
+        testRemoveZero();
+        testRemoveMiddle();
+        console.log("🎉 All tests passed!");
+    }
+
+    main();
 };

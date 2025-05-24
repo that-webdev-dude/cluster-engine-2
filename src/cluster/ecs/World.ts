@@ -1,7 +1,7 @@
 import { Entity, EntityPool } from "./Entity";
 import { Storage } from "./Storage";
 import { Schema } from "./Schema";
-import { ComponentRegistry, ComponentInstance } from "./Component";
+import { ComponentRegistry, Component } from "./Component";
 
 // WORLD
 /**
@@ -38,7 +38,7 @@ export class World {
      */
     addEntityComponent<S extends Schema>(
         entity: Entity,
-        component: ComponentInstance<S>
+        component: Component<S>
     ): void {
         if (!this.storages.has(component.name)) {
             // register the component if it doesn't exist

@@ -5,10 +5,12 @@ import { Storage } from "./Storage";
 type MutableDefault<D> = D extends readonly (infer U)[] ? U[] : D;
 
 // 2) Given a schema S, this builds the “instance” shape
-export type ComponentInstance<S extends Schema> = {
-    [K in keyof S["fields"]]: MutableDefault<S["fields"][K]["default"]>;
-} & {
+export type Component<S extends Schema> = {
     name: S["name"];
+} & {
+    [K in keyof S["fields"]]: S["fields"][K]["count"] extends 1
+        ? number // or MutableDefault<…> if you really need defaults
+        : number[]; // fixed-length by convention
 };
 
 /**
@@ -98,8 +100,8 @@ export class ComponentFactory<S extends Schema> {
      * the instance, it won't affect the schema.
      * @returns a new instance of this component, with default values
      */
-    create(): ComponentInstance<S> {
-        const inst = {} as ComponentInstance<S>;
+    create(): Component<S> {
+        const inst = {} as Component<S>;
 
         inst.name = this.schema.name; // tag the instance with the schema name
 
@@ -117,9 +119,9 @@ export class ComponentFactory<S extends Schema> {
             const def = field.default!;
 
             if (Array.isArray(def)) {
-                inst[key] = [...def] as ComponentInstance<S>[typeof key];
+                inst[key] = [...def] as Component<S>[typeof key];
             } else {
-                inst[key] = def as ComponentInstance<S>[typeof key];
+                inst[key] = def as Component<S>[typeof key];
             }
         }
 
