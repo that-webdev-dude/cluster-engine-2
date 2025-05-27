@@ -78,7 +78,7 @@ export class RectPipeline extends Pipeline<RectData> {
         this.colorBuffer = gl.createBuffer()!;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer);
         gl.enableVertexAttribArray(3);
-        gl.vertexAttribPointer(3, 4, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(3, 4, gl.UNSIGNED_BYTE, true, 0, 0);
         gl.vertexAttribDivisor(3, 1);
 
         // Cleanup bindings

@@ -5,7 +5,7 @@
  * colors:    [r0,g0,b0,a0,r1,g1,b1,a1,...]
  */
 export interface RectData {
-  positions: Float32Array;
-  sizes: Float32Array;
-  colors: Float32Array;
+    positions: ArrayBufferView;
+    sizes: ArrayBufferView;
+    colors: ArrayBufferView;
 }
