@@ -8,7 +8,7 @@ type ComponentViews<D extends readonly ComponentDescriptor[]> = {
     [K in D[number] as K["name"]]: InstanceType<K["buffer"]>;
 };
 
-class Chunk<S extends readonly ComponentDescriptor[]> {
+export class Chunk<S extends readonly ComponentDescriptor[]> {
     static readonly ENTITIES_PER_CHUNK = 256; // entities per chunk
 
     static readonly HEADER_BYTE_SIZE = 32; // size of the header in bytes, can be used for metadata
@@ -51,6 +51,10 @@ class Chunk<S extends readonly ComponentDescriptor[]> {
     // Handy for debug prints or quick look-ups
     get entityIdColumn(): Uint32Array {
         return this.getView<Uint32Array>(DESCRIPTORS[ComponentType.EntityId]);
+    }
+
+    get full(): boolean {
+        return this.count >= Chunk.ENTITIES_PER_CHUNK;
     }
 
     getView<T extends BufferInstance>(descriptor: ComponentDescriptor): T {
@@ -98,9 +102,20 @@ class Chunk<S extends readonly ComponentDescriptor[]> {
         return row;
     }
 
-    delete(row: number): void {
+    // this version of delete should return the movedEntityId
+    delete(row: number): number | undefined {
+        if (this.count <= 0) {
+            console.warn("Chunk is empty, nothing to delete");
+            return undefined; // Nothing to delete
+        }
+
         const lastRow = this.count - 1;
-        if (row < 0 || row >= this.count) throw new Error("row out of bounds");
+        if (row < 0 || row >= this.count) {
+            console.warn(`Row ${row} out of bounds, nothing to delete`);
+            return undefined; // Row out of bounds, nothing to delete
+        }
+
+        const movedEntityId = this.entityIdColumn[lastRow];
 
         if (row !== lastRow) {
             // copy last row → hole, column by column
@@ -118,13 +133,43 @@ class Chunk<S extends readonly ComponentDescriptor[]> {
             // update the world-side entity-lookup table *outside* the chunk
             // (world must swap the moved entity's row index)
             console.warn(
-                `Moved entity from row ${lastRow} to ${row} in chunk. you must update the world-side entity-lookup table!`
+                `Moved entity from row ${lastRow} to row ${row} in chunk. you must update the world-side entity-lookup table!`
             );
         }
 
         // finally shrink count
         this.header.setUint32(0, lastRow, true);
+
+        return movedEntityId ?? null; // Return the moved entity ID or null if no entity was moved
     }
+
+    // delete(row: number): void {
+    //     const lastRow = this.count - 1;
+    //     if (row < 0 || row >= this.count) throw new Error("row out of bounds");
+
+    //     if (row !== lastRow) {
+    //         // copy last row → hole, column by column
+    //         for (const type of this.archetype.types) {
+    //             const d = DESCRIPTORS[type];
+    //             const view = this.getView<BufferInstance>(d);
+
+    //             const elems = d.count;
+    //             const src = lastRow * elems;
+    //             const dst = row * elems;
+
+    //             // fast path: TypedArray.set(view.subarray(...))
+    //             view.copyWithin(dst, src, src + elems);
+    //         }
+    //         // update the world-side entity-lookup table *outside* the chunk
+    //         // (world must swap the moved entity's row index)
+    //         console.warn(
+    //             `Moved entity from row ${lastRow} to ${row} in chunk. you must update the world-side entity-lookup table!`
+    //         );
+    //     }
+
+    //     // finally shrink count
+    //     this.header.setUint32(0, lastRow, true);
+    // }
 
     /* _______________ internals _______________ */
     private buildViews(): ComponentViews<S> {
@@ -175,4 +220,117 @@ class Chunk<S extends readonly ComponentDescriptor[]> {
     }
 }
 
-export { Chunk };
+export class ChunkMap<
+    S extends readonly ComponentDescriptor[] = readonly ComponentDescriptor[]
+> {
+    private static nextChunkId = 0; // Static counter for chunk IDs
+
+    private chunkIdPool: number[] = []; // Pool of available chunk IDs
+
+    private readonly chunks: Chunk<S>[] = []; // Array to hold chunks
+    // private readonly chunks: Map<number, Chunk<S>> = new Map();
+
+    readonly entityAddress: Map<
+        number,
+        {
+            chunkId: number;
+            row: number;
+        }
+    > = new Map();
+
+    constructor(private readonly archetype: Archetype) {}
+
+    allocate(entityId: number): { chunkId: number; row: number } {
+        if (this.entityAddress.has(entityId)) {
+            throw new Error(`Entity ${entityId} already exists`);
+        }
+
+        let chunkId = this.chunks.findIndex((chunk) => chunk && !chunk.full);
+
+        if (chunkId < 0) {
+            // No available chunk, create a new one
+            chunkId = ChunkMap.nextChunkId++;
+            const newChunk = this.createChunk(chunkId);
+            this.chunks[chunkId] = newChunk;
+        }
+
+        const chunk = this.chunks[chunkId];
+        const row = chunk.allocate(entityId);
+
+        // Store the entity's address in the map
+        this.entityAddress.set(entityId, {
+            chunkId: chunkId,
+            row: row,
+        });
+
+        return { chunkId, row };
+    }
+
+    delete(entityId: number): void {
+        const address = this.entityAddress.get(entityId);
+        if (!address) {
+            throw new Error(`Entity ${entityId} does not exist`);
+        }
+
+        const { chunkId, row } = address;
+        const chunk = this.getChunk(chunkId);
+        if (!chunk) {
+            throw new Error(`Chunk ${chunkId} does not exist`);
+        }
+
+        const movedEntity = chunk.delete(row); // Delete the entity from the chunk
+
+        this.entityAddress.delete(entityId); // Remove the entity from the address map
+        if (movedEntity !== undefined && movedEntity !== entityId) {
+            // If the moved entity is not the same as the deleted entity, update its address
+            this.entityAddress.set(movedEntity, {
+                chunkId: chunkId,
+                row: row,
+            });
+        }
+    }
+
+    getEntityAddress(
+        entityId: number
+    ): { chunkId: string; row: number } | undefined {
+        const address = this.entityAddress.get(entityId);
+        if (!address) {
+            return undefined;
+        }
+        return {
+            chunkId: String(address.chunkId),
+            row: address.row,
+        };
+    }
+
+    getChunk(chunkId: number): Chunk<S> | undefined {
+        if (chunkId < 0 || chunkId >= this.chunks.length) {
+            return undefined; // Invalid chunk ID
+        }
+        return this.chunks[chunkId];
+    }
+
+    createChunk(chunkId: number): Chunk<S> {
+        if (chunkId < 0) {
+            throw new Error("Chunk ID must be a non-negative integer");
+        }
+
+        return new Chunk<S>(this.archetype);
+    }
+
+    deleteChunk(chunkId: number): void {
+        const chunk = this.getChunk(chunkId);
+        if (!chunk) {
+            throw new Error(`Chunk with ID ${chunkId} does not exist`);
+        }
+
+        // Remove all entities in this chunk from the entityAddress map
+        for (let i = 0; i < chunk.count; i++) {
+            const entityId = chunk.entityIdColumn[i];
+            this.entityAddress.delete(entityId);
+        }
+
+        // Remove the chunk from the chunks array
+        this.chunks[chunkId] = undefined as any; // Mark as undefined
+    }
+}
