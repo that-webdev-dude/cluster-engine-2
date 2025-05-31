@@ -44,4 +44,11 @@ for (let i = 0; i < 10; i++) {
     storage.allocate(i);
 }
 
+// console.log(storage.getChunk(0));
+storage.forEachChunk(
+    (chunk: Readonly<Chunk<typeof rectangleDescriptors>>, id: number) => {
+        console.log(chunk, id);
+    }
+);
+
 export default () => {};

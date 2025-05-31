@@ -1,6 +1,6 @@
 // src/ecs/archetype.ts
 
-import { ComponentType, DESCRIPTORS } from "./components";
+import { ComponentType, ComponentDescriptor, DESCRIPTORS } from "./components";
 
 /** public type */
 export interface Archetype {
