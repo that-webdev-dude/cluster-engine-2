@@ -1,0 +1,46 @@
+/**
+ * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
+ */
+const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
+
+type ID = number;
+
+export class IDPool {
+    private nextId: ID = 0;
+
+    private freeIds: Set<ID> = new Set();
+
+    acquire(): ID {
+        const iterator = this.freeIds.values();
+        const next = iterator.next();
+        if (!next.done) {
+            this.freeIds.delete(next.value);
+            return next.value;
+        }
+        return this.nextId++;
+    }
+
+    release(id: ID): void {
+        if (id < this.nextId && !this.freeIds.has(id)) {
+            this.freeIds.add(id);
+        } else {
+            if (DEBUG) {
+                console.warn(
+                    `IDPool.release: attempt to release an invalid or already released ID: ${id}`
+                );
+            }
+        }
+    }
+
+    reset() {
+        this.nextId = 0;
+        this.freeIds = new Set();
+    }
+
+    getStats() {
+        return {
+            nextId: this.nextId,
+            freeCount: this.freeIds.size,
+        };
+    }
+}

@@ -3,6 +3,8 @@
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
+import { IDPool } from "../tools/IDPool";
+
 type EntityId = number;
 
 export class Entity {

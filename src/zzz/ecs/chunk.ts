@@ -1,6 +1,6 @@
 import { BufferInstance } from "./buffer";
 import { Archetype } from "./archetype";
-import { ComponentType, ComponentDescriptor, DESCRIPTORS } from "./components";
+import { ComponentDescriptor, ComponentType, DESCRIPTORS } from "./components";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -64,7 +64,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return this.count >= Chunk.ENTITIES_PER_CHUNK;
     }
 
-    get entityIdColumn(): Uint32Array {
+    get entityIdView(): Uint32Array {
         this.assertAlive();
         return this.getView<Uint32Array>(DESCRIPTORS[ComponentType.EntityId]);
     }
@@ -139,7 +139,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             return undefined;
         }
 
-        const movedEntityId = this.entityIdColumn[lastRow];
+        const movedEntityId = this.entityIdView[lastRow];
 
         if (row !== lastRow) {
             // copy last row → hole, column by column

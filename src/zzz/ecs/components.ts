@@ -22,10 +22,9 @@ export interface ComponentDescriptor {
     alignment?: number;
 }
 
-export interface ComponentUnit {
-    type: ComponentType;
-    value: number[];
-}
+export type ComponentAssignmentMap = Partial<{
+    [K in Exclude<ComponentType, ComponentType.EntityId>]: number[];
+}>;
 
 export const DESCRIPTORS: readonly ComponentDescriptor[] = [
     {

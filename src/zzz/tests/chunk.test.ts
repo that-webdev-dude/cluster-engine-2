@@ -33,7 +33,7 @@ function snapshotRow(chunk: ReturnType<typeof makePosVelChunk>, row: number) {
     const pBase = row * 2;
     const vBase = row * 2;
     return {
-        id: chunk.entityIdColumn[row],
+        id: chunk.entityIdView[row],
         pos: [Position[pBase], Position[pBase + 1]],
         vel: [Velocity[vBase], Velocity[vBase + 1]],
     };

@@ -1,7 +1,10 @@
 TODO:
 
-- add an optional component initialization parameter to Storage.allocate
+- ✅ add an optional component initialization parameter to Storage.allocate 
+- ✅ replace the ComponentUnit array for a map map-like object with keys as ComponentType enum members (or strings like "Position") 
 - implement the deferred update feature in the storage. allocate and delete should not be allowed during a foreach lop
-- implement an IDManager for creation and deletion of ids (this can be used in the storage)
-    → maybe this can have the genetation encoding?
+- ✅ implement an IDPool for creation and deletion of ids (this can be used in the storage)
+    → 🟦 maybe this can have the generation encoding?
 - make the Archetype a generic so the Storage works with generics
+- should each Archetype own its Storage?
+- If you plan to reset a scene or level, consider exposing a .reset() method in Storage that calls chunkIdPool.reset() and clears all internal maps. This would make recycling the whole world easier without creating new instances.

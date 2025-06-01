@@ -117,7 +117,6 @@ describe("Storage (rev 2025-05-31)", () => {
 
         entityIds.forEach((id) => storage.delete(id));
         expect(storage["chunks"].has(chunkId)).toBe(false);
-        expect(storage["freeChunkIds"]).toContain(chunkId);
     });
 
     it("throws on deleting non-existing entityId", () => {

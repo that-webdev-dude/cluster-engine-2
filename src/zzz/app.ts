@@ -7,9 +7,14 @@ import { RectData } from "../cluster/gl/pipelines/rectData";
 import { RectPipeline } from "../cluster/gl/pipelines/rect";
 import { Engine } from "../cluster/core/Engine";
 import { getArchetype } from "./ecs/archetype";
-import { ComponentType, DESCRIPTORS } from "./ecs/components";
+import {
+    ComponentType,
+    ComponentAssignmentMap,
+    DESCRIPTORS,
+} from "./ecs/components";
 import { Chunk } from "./ecs/chunk";
 import { Storage } from "./ecs/storage";
+import { IDPool } from "./tools/IDPool";
 
 const renderer = Renderer.getInstance();
 
@@ -40,15 +45,32 @@ const rectangleDescriptors = [
 // 3. create a sotrage of chunks
 const storage = new Storage<typeof rectangleDescriptors>(rectangleArchetype);
 
-for (let i = 0; i < 10; i++) {
-    storage.allocate(i);
-}
+const entityIdPool = new IDPool();
+for (let i = 0; i < 1; i++) {
+    const px = (Math.random() - 0.5) * 10;
+    const py = (Math.random() - 0.5) * 10;
+    const ppx = px;
+    const ppy = py;
+    const sx = 32;
+    const sy = 32;
+    const r = 0;
+    const g = 0;
+    const b = 0;
+    const a = 0;
+    const vx = (Math.random() - 0.5) * 100;
+    const vy = (Math.random() - 0.5) * 100;
 
-// console.log(storage.getChunk(0));
-storage.forEachChunk(
-    (chunk: Readonly<Chunk<typeof rectangleDescriptors>>, id: number) => {
-        console.log(chunk, id);
-    }
-);
+    const comps: ComponentAssignmentMap = {
+        [ComponentType.Position]: [px, py],
+        [ComponentType.Size]: [sx, sy],
+        [ComponentType.Color]: [r, g, b, a],
+        [ComponentType.Velocity]: [vx, vy],
+        [ComponentType.PreviousPosition]: [px, py],
+    };
+
+    const entityId = entityIdPool.acquire();
+
+    storage.allocate(entityId, comps);
+}
 
 export default () => {};

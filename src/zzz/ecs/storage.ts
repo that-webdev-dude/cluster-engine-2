@@ -1,6 +1,13 @@
 import { Chunk } from "./chunk";
-import { Archetype } from "./archetype";
-import { ComponentDescriptor } from "./components";
+import { Archetype, has } from "./archetype";
+import {
+    ComponentDescriptor,
+    ComponentType,
+    ComponentAssignmentMap,
+    DESCRIPTORS,
+} from "./components";
+import { BufferInstance } from "./buffer";
+import { IDPool } from "../tools/IDPool";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -8,9 +15,7 @@ import { ComponentDescriptor } from "./components";
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 export class Storage<S extends readonly ComponentDescriptor[]> {
-    private static nextChunkId = 0;
-
-    private freeChunkIds: number[] = [];
+    private chunkIdPool: IDPool = new IDPool();
 
     private entities: Map<number, { chunkId: number; row: number }> = new Map();
 
@@ -34,7 +39,61 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
         this.chunks.forEach((chunk, id) => cb(chunk, id));
     }
 
-    allocate(entityId: number): { chunkId: number; row: number } {
+    assign(
+        entityId: number,
+        comps: ComponentAssignmentMap
+    ): { chunkId: number; row: number } | undefined {
+        this.validateEntityId(entityId);
+
+        const address = this.entities.get(entityId);
+        if (!address) {
+            return undefined;
+        }
+
+        const { chunkId, row } = address;
+
+        const chunk = this.chunks.get(chunkId);
+        if (!chunk) {
+            return undefined;
+        }
+
+        for (const [typeStr, value] of Object.entries(comps)) {
+            const type = Number(typeStr) as ComponentType; // case to a number for getting the ComponentType
+
+            // first check if the actual component is in this archetype
+            if (!has(this.archetype, type)) {
+                if (DEBUG) {
+                    console.log(
+                        `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype`
+                    );
+                }
+                continue;
+            }
+
+            const descriptor = DESCRIPTORS[type];
+            const view = chunk.getView<BufferInstance>(descriptor);
+            // now check if the component values has the same length of the descriptor
+            const count = descriptor.count;
+            if (value.length !== count) {
+                throw new Error(
+                    `Storage.assign: illegal assignement - component value must be an array of length ${count}. user value: ${value}`
+                );
+            }
+
+            // copy the values now
+            const base = row * count;
+            for (let i = 0; i < count; i++) {
+                view[base + i] = value[i];
+            }
+        }
+
+        return address;
+    }
+
+    allocate(
+        entityId: number,
+        comps?: ComponentAssignmentMap | undefined
+    ): { chunkId: number; row: number } {
         this.validateEntityId(entityId);
 
         if (this.entities.has(entityId))
@@ -68,6 +127,11 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             );
         }
 
+        // if the user provides comps, assign comps
+        if (comps !== undefined) {
+            this.assign(entityId, comps);
+        }
+
         return address;
     }
 
@@ -86,10 +150,6 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
         const movedEntityId = chunk.delete(row);
 
-        if (!chunk.full) {
-            this.partialChunkIds.add(chunkId);
-        }
-
         // if an entity is been moved to the new location update the address map
         if (movedEntityId !== undefined) {
             this.entities.set(movedEntityId, { chunkId, row });
@@ -100,6 +160,8 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
         if (chunk.count === 0) {
             this.destroyChunkInstance(chunkId);
+        } else if (!chunk.full) {
+            this.partialChunkIds.add(chunkId);
         }
     }
 
@@ -116,7 +178,8 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
     }
 
     private createChunk(): number {
-        const chunkId = this.freeChunkIds.pop() ?? Storage.nextChunkId++;
+        // const chunkId = this.freeChunkIds.pop() ?? Storage.nextChunkId++;
+        const chunkId = this.chunkIdPool.acquire();
 
         this.chunks.set(chunkId, new Chunk<S>(this.archetype));
 
@@ -132,6 +195,6 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
         this.chunks.delete(chunkId);
         this.partialChunkIds.delete(chunkId);
-        this.freeChunkIds.push(chunkId);
+        this.chunkIdPool.release(chunkId);
     }
 }
