@@ -22,6 +22,11 @@ export interface ComponentDescriptor {
     alignment?: number;
 }
 
+export interface ComponentUnit {
+    type: ComponentType;
+    value: number[];
+}
+
 export const DESCRIPTORS: readonly ComponentDescriptor[] = [
     {
         type: ComponentType.EntityId,

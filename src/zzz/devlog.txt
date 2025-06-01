@@ -1,0 +1,7 @@
+TODO:
+
+- add an optional component initialization parameter to Storage.allocate
+- implement the deferred update feature in the storage. allocate and delete should not be allowed during a foreach lop
+- implement an IDManager for creation and deletion of ids (this can be used in the storage)
+    → maybe this can have the genetation encoding?
+- make the Archetype a generic so the Storage works with generics
