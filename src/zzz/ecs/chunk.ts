@@ -14,7 +14,7 @@ type ComponentViews<D extends readonly ComponentDescriptor[]> = {
 type MovedEntityId = number & { __brand: "MovedEntityId" }; // used in the delete method
 
 export class Chunk<S extends readonly ComponentDescriptor[]> {
-    static readonly ENTITIES_PER_CHUNK = 256; // entities per chunk
+    static readonly ENTITIES_PER_CHUNK = 256 * 2; // entities per chunk
 
     static readonly HEADER_BYTE_SIZE = 32; // size of the header in bytes, can be used for metadata
 

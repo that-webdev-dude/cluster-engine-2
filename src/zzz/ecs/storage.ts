@@ -32,11 +32,13 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
         return this.chunks.get(chunkId);
     }
 
-    // TODO
-    // need to implement a command buffer for deferred structural changes in the chunks (allocate/delete)
+    /**
+     * Iterates all chunks for this Storage.
+     * Structural changes (allocate/delete) MUST NOT be made during iteration.
+     * Use CommandBuffer to defer operations and call `flushCommands()` after.
+     */
     forEachChunk(cb: (chunk: Readonly<Chunk<S>>, id: number) => void): void {
-        // ⚠️  DO NOT modify this.chunks inside the callback!
-        this.chunks.forEach((chunk, id) => cb(chunk, id));
+        this.chunks.forEach((chunk, id) => cb(chunk, id)); // ⚠️ DO NOT modify this.chunks inside the callback!
     }
 
     assign(
@@ -121,11 +123,11 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
         // update the entity address
         this.entities.set(entityId, address);
 
-        if (DEBUG) {
-            console.log(
-                `Storage.allocate.DEBUG: entityId: ${entityId} chunkId: ${address.chunkId} row: ${address.row}`
-            );
-        }
+        // if (DEBUG) {
+        //     console.log(
+        //         `Storage.allocate.DEBUG: entityId: ${entityId} chunkId: ${address.chunkId} row: ${address.row}`
+        //     );
+        // }
 
         // if the user provides comps, assign comps
         if (comps !== undefined) {
