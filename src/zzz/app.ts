@@ -14,7 +14,8 @@ import {
 } from "./ecs/components";
 import { Chunk } from "./ecs/chunk";
 import { Storage } from "./ecs/storage";
-import { IDPool } from "./tools/IDPool";
+// import { IDPool } from "./tools/IDPool";
+import { EntityPool, EntityMetaSet } from "./ecs/entity";
 
 const renderer = Renderer.getInstance();
 
@@ -45,8 +46,8 @@ const rectangleDescriptors = [
 // 3. create a sotrage of chunks
 const storage = new Storage<typeof rectangleDescriptors>(rectangleArchetype);
 
-const entityIdPool = new IDPool();
-for (let i = 0; i < 256 * 12; i++) {
+const entityMetaSet = new EntityMetaSet();
+for (let i = 0; i < 10; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
     const ppx = px;
@@ -68,10 +69,19 @@ for (let i = 0; i < 256 * 12; i++) {
         [ComponentType.PreviousPosition]: [ppx, ppy],
     };
 
-    const entityId = entityIdPool.acquire();
+    const entityId = EntityPool.acquire();
 
-    storage.allocate(entityId, comps);
+    const { chunkId, row } = storage.allocate(entityId, comps);
+
+    entityMetaSet.insert({
+        entityId,
+        storage,
+        chunkId,
+        row,
+    });
 }
+
+console.log(entityMetaSet);
 
 // 5. system to make the rectangles bouncing on screen
 const updateSystem = {
