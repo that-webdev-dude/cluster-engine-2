@@ -1,6 +1,7 @@
 // src/ecs/archetype.ts
 
 import { ComponentType, ComponentDescriptor, DESCRIPTORS } from "./components";
+import * as Tools from "../tools";
 
 /** public type */
 export interface Archetype {
@@ -21,7 +22,7 @@ function sortComponentTypes(types: ComponentType[]): ComponentType[] {
     return types.sort((a, b) => a - b);
 }
 
-function makeSignature(types: ComponentType[]): number {
+export function makeSignature(types: ComponentType[]): number {
     return types.reduce((mask, t) => mask | (1 << t), 0);
 }
 
@@ -61,11 +62,21 @@ export function getArchetype(userTypes: ComponentType[]): Archetype {
 
     cache.set(signature, archetype);
 
+    Tools.Obj.deepFreze(archetype); // make the archetype deep-immutable
+
     return archetype;
 }
 
 /* convenience helpers (optional) */
+
+/** @deprecated - use archetypeIncludes instead */
 export function has(archetype: Archetype, comp: ComponentType): boolean {
+    return (archetype.signature & (1 << comp)) !== 0;
+}
+export function archetypeIncludes(
+    archetype: Archetype,
+    comp: ComponentType
+): boolean {
     return (archetype.signature & (1 << comp)) !== 0;
 }
 

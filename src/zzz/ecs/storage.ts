@@ -25,7 +25,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
     // TODO
     // Storage<S> can be instantiated with an Archetype whose component list does not match S. TypeScript can’t prove the two are consistent.
-    constructor(private readonly archetype: Archetype) {}
+    constructor(readonly archetype: Archetype) {}
 
     /* _______________ public API _______________ */
     getChunk(chunkId: number): Readonly<Chunk<S>> | undefined {

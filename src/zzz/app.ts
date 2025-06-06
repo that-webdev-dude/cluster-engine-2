@@ -1,91 +1,138 @@
-// little demo app to test on archetypes, chunks, and the engine
-// this is simply drawing rectangles on screen.
-// data is stored in a single chunk
-
 import { Renderer } from "../cluster/gl/Renderer";
 import { RectData } from "../cluster/gl/pipelines/rectData";
 import { RectPipeline } from "../cluster/gl/pipelines/rect";
 import { Engine } from "../cluster/core/Engine";
-import { getArchetype } from "./ecs/archetype";
+import { Archetype, getArchetype, makeSignature } from "./ecs/archetype";
 import {
     ComponentType,
     ComponentAssignmentMap,
     DESCRIPTORS,
+    ComponentDescriptor,
 } from "./ecs/components";
-import { Chunk } from "./ecs/chunk";
 import { Storage } from "./ecs/storage";
-// import { IDPool } from "./tools/IDPool";
-import { EntityPool, EntityMetaSet } from "./ecs/entity";
+import { EntityPool, EntityMetaSet, EntityId } from "./ecs/entity";
+import { CommandBuffer } from "./ecs/cmd";
 
-const renderer = Renderer.getInstance();
+/**
+ * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
+ */
+const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
-const rectPipeline = new RectPipeline(renderer, ["Position", "Size", "Color"]);
+/**
+ * Abstract base class for systems that can be updated each frame.
+ *
+ * Classes extending `UpdateableSystem` must implement the `update` method,
+ * which is called with the elapsed time since the last update.
+ */
+export abstract class UpdateableSystem {
+    abstract update(world: World, dt: number): void;
+}
+
+/**
+ * Abstract base class for systems that can be rendered each frame.
+ *
+ * Classes extending `RenderableSystem` must implement the `render` method,
+ * which is called with an interpolation alpha value.
+ */
+export abstract class RenderableSystem {
+    abstract render(world: World, alpha: number): void;
+}
+
+class World {
+    private updateableSystems: UpdateableSystem[] = [];
+    private renderableSystems: RenderableSystem[] = [];
+    private cmd: CommandBuffer = new CommandBuffer();
+    private entities: EntityMetaSet = new EntityMetaSet();
+
+    readonly archetypes: Map<number, Storage<ComponentDescriptor[]>> =
+        new Map();
+
+    constructor(options: {
+        updateableSystems: UpdateableSystem[];
+        renderableSystems: RenderableSystem[];
+    }) {
+        this.updateableSystems = options.updateableSystems;
+        this.renderableSystems = options.renderableSystems;
+    }
+
+    createEntity(archetype: Archetype, comps: ComponentAssignmentMap) {
+        let storage = this.archetypes.get(archetype.signature);
+        if (storage === undefined) {
+            const descriptors = archetype.types.map((c) => DESCRIPTORS[c]); // archetype.types includes EntityId type so it's fine
+            this.archetypes.set(
+                archetype.signature,
+                new Storage<typeof descriptors>(archetype)
+            );
+            storage = this.archetypes.get(archetype.signature)!; // just created one
+        }
+
+        const entityId = EntityPool.acquire();
+
+        // ⚠️ this should be done via cmd
+        const { chunkId, row } = storage.allocate(entityId, comps);
+
+        this.entities.insert({
+            archetype,
+            entityId,
+            chunkId,
+            row,
+        });
+    }
+
+    removeEntity(entityId: EntityId): boolean {
+        const meta = this.entities.get(entityId);
+        if (meta === undefined) {
+            if (DEBUG)
+                throw new Error(
+                    `World.removeEntity: entityId ${entityId} does not exists in the world`
+                );
+            return false;
+        }
+
+        const { archetype } = meta;
+        const storage = this.archetypes.get(archetype.signature);
+        if (storage === undefined) {
+            if (DEBUG)
+                throw new Error(
+                    `World.removeEntity: entityId ${entityId} does not exists in the world`
+                );
+            return false;
+        }
+
+        // ⚠️ this should be done via cmd
+        storage.delete(entityId);
+
+        this.entities.remove(entityId);
+
+        EntityPool.release(entityId);
+
+        return true;
+    }
+
+    // ⚠️ these methods should be part of a Game class owning the world instance
+    update(dt: number) {
+        this.updateableSystems.forEach((system) => system.update(this, dt));
+    }
+
+    render(alpha: number) {
+        this.renderableSystems.forEach((system) => system.render(this, alpha));
+    }
+
+    done() {
+        // console.log("events and flush");
+    }
+}
 
 const engine = new Engine(60);
 
-// 1. create a rectangle archetype
-const rectangleArchetype = getArchetype([
-    ComponentType.EntityId,
-    ComponentType.Position,
-    ComponentType.Size,
-    ComponentType.Color,
-    ComponentType.Velocity,
-    ComponentType.PreviousPosition,
-]);
-
-// 2. create the rectangle component descriptors object
-const rectangleDescriptors = [
-    DESCRIPTORS[ComponentType.EntityId],
-    DESCRIPTORS[ComponentType.Position],
-    DESCRIPTORS[ComponentType.Size],
-    DESCRIPTORS[ComponentType.Color],
-    DESCRIPTORS[ComponentType.Velocity],
-    DESCRIPTORS[ComponentType.PreviousPosition],
-] as const;
-
-// 3. create a sotrage of chunks
-const storage = new Storage<typeof rectangleDescriptors>(rectangleArchetype);
-
-const entityMetaSet = new EntityMetaSet();
-for (let i = 0; i < 10; i++) {
-    const px = Math.random() * 100;
-    const py = Math.random() * 100;
-    const ppx = px;
-    const ppy = py;
-    const sx = 32;
-    const sy = 32;
-    const r = Math.random() * 255;
-    const g = Math.random() * 255;
-    const b = Math.random() * 255;
-    const a = 1;
-    const vx = (Math.random() - 0.5) * 200;
-    const vy = (Math.random() - 0.5) * 200;
-
-    const comps: ComponentAssignmentMap = {
-        [ComponentType.Position]: [px, py],
-        [ComponentType.Size]: [sx, sy],
-        [ComponentType.Color]: [r, g, b, a],
-        [ComponentType.Velocity]: [vx, vy],
-        [ComponentType.PreviousPosition]: [ppx, ppy],
-    };
-
-    const entityId = EntityPool.acquire();
-
-    const { chunkId, row } = storage.allocate(entityId, comps);
-
-    entityMetaSet.insert({
-        entityId,
-        storage,
-        chunkId,
-        row,
-    });
-}
-
-console.log(entityMetaSet);
-
 // 5. system to make the rectangles bouncing on screen
-const updateSystem = {
-    update: (dt: number) => {
+class MovementSystem implements UpdateableSystem {
+    update(world: World, dt: number) {
+        const renderer = Renderer.getInstance();
+
+        const storage = world.archetypes.get(rectangleArchetype.signature);
+        if (storage === undefined) return;
+
         // const start = window.performance.now();
         storage.forEachChunk((chunk) => {
             for (let i = 0; i < chunk.count; i++) {
@@ -122,24 +169,31 @@ const updateSystem = {
         });
         // const end = window.performance.now();
         // console.log((end - start).toFixed(3));
-    },
-};
+    }
+}
 
 // 5. system to make the rectangles bouncing on screen
+class RendererSystem implements RenderableSystem {
+    private interpPos = null as Float32Array | null;
+    private renderer = Renderer.getInstance();
+    private rectPipeline = new RectPipeline(this.renderer, [
+        "Position",
+        "Size",
+        "Color",
+    ]);
 
-const rendererSystem = {
-    // interpPos: Float32Array.from(chunk.views.Position), // for smooth movement - scratch
-    interpPos: null as Float32Array | null,
-    render: (alpha: number) => {
-        // const start = window.performance.now();
-        renderer.clear();
+    render(world: World, alpha: number) {
+        const storage = world.archetypes.get(rectangleArchetype.signature);
+        if (storage === undefined) return;
+
+        this.renderer.clear();
         storage.forEachChunk((chunk) => {
             const count = chunk.count;
             if (count === 0) return;
 
             // at the first iteration initialize the scratch
-            if (!rendererSystem.interpPos) {
-                rendererSystem.interpPos = Float32Array.from(
+            if (!this.interpPos) {
+                this.interpPos = Float32Array.from(
                     chunk.views.PreviousPosition
                 );
             }
@@ -149,28 +203,69 @@ const rendererSystem = {
             const prev = chunk.views.PreviousPosition;
 
             for (let i = 0; i < count * 2; ++i) {
-                rendererSystem.interpPos[i] =
-                    prev[i] + (cur[i] - prev[i]) * alpha;
+                this.interpPos[i] = prev[i] + (cur[i] - prev[i]) * alpha;
             }
 
             // rect data from subarrays
             const rectData: RectData = {
-                positions: rendererSystem.interpPos.subarray(0, count * 2),
+                positions: this.interpPos.subarray(0, count * 2),
                 sizes: chunk.views.Size.subarray(0, count * 2),
                 colors: chunk.views.Color.subarray(0, count * 4),
             };
 
-            rectPipeline.bind(renderer.gl);
+            const { gl } = this.renderer;
 
-            rectPipeline.draw(renderer.gl, rectData, count);
+            this.rectPipeline.bind(gl);
+
+            this.rectPipeline.draw(gl, rectData, count);
         });
-        // const end = window.performance.now();
-        // console.log((end - start).toFixed(3));
-    },
-};
+    }
+}
+
+// 6. create the world
+const world = new World({
+    updateableSystems: [new MovementSystem()],
+    renderableSystems: [new RendererSystem()],
+});
+
+// 1. create a rectangle archetype
+const rectangleArchetype = getArchetype([
+    ComponentType.EntityId,
+    ComponentType.Position,
+    ComponentType.Size,
+    ComponentType.Color,
+    ComponentType.Velocity,
+    ComponentType.PreviousPosition,
+]);
+
+for (let i = 0; i < 10; i++) {
+    const px = Math.random() * 100;
+    const py = Math.random() * 100;
+    const ppx = px;
+    const ppy = py;
+    const sx = 2;
+    const sy = 2;
+    const r = Math.random() * 256;
+    const g = Math.random() * 256;
+    const b = Math.random() * 256;
+    const a = 1;
+    const vx = (Math.random() - 0.5) * 200;
+    const vy = (Math.random() - 0.5) * 200;
+
+    const comps: ComponentAssignmentMap = {
+        [ComponentType.Position]: [px, py],
+        [ComponentType.Size]: [sx, sy],
+        [ComponentType.Color]: [r, g, b, a],
+        [ComponentType.Velocity]: [vx, vy],
+        [ComponentType.PreviousPosition]: [ppx, ppy],
+    };
+
+    world.createEntity(rectangleArchetype, comps);
+}
 
 export default () => {
-    engine.addUpdateable(updateSystem);
-    engine.addRenderable(rendererSystem);
+    engine.addUpdateable(world);
+    engine.addRenderable(world);
+    engine.addCallback(world);
     engine.start();
 };

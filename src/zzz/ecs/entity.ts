@@ -6,6 +6,8 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 import { IDPool } from "../tools/IDPool";
 import { Storage } from "./storage";
 import { ComponentDescriptor } from "./components";
+import * as Types from "../types";
+import { Archetype } from "./archetype";
 
 /**
  * Represents the unique identifier for an entity within the ECS (Entity Component System).
@@ -22,7 +24,8 @@ export type EntityId = number;
  * @property row - The row index within the chunk where the entity's data resides.
  */
 export type EntityMeta = {
-    storage: Storage<ComponentDescriptor[]>;
+    // storage: Storage<ComponentDescriptor[]>;
+    archetype: Archetype;
     entityId: EntityId;
     chunkId: number;
     row: number;
@@ -41,7 +44,9 @@ export class EntityMetaSet {
      */
     private sparse: EntityId[] = [];
 
-    /** Packed array of EntityMeta entries */
+    /**
+     * Packed array of EntityMeta entries
+     * */
     private meta: EntityMeta[] = [];
 
     /**
