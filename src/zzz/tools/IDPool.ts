@@ -6,9 +6,16 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 type ID = number;
 
 export class IDPool {
-    private nextId: ID = 0;
+    private first: number;
+
+    private nextId: ID;
 
     private freeIds: Set<ID> = new Set();
+
+    constructor(first: number = 0) {
+        this.first = first;
+        this.nextId = first;
+    }
 
     acquire(): ID {
         const iterator = this.freeIds.values();

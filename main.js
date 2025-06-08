@@ -1,8 +1,6 @@
 import "./src/styles/style.scss";
-// import app from "./src/app.ts";
-import dev from "./src/zzz/dev.ts";
+import exp from "./src/zzz/exp.ts";
 
 window.onload = () => {
-    // dev();
-    dev();
+    exp();
 };
