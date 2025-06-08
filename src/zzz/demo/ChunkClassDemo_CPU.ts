@@ -4,7 +4,7 @@
 
 import { Display } from "../../cluster/core/Display";
 import { Engine } from "../../cluster/core/Engine";
-import { Archetype } from "../ecs/archetype";
+import { Archetype } from "../ecs/archetypeV2";
 import { ComponentType, DESCRIPTORS } from "../ecs/components";
 import { Chunk } from "../ecs/chunk";
 

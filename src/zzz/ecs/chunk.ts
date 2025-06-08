@@ -1,5 +1,5 @@
 import { BufferInstance } from "./buffer";
-import { Archetype } from "./archetype";
+import { Archetype } from "./archetypeV2";
 import { ComponentDescriptor, ComponentType, DESCRIPTORS } from "./components";
 
 /**

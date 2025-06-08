@@ -7,7 +7,7 @@ import { IDPool } from "../tools/IDPool";
 import { Storage } from "./storage";
 import { ComponentDescriptor } from "./components";
 import * as Types from "../types";
-import { Archetype } from "./archetype";
+import { Archetype } from "./archetypeV2";
 
 /**
  * Represents the unique identifier for an entity within the ECS (Entity Component System).
