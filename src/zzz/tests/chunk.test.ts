@@ -6,17 +6,17 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Chunk } from "../ecs/chunk";
-import { getArchetype } from "../ecs/archetype";
+import { Archetype } from "../ecs/archetype";
 import { ComponentType, DESCRIPTORS } from "../ecs/components";
 
 /* Helpers ────────────────────────────────────────────────────────────────── */
 
 /** Produces a fresh Position-Velocity chunk every time. */
 function makePosVelChunk() {
-    const archetype = getArchetype([
+    const archetype = Archetype.create(
         ComponentType.Position,
-        ComponentType.Velocity,
-    ]);
+        ComponentType.Velocity
+    );
 
     const tuple = [
         DESCRIPTORS[ComponentType.Position],

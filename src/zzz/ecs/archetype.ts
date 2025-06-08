@@ -1,39 +1,28 @@
-// src/ecs/archetype.ts
+import { DESCRIPTORS } from "./components";
+import { Obj } from "../tools";
+import { ComponentType } from "../types";
+import type { Signature } from "../types";
 
-import { ComponentType, ComponentDescriptor, DESCRIPTORS } from "./components";
-import * as Tools from "../tools";
-
-/** public type */
-export interface Archetype {
-    signature: number;
-    types: ComponentType[];
-    offsets: Map<ComponentType, number>;
-    elementStride: number; // total size of the archetype in numbers of elements
-    byteStride: number;
-}
-
-/** private state */
-type Signature = number;
-
+/**  cache for already backed archetypes */
 const cache: Map<Signature, Archetype> = new Map();
 
-/** private helpers */
-function sortComponentTypes(types: ComponentType[]): ComponentType[] {
-    return types.sort((a, b) => a - b);
+/** utility to compute the signature from a provided list of component types */
+function makeSignature(...comps: ComponentType[]): Signature {
+    const signature = comps.reduce((mask, t) => mask | (1 << t), 0);
+    return signature as Signature;
 }
 
-export function makeSignature(types: ComponentType[]): number {
-    return types.reduce((mask, t) => mask | (1 << t), 0);
-}
+/** creates a brand new archetype */
+function create(...comps: ComponentType[]): Archetype {
+    let types = [...new Set([...comps, ComponentType.EntityId])].sort(
+        (a, b) => a - b
+    );
 
-/** public factory */
-export function getArchetype(userTypes: ComponentType[]): Archetype {
-    let types = [...new Set([...userTypes, ComponentType.EntityId])]; // Copy to avoid mutation
+    const signature = makeSignature(...types);
 
-    const signature = makeSignature(types);
-    if (cache.has(signature)) return cache.get(signature)!;
+    const existing = cache.get(signature);
+    if (existing) return existing;
 
-    types = sortComponentTypes(types);
     let byteStride = 0;
     let elementStride = 0;
     const offsets = new Map<ComponentType, number>();
@@ -62,32 +51,43 @@ export function getArchetype(userTypes: ComponentType[]): Archetype {
 
     cache.set(signature, archetype);
 
-    Tools.Obj.deepFreze(archetype); // make the archetype deep-immutable
+    Obj.deepFreze(archetype); // make the archetype deep-immutable
 
     return archetype;
 }
 
-/* convenience helpers (optional) */
-
-/** @deprecated - use archetypeIncludes instead */
-export function has(archetype: Archetype, comp: ComponentType): boolean {
-    return (archetype.signature & (1 << comp)) !== 0;
-}
-export function archetypeIncludes(
-    archetype: Archetype,
-    comp: ComponentType
-): boolean {
-    return (archetype.signature & (1 << comp)) !== 0;
+/** returns true if the archetype has _exactly_ these comps (plus EntityId) */
+function matches(arch: Archetype, ...comps: ComponentType[]): boolean {
+    const reqMask = makeSignature(...comps, ComponentType.EntityId); // archetypes always include EntityId under the hood
+    return arch.signature === reqMask;
 }
 
-export function offsetOf(archetype: Archetype, comp: ComponentType): number {
-    const v = archetype.offsets.get(comp);
-    if (v == null) throw new Error("component not in archetype");
-    return v;
+/** returns true if _all_ of the requested comps are present */
+function includes(arch: Archetype, ...comps: ComponentType[]): boolean {
+    const reqMask = makeSignature(...comps);
+    return (arch.signature & reqMask) === reqMask;
 }
 
-/* debug utilities (optional, dev-only) */
-export function pretty(archetype: Archetype): string {
-    const names = archetype.types.map((t) => ComponentType[t]).join(",");
-    return `Archetype<${names}>  stride=${archetype.byteStride}B`;
+/* utility to pretty print the provided archetype */
+function format(arch: Archetype): string {
+    return `Archetype<${arch.types
+        .map((t) => ComponentType[t])
+        .join(",")}> stride=${arch.byteStride}B`;
 }
+
+/** metadata descriptor for an archetype */
+export type Archetype = {
+    readonly signature: Signature;
+    readonly types: readonly ComponentType[];
+    readonly offsets: ReadonlyMap<ComponentType, number>;
+    readonly byteStride: number;
+    readonly elementStride: number;
+};
+
+/** Namespace Archetype */
+export const Archetype = {
+    create,
+    matches,
+    includes,
+    format,
+};

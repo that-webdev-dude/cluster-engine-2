@@ -1,5 +1,5 @@
 import { Chunk } from "./chunk";
-import { Archetype, has } from "./archetype";
+import { Archetype } from "./archetype";
 import {
     ComponentDescriptor,
     ComponentType,
@@ -63,7 +63,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             const type = Number(typeStr) as ComponentType; // case to a number for getting the ComponentType
 
             // first check if the actual component is in this archetype
-            if (!has(this.archetype, type)) {
+            if (!Archetype.includes(this.archetype, type)) {
                 if (DEBUG) {
                     console.log(
                         `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype`

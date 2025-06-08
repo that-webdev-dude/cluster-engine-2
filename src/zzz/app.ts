@@ -2,13 +2,14 @@ import { Renderer } from "../cluster/gl/Renderer";
 import { RectData } from "../cluster/gl/pipelines/rectData";
 import { RectPipeline } from "../cluster/gl/pipelines/rect";
 import { Engine } from "../cluster/core/Engine";
-import { Archetype, getArchetype, makeSignature } from "./ecs/archetype";
+import { Archetype } from "./ecs/archetype";
 import {
     ComponentType,
     ComponentAssignmentMap,
     DESCRIPTORS,
     ComponentDescriptor,
 } from "./ecs/components";
+import { Chunk } from "./ecs/chunk";
 import { Storage } from "./ecs/storage";
 import { EntityPool, EntityMetaSet, EntityId } from "./ecs/entity";
 import { CommandBuffer } from "./ecs/cmd";
@@ -36,6 +37,19 @@ export abstract class UpdateableSystem {
  */
 export abstract class RenderableSystem {
     abstract render(world: World, alpha: number): void;
+}
+
+class WorldView {
+    constructor(
+        private readonly archetypeMap: Map<
+            number,
+            Storage<ComponentDescriptor[]>
+        >
+    ) {}
+
+    // forEachChunkWith(...components: ComponentType[]) {
+
+    // }
 }
 
 class World {
@@ -229,14 +243,14 @@ const world = new World({
 });
 
 // 1. create a rectangle archetype
-const rectangleArchetype = getArchetype([
+const rectangleArchetype = Archetype.create(
     ComponentType.EntityId,
     ComponentType.Position,
     ComponentType.Size,
     ComponentType.Color,
     ComponentType.Velocity,
-    ComponentType.PreviousPosition,
-]);
+    ComponentType.PreviousPosition
+);
 
 for (let i = 0; i < 10; i++) {
     const px = Math.random() * 100;

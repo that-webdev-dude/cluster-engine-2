@@ -4,7 +4,7 @@
 
 import { Display } from "../../cluster/core/Display";
 import { Engine } from "../../cluster/core/Engine";
-import { getArchetype } from "../ecs/archetype";
+import { Archetype } from "../ecs/archetype";
 import { ComponentType, DESCRIPTORS } from "../ecs/components";
 import { Chunk } from "../ecs/chunk";
 
@@ -17,14 +17,14 @@ const display = new Display({
 const engine = new Engine(60);
 
 // 1. create a rectangle archetype
-const rectangleArchetype = getArchetype([
+const rectangleArchetype = Archetype.create(
     ComponentType.EntityId,
     ComponentType.Position,
     ComponentType.Size,
     ComponentType.Color,
     ComponentType.Velocity,
-    ComponentType.PreviousPosition,
-]);
+    ComponentType.PreviousPosition
+);
 
 // 2. create the rectangle component descriptors object
 const rectangleDescriptors = [
