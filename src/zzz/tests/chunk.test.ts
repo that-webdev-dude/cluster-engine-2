@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Chunk } from "../ecs/chunk";
-import { Archetype } from "../ecs/archetypeV2";
+import { Archetype } from "../ecs/archetype";
 import { ComponentType, DESCRIPTORS } from "../ecs/components";
 
 /* Helpers ────────────────────────────────────────────────────────────────── */

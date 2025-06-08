@@ -6,7 +6,7 @@ import { Renderer } from "../../cluster/gl/Renderer";
 import { RectData } from "../../cluster/gl/pipelines/rectData";
 import { RectPipeline } from "../../cluster/gl/pipelines/rect";
 import { Engine } from "../../cluster/core/Engine";
-import { Archetype } from "../ecs/archetypeV2";
+import { Archetype } from "../ecs/archetype";
 import { ComponentType, DESCRIPTORS } from "../ecs/components";
 import { Chunk } from "../ecs/chunk";
 

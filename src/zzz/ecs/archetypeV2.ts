@@ -1,8 +1,8 @@
-import { DESCRIPTORS } from "./components";
+import { DESCRIPTORS } from "./componentsV2";
 import { Obj } from "../tools";
 import { IDPool } from "../tools";
 import type { Signature } from "../types";
-import { ComponentType, ComponentDescriptor } from "../types";
+import { ComponentType, ComponentDescriptor } from "./componentsV2";
 
 /**  cache for already backed archetypes */
 const cache: Map<Signature, Archetype> = new Map();
@@ -37,9 +37,7 @@ function makeSignature(...comps: ComponentType[]): Signature {
 
 /** creates a brand new archetype */
 function create(...comps: ComponentType[]): Archetype {
-    let types = [...new Set([...comps, ComponentType.EntityId])].sort(
-        (a, b) => a - b
-    );
+    let types = [...new Set(comps)].sort((a, b) => a - b);
 
     const signature = makeSignature(...types);
 
@@ -90,7 +88,7 @@ function create(...comps: ComponentType[]): Archetype {
 
 /** returns true if the archetype has _exactly_ these comps (plus EntityId) */
 function matches(arch: Archetype, ...comps: ComponentType[]): boolean {
-    const reqMask = makeSignature(...comps, ComponentType.EntityId); // archetypes always include EntityId under the hood
+    const reqMask = makeSignature(...comps); // archetypes always include EntityId under the hood
     return arch.signature === reqMask;
 }
 

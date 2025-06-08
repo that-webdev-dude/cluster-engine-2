@@ -1,11 +1,11 @@
-import { Chunk } from "./chunk";
-import { Archetype } from "./archetype";
+import { Chunk } from "./chunkV2";
+import { Archetype } from "./archetypeV2";
 import {
     ComponentDescriptor,
     ComponentType,
     ComponentAssignmentMap,
     DESCRIPTORS,
-} from "./components";
+} from "./componentsV2";
 import { BufferInstance } from "./buffer";
 import { IDPool } from "../tools/IDPool";
 
@@ -63,16 +63,16 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             const type = Number(typeStr) as ComponentType; // case to a number for getting the ComponentType
 
             // first check if the actual component is in this archetype
-            if (!Archetype.includes(this.archetype, type)) {
+            const descriptor = this.archetype.descriptors.get(type);
+            if (descriptor === undefined) {
                 if (DEBUG) {
                     console.log(
-                        `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype`
+                        `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype descriptors`
                     );
                 }
                 continue;
             }
 
-            const descriptor = DESCRIPTORS[type];
             const view = chunk.getView<BufferInstance>(descriptor);
             // now check if the component values has the same length of the descriptor
             const count = descriptor.count;
