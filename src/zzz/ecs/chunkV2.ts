@@ -1,7 +1,6 @@
 import { BufferInstance } from "./buffer";
 import { Archetype } from "./archetypeV2";
-// import { ComponentDescriptor, ComponentType, DESCRIPTORS } from "./components";
-import { ComponentDescriptor, ComponentType } from "./componentsV2";
+import { ComponentDescriptor } from "./componentsV2";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.

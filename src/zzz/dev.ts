@@ -4,10 +4,9 @@ import { RectPipeline } from "../cluster/gl/pipelines/rect";
 import { Engine } from "../cluster/core/Engine";
 import { Archetype } from "./ecs/archetypeV2";
 import {
-    ComponentType,
     ComponentAssignmentMap,
-    DESCRIPTORS,
     ComponentDescriptor,
+    ComponentType,
 } from "./ecs/componentsV2";
 import { Chunk } from "./ecs/chunkV2";
 import { Storage } from "./ecs/storageV2";
@@ -38,106 +37,6 @@ export abstract class UpdateableSystem {
 export abstract class RenderableSystem {
     abstract render(world: World, alpha: number): void;
 }
-
-class WorldView {
-    constructor(
-        private readonly archetypeMap: Map<
-            number,
-            Storage<ComponentDescriptor[]>
-        >
-    ) {}
-
-    // forEachChunkWith(...components: ComponentType[]) {
-
-    // }
-}
-
-class World {
-    private updateableSystems: UpdateableSystem[] = [];
-    private renderableSystems: RenderableSystem[] = [];
-    private cmd: CommandBuffer = new CommandBuffer();
-    private entities: EntityMetaSet = new EntityMetaSet();
-
-    readonly archetypes: Map<number, Storage<ComponentDescriptor[]>> =
-        new Map();
-
-    constructor(options: {
-        updateableSystems: UpdateableSystem[];
-        renderableSystems: RenderableSystem[];
-    }) {
-        this.updateableSystems = options.updateableSystems;
-        this.renderableSystems = options.renderableSystems;
-    }
-
-    createEntity(archetype: Archetype, comps: ComponentAssignmentMap) {
-        let storage = this.archetypes.get(archetype.signature);
-        if (storage === undefined) {
-            const descriptors = archetype.types.map((c) => DESCRIPTORS[c]); // archetype.types includes EntityId type so it's fine
-            this.archetypes.set(
-                archetype.signature,
-                new Storage<typeof descriptors>(archetype)
-            );
-            storage = this.archetypes.get(archetype.signature)!; // just created one
-        }
-
-        const entityId = EntityPool.acquire();
-
-        // ⚠️ this should be done via cmd
-        const { chunkId, row } = storage.allocate(entityId, comps);
-
-        this.entities.insert({
-            archetype,
-            entityId,
-            chunkId,
-            row,
-        });
-    }
-
-    removeEntity(entityId: EntityId): boolean {
-        const meta = this.entities.get(entityId);
-        if (meta === undefined) {
-            if (DEBUG)
-                throw new Error(
-                    `World.removeEntity: entityId ${entityId} does not exists in the world`
-                );
-            return false;
-        }
-
-        const { archetype } = meta;
-        const storage = this.archetypes.get(archetype.signature);
-        if (storage === undefined) {
-            if (DEBUG)
-                throw new Error(
-                    `World.removeEntity: entityId ${entityId} does not exists in the world`
-                );
-            return false;
-        }
-
-        // ⚠️ this should be done via cmd
-        storage.delete(entityId);
-
-        this.entities.remove(entityId);
-
-        EntityPool.release(entityId);
-
-        return true;
-    }
-
-    // ⚠️ these methods should be part of a Game class owning the world instance
-    update(dt: number) {
-        this.updateableSystems.forEach((system) => system.update(this, dt));
-    }
-
-    render(alpha: number) {
-        this.renderableSystems.forEach((system) => system.render(this, alpha));
-    }
-
-    done() {
-        // console.log("events and flush");
-    }
-}
-
-const engine = new Engine(60);
 
 // 5. system to make the rectangles bouncing on screen
 class MovementSystem implements UpdateableSystem {
@@ -236,52 +135,207 @@ class RendererSystem implements RenderableSystem {
     }
 }
 
+class WorldView {
+    constructor(
+        private readonly archetypeMap: Map<
+            number,
+            Storage<ComponentDescriptor[]>
+        >
+    ) {}
+
+    // forEachChunkWith(...components: ComponentType[]) {
+
+    // }
+}
+class World {
+    private updateableSystems: UpdateableSystem[] = [];
+    private renderableSystems: RenderableSystem[] = [];
+    private cmd: CommandBuffer = new CommandBuffer();
+    private entities: EntityMetaSet = new EntityMetaSet();
+
+    readonly archetypes: Map<number, Storage<ComponentDescriptor[]>> =
+        new Map();
+
+    constructor(options: {
+        updateableSystems: UpdateableSystem[];
+        renderableSystems: RenderableSystem[];
+    }) {
+        this.updateableSystems = options.updateableSystems;
+        this.renderableSystems = options.renderableSystems;
+    }
+
+    createEntity(archetype: Archetype, comps: ComponentAssignmentMap) {
+        let storage = this.archetypes.get(archetype.signature);
+        if (storage === undefined) {
+            const descriptors = archetype.types.map((c) =>
+                Archetype.registry.get(c)
+            ) as ComponentDescriptor[]; // archetype.types includes EntityId type so it's fine
+            this.archetypes.set(
+                archetype.signature,
+                new Storage<typeof descriptors>(archetype)
+            );
+            storage = this.archetypes.get(archetype.signature)!; // just created one
+        }
+
+        const entityId = EntityPool.acquire();
+
+        // ⚠️ this should be done via cmd
+        const { chunkId, row } = storage.allocate(entityId, comps);
+
+        this.entities.insert({
+            archetype,
+            entityId,
+            chunkId,
+            row,
+        });
+    }
+
+    removeEntity(entityId: EntityId): boolean {
+        const meta = this.entities.get(entityId);
+        if (meta === undefined) {
+            if (DEBUG)
+                throw new Error(
+                    `World.removeEntity: entityId ${entityId} does not exists in the world`
+                );
+            return false;
+        }
+
+        const { archetype } = meta;
+        const storage = this.archetypes.get(archetype.signature);
+        if (storage === undefined) {
+            if (DEBUG)
+                throw new Error(
+                    `World.removeEntity: entityId ${entityId} does not exists in the world`
+                );
+            return false;
+        }
+
+        // ⚠️ this should be done via cmd
+        storage.delete(entityId);
+
+        this.entities.remove(entityId);
+
+        EntityPool.release(entityId);
+
+        return true;
+    }
+
+    // ⚠️ these methods should be part of a Game class owning the world instance
+    update(dt: number) {
+        this.updateableSystems.forEach((system) => system.update(this, dt));
+    }
+
+    render(alpha: number) {
+        this.renderableSystems.forEach((system) => system.render(this, alpha));
+    }
+
+    done() {
+        // console.log("events and flush");
+    }
+}
+
 // 6. create the world
 const world = new World({
     updateableSystems: [new MovementSystem()],
     renderableSystems: [new RendererSystem()],
 });
 
+const Component = {
+    Position: 0,
+    Velocity: 1,
+    Radius: 2,
+    Size: 3,
+    Color: 4,
+    PreviousPosition: 5,
+} as const;
+
+const DESCRIPTORS: readonly ComponentDescriptor[] = [
+    {
+        type: Component.Position,
+        name: "Position",
+        count: 2,
+        buffer: Float32Array,
+        default: [10, 11],
+    },
+    {
+        type: Component.Velocity,
+        name: "Velocity",
+        count: 2,
+        buffer: Float32Array,
+        default: [20, 21],
+    },
+    {
+        type: Component.Radius,
+        name: "Radius",
+        count: 1,
+        buffer: Float32Array,
+        default: [1],
+    },
+    {
+        type: Component.Size, // width and height
+        name: "Size",
+        count: 2,
+        buffer: Float32Array,
+        default: [1, 1],
+    },
+    {
+        type: Component.Color,
+        name: "Color",
+        count: 4,
+        buffer: Uint8Array,
+        default: [255, 255, 255, 255],
+    },
+    {
+        type: Component.PreviousPosition,
+        name: "PreviousPosition",
+        count: 2,
+        buffer: Float32Array,
+        default: [0, 0],
+    },
+] as const;
+Archetype.register(...DESCRIPTORS);
+
 // 1. create a rectangle archetype
 const rectangleArchetype = Archetype.create(
-    ComponentType.Position,
-    ComponentType.Size,
-    ComponentType.Color,
-    ComponentType.Velocity,
-    ComponentType.PreviousPosition
+    Component.Position,
+    Component.Size,
+    Component.Color,
+    Component.Velocity,
+    Component.PreviousPosition
 );
 
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 10000; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
     const ppx = px;
     const ppy = py;
     const sx = 2;
     const sy = 2;
-    const r = Math.random() * 256;
-    const g = Math.random() * 256;
-    const b = Math.random() * 256;
-    const a = 1;
+    const r = 255;
+    const g = 255;
+    const b = 255;
+    const a = 255;
     const vx = (Math.random() - 0.5) * 200;
     const vy = (Math.random() - 0.5) * 200;
 
     const comps: ComponentAssignmentMap = {
-        [ComponentType.Position]: [px, py],
-        [ComponentType.Size]: [sx, sy],
-        [ComponentType.Color]: [r, g, b, a],
-        [ComponentType.Velocity]: [vx, vy],
-        [ComponentType.PreviousPosition]: [ppx, ppy],
+        [Component.Position]: [px, py],
+        [Component.Size]: [sx, sy],
+        [Component.Color]: [r, g, b, a],
+        [Component.Velocity]: [vx, vy],
+        [Component.PreviousPosition]: [ppx, ppy],
     };
 
     world.createEntity(rectangleArchetype, comps);
 }
 
 export default () => {
+    const engine = new Engine(60);
     engine.addUpdateable(world);
     engine.addRenderable(world);
     engine.addCallback(world);
     engine.start();
-    setTimeout(() => {
-        engine.stop();
-    }, 100);
+    // setTimeout(() => {
+    //     engine.stop();
+    // }, 100);
 };

@@ -1,19 +1,21 @@
 import { Chunk } from "./chunkV2";
 import { Archetype } from "./archetypeV2";
 import {
-    ComponentDescriptor,
     ComponentType,
+    ComponentDescriptor,
     ComponentAssignmentMap,
-    DESCRIPTORS,
 } from "./componentsV2";
 import { BufferInstance } from "./buffer";
 import { IDPool } from "../tools/IDPool";
+
+// type ComponentType = number & { __brand: "ComponentType" };
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
+// export class Storage<S extends readonly ComponentDescriptor[]> {
 export class Storage<S extends readonly ComponentDescriptor[]> {
     private chunkIdPool: IDPool = new IDPool();
 
@@ -76,7 +78,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             const view = chunk.getView<BufferInstance>(descriptor);
             // now check if the component values has the same length of the descriptor
             const count = descriptor.count;
-            if (value.length !== count) {
+            if (value?.length !== count) {
                 throw new Error(
                     `Storage.assign: illegal assignement - component value must be an array of length ${count}. user value: ${value}`
                 );

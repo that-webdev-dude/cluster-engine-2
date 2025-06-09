@@ -1,15 +1,15 @@
-import { DESCRIPTORS } from "./componentsV2";
 import { Obj } from "../tools";
 import { IDPool } from "../tools";
+import { SparseSet } from "../tools";
 import type { Signature } from "../types";
 import { ComponentType, ComponentDescriptor } from "./componentsV2";
 
 /**  cache for already backed archetypes */
 const cache: Map<Signature, Archetype> = new Map();
 
-// const registry: Map<number, ComponentDescriptor> = new Map();
+const registry: SparseSet<ComponentDescriptor> = new SparseSet();
 
-// const idPool: IDPool = new IDPool(1); // the component types start at index: 1
+const idPool: IDPool = new IDPool(); // the component types start at index: 1
 
 /** utility to compute the signature from a provided list of component types */
 function makeSignature(...comps: ComponentType[]): Signature {
@@ -17,23 +17,22 @@ function makeSignature(...comps: ComponentType[]): Signature {
     return signature as Signature;
 }
 
-// function register(...desc: ComponentDescriptor[]) {
-//     desc.forEach((descriptor) => {
-//         // check if the descriptor is laready registered
-//         for (let [_, registered] of registry) {
-//             if (registered !== undefined && registered.name === descriptor.name)
-//                 throw new Error(
-//                     `Archetype.register: the descriptor name ${descriptor.name} is already registered. change name`
-//                 );
-//         }
+function register(...desc: ComponentDescriptor[]) {
+    desc.forEach((descriptor) => {
+        // check if the descriptor is laready registered
+        for (let [_, registered] of registry) {
+            if (registered !== undefined && registered.name === descriptor.name)
+                throw new Error(
+                    `Archetype.register: the descriptor name ${descriptor.name} is already registered. change name`
+                );
+        }
 
-//         const typeId = idPool.acquire();
+        const typeId = idPool.acquire();
 
-//         registry.set(typeId, descriptor);
-//     });
-
-//     console.log(registry);
-// }
+        registry.insert(typeId, descriptor);
+    });
+    console.log(registry);
+}
 
 /** creates a brand new archetype */
 function create(...comps: ComponentType[]): Archetype {
@@ -50,7 +49,8 @@ function create(...comps: ComponentType[]): Archetype {
     const descriptors = new Map<ComponentType, ComponentDescriptor>();
 
     for (const type of types) {
-        const descriptor = DESCRIPTORS[type]; // this should be a registry
+        const descriptor = registry.get(type);
+        console.log(" create ~ descriptor:", type, descriptor); // fix this error
         if (descriptor === undefined)
             throw new Error(
                 `Archetype:create: the type ${type} is not registered!`
@@ -101,7 +101,7 @@ function includes(arch: Archetype, ...comps: ComponentType[]): boolean {
 /* utility to pretty print the provided archetype */
 function format(arch: Archetype): string {
     return `Archetype<${arch.types
-        .map((t) => ComponentType[t])
+        .map((t) => arch.types[t])
         .join(",")}> stride=${arch.byteStride}B`;
 }
 
@@ -121,4 +121,6 @@ export const Archetype = {
     matches,
     includes,
     format,
+    register,
+    registry,
 };

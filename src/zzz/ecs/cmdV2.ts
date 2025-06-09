@@ -1,5 +1,5 @@
 import { Storage } from "./storageV2";
-import { ComponentAssignmentMap } from "./components";
+import { ComponentAssignmentMap } from "./componentsV2";
 
 export type Command =
     | { type: "allocate"; entityId: number; comps?: ComponentAssignmentMap }
@@ -20,7 +20,9 @@ export class CommandBuffer {
         for (const cmd of this.commands) {
             switch (cmd.type) {
                 case "allocate":
-                    storage.allocate(cmd.entityId, cmd.comps);
+                    if (cmd.comps !== undefined) {
+                        storage.allocate(cmd.entityId, cmd.comps);
+                    }
                     break;
 
                 case "delete":

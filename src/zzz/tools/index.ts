@@ -1,3 +1,5 @@
+export { Obj } from "./Obj";
+
 export { IDPool } from "./IDPool";
 
-export { Obj } from "./Obj";
+export { SparseSet } from "./SparseSet";
