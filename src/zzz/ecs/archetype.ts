@@ -6,9 +6,9 @@ import type { ComponentType, ComponentDescriptor, Signature } from "../types";
 /**  cache for already backed archetypes */
 const cache: Map<Signature, Archetype> = new Map();
 
-const registry: SparseSet<ComponentDescriptor> = new SparseSet();
+const registry: SparseSet<ComponentType, ComponentDescriptor> = new SparseSet();
 
-const idPool: IDPool = new IDPool(); // the component types start at index: 1
+const idPool: IDPool<ComponentType> = new IDPool(); // the component types start at index: 1
 
 /** utility to compute the signature from a provided list of component types */
 function makeSignature(...comps: ComponentType[]): Signature {
@@ -30,7 +30,6 @@ function register(...desc: ComponentDescriptor[]) {
 
         registry.insert(typeId, descriptor);
     });
-    console.log(registry);
 }
 
 /** creates a brand new archetype */
@@ -49,7 +48,6 @@ function create(...comps: ComponentType[]): Archetype {
 
     for (const type of types) {
         const descriptor = registry.get(type);
-        console.log(" create ~ descriptor:", type, descriptor); // fix this error
         if (descriptor === undefined)
             throw new Error(
                 `Archetype:create: the type ${type} is not registered!`

@@ -1,47 +1,21 @@
-import {
-    ComponentDescriptor,
-    ComponentType,
-    ComponentValueMap,
-    Signature,
-} from "./types";
-import { Renderer } from "../cluster/gl/Renderer";
-import { RectData } from "../cluster/gl/pipelines/rectData";
+import { ComponentDescriptor, ComponentValueMap } from "./types";
 import { RectPipeline } from "../cluster/gl/pipelines/rect";
+import { RectData } from "../cluster/gl/pipelines/rectData";
+import { Renderer } from "../cluster/gl/Renderer";
 import { Engine } from "../cluster/core/Engine";
 import { Archetype } from "./ecs/archetype";
-import { Chunk } from "./ecs/chunk";
-import { Storage } from "./ecs/storage";
-import { EntityPool, EntityMetaSet, EntityId } from "./ecs/entity";
 import { CommandBuffer } from "./ecs/cmd";
+import { World, WorldView } from "./ecs/world";
+import { UpdateableSystem, RenderableSystem } from "./ecs/system";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
-/**
- * Abstract base class for systems that can be updated each frame.
- *
- * Classes extending `UpdateableSystem` must implement the `update` method,
- * which is called with the elapsed time since the last update.
- */
-export abstract class UpdateableSystem {
-    abstract update(view: WorldView, dt: number): void;
-}
-
-/**
- * Abstract base class for systems that can be rendered each frame.
- *
- * Classes extending `RenderableSystem` must implement the `render` method,
- * which is called with an interpolation alpha value.
- */
-export abstract class RenderableSystem {
-    abstract render(view: WorldView, alpha: number): void;
-}
-
 // 5. system to make the rectangles bouncing on screen
 class MovementSystem implements UpdateableSystem {
-    update(view: WorldView, dt: number) {
+    update(view: WorldView, cmd: CommandBuffer, dt: number) {
         const renderer = Renderer.getInstance();
         view.forEachChunkWith(
             [
@@ -138,126 +112,6 @@ class RendererSystem implements RenderableSystem {
                 this.rectPipeline.draw(gl, rectData, count);
             }
         );
-    }
-}
-
-class WorldView {
-    constructor(
-        private readonly archetypeMap: Map<
-            Signature,
-            Storage<ComponentDescriptor[]>
-        >
-    ) {}
-
-    forEachChunkWith(
-        comps: ComponentType[],
-        cb: (
-            chunk: Readonly<Chunk<ComponentDescriptor[]>>,
-            chunkId: number
-        ) => void
-    ) {
-        const componentSignature = Archetype.makeSignature(...comps);
-        for (let [archetypeSignature, storage] of this.archetypeMap) {
-            if (
-                (archetypeSignature & componentSignature) ===
-                componentSignature
-            ) {
-                storage.forEachChunk(cb);
-            }
-        }
-    }
-}
-
-class World {
-    private updateableSystems: UpdateableSystem[] = [];
-    private renderableSystems: RenderableSystem[] = [];
-    private cmd: CommandBuffer = new CommandBuffer();
-    private entities: EntityMetaSet = new EntityMetaSet();
-
-    readonly worldView: WorldView;
-    readonly archetypes: Map<Signature, Storage<ComponentDescriptor[]>> =
-        new Map();
-
-    constructor(options: {
-        updateableSystems: UpdateableSystem[];
-        renderableSystems: RenderableSystem[];
-    }) {
-        this.updateableSystems = options.updateableSystems;
-        this.renderableSystems = options.renderableSystems;
-        this.worldView = new WorldView(this.archetypes);
-    }
-
-    createEntity(archetype: Archetype, comps: ComponentValueMap) {
-        let storage = this.archetypes.get(archetype.signature);
-        if (storage === undefined) {
-            const descriptors = archetype.types.map((c) =>
-                Archetype.registry.get(c)
-            ) as ComponentDescriptor[]; // archetype.types includes EntityId type so it's fine
-            this.archetypes.set(
-                archetype.signature,
-                new Storage<typeof descriptors>(archetype)
-            );
-            storage = this.archetypes.get(archetype.signature)!; // just created one
-        }
-
-        const entityId = EntityPool.acquire();
-
-        // ⚠️ this should be done via cmd
-        const { chunkId, row } = storage.allocate(entityId, comps);
-
-        this.entities.insert({
-            archetype,
-            entityId,
-            chunkId,
-            row,
-        });
-    }
-
-    removeEntity(entityId: EntityId): boolean {
-        const meta = this.entities.get(entityId);
-        if (meta === undefined) {
-            if (DEBUG)
-                throw new Error(
-                    `World.removeEntity: entityId ${entityId} does not exists in the world`
-                );
-            return false;
-        }
-
-        const { archetype } = meta;
-        const storage = this.archetypes.get(archetype.signature);
-        if (storage === undefined) {
-            if (DEBUG)
-                throw new Error(
-                    `World.removeEntity: entityId ${entityId} does not exists in the world`
-                );
-            return false;
-        }
-
-        // ⚠️ this should be done via cmd
-        storage.delete(entityId);
-
-        this.entities.remove(entityId);
-
-        EntityPool.release(entityId);
-
-        return true;
-    }
-
-    // ⚠️ these methods should be part of a Game class owning the world instance
-    update(dt: number) {
-        this.updateableSystems.forEach((system) =>
-            system.update(this.worldView, dt)
-        );
-    }
-
-    render(alpha: number) {
-        this.renderableSystems.forEach((system) =>
-            system.render(this.worldView, alpha)
-        );
-    }
-
-    done() {
-        // console.log("events and flush");
     }
 }
 
@@ -374,6 +228,8 @@ const obstacleComps: ComponentValueMap = {
 };
 
 world.createEntity(obstacleArchetype, obstacleComps);
+
+world.initialize();
 
 export default () => {
     const engine = new Engine(60);

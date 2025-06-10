@@ -17,7 +17,7 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 // export class Storage<S extends readonly ComponentDescriptor[]> {
 export class Storage<S extends readonly ComponentDescriptor[]> {
-    private chunkIdPool: IDPool = new IDPool();
+    private chunkIdPool: IDPool<number> = new IDPool();
 
     private entities: Map<number, { chunkId: number; row: number }> = new Map();
 

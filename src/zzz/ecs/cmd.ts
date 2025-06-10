@@ -1,32 +1,94 @@
 import { Storage } from "./storage";
-import { ComponentValueMap } from "../types";
+import { EntityMetaSet } from "./entity";
+import {
+    Signature,
+    ComponentDescriptor,
+    ComponentValueMap,
+    ComponentType,
+    EntityId,
+} from "../types";
+import { Archetype } from "./archetype";
 
 export type Command =
-    | { type: "allocate"; entityId: number; comps?: ComponentValueMap }
-    | { type: "delete"; entityId: number };
+    | { type: "allocate"; entityId: EntityId; comps?: ComponentValueMap }
+    | { type: "delete"; entityId: EntityId };
 
 export class CommandBuffer {
     private commands: Command[] = [];
 
-    allocate(entityId: number, comps?: ComponentValueMap) {
+    constructor(
+        private readonly archetypeMap: Map<
+            Signature,
+            Storage<ComponentDescriptor[]>
+        >,
+        private readonly entityMetaSet: EntityMetaSet
+    ) {}
+
+    private getStorageByEntityId(
+        entityId: EntityId
+    ): Storage<ComponentDescriptor[]> | undefined {
+        const meta = this.entityMetaSet.get(entityId);
+        if (meta !== undefined) {
+            const storage = this.archetypeMap.get(meta.archetype.signature);
+            if (storage !== undefined) {
+                return storage;
+            }
+        }
+        return undefined;
+    }
+
+    private getStorageBySignature(
+        signature: Signature
+    ): Storage<ComponentDescriptor[]> | undefined {
+        const storage = this.archetypeMap.get(signature);
+        if (storage !== undefined) {
+            return storage;
+        }
+
+        return undefined;
+    }
+
+    allocate(entityId: EntityId, comps?: ComponentValueMap) {
         this.commands.push({ type: "allocate", entityId, comps });
     }
 
-    delete(entityId: number) {
+    delete(entityId: EntityId) {
         this.commands.push({ type: "delete", entityId });
     }
 
-    flush(storage: Storage<any>) {
+    flush() {
         for (const cmd of this.commands) {
             switch (cmd.type) {
                 case "allocate":
                     if (cmd.comps !== undefined) {
-                        storage.allocate(cmd.entityId, cmd.comps);
+                        const signature = Archetype.makeSignature(
+                            ...(Object.keys(cmd.comps).map(
+                                Number
+                            ) as ComponentType[])
+                        );
+
+                        const storage = this.getStorageBySignature(signature);
+                        if (storage !== undefined) {
+                            const { chunkId, row } = storage.allocate(
+                                cmd.entityId,
+                                cmd.comps
+                            );
+                            this.entityMetaSet.insert({
+                                archetype: storage.archetype,
+                                entityId: cmd.entityId,
+                                chunkId,
+                                row,
+                            });
+                        }
                     }
                     break;
 
                 case "delete":
-                    storage.delete(cmd.entityId);
+                    const storage = this.getStorageByEntityId(cmd.entityId);
+                    if (storage !== undefined) {
+                        storage.delete(cmd.entityId);
+                        this.entityMetaSet.remove(cmd.entityId);
+                    }
                     break;
 
                 default:

@@ -145,7 +145,7 @@ export class EntityMetaSet {
  * A global instance of {@link IDPool} used to manage and allocate unique entity IDs
  * within the ECS (Entity Component System) framework.
  */
-export const EntityPool = new IDPool();
+export const EntityPool: IDPool<EntityId> = new IDPool();
 
 /**
  * Creates and returns a new entity identifier by acquiring it from the entity pool.

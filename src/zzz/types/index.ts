@@ -23,9 +23,6 @@ export type ComponentCount = number;
 
 export type ComponentAlignement = number;
 
-/** @deprecated - use componentValueMap instead */
-export type ComponentAssignmentMap = Record<ComponentType, ComponentValue>;
-
 export type ComponentValueMap = Record<ComponentType, ComponentValue>;
 
 export interface ComponentDescriptor {
@@ -38,7 +35,7 @@ export interface ComponentDescriptor {
 }
 
 /** Unique, strongly-typed identifier for entities within the ECS framework. */
-export type EntityId = number & { __brand: "EntityId" };
+export type EntityId = number;
 
 /** A branded type representing an archetype signature as a number. */
 export type Signature = number & { __brand: "Signature" };
