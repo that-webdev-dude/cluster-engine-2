@@ -1,17 +1,18 @@
+import {
+    ComponentDescriptor,
+    ComponentType,
+    ComponentValueMap,
+    Signature,
+} from "./types";
 import { Renderer } from "../cluster/gl/Renderer";
 import { RectData } from "../cluster/gl/pipelines/rectData";
 import { RectPipeline } from "../cluster/gl/pipelines/rect";
 import { Engine } from "../cluster/core/Engine";
-import { Archetype } from "./ecs/archetypeV2";
-import {
-    ComponentAssignmentMap,
-    ComponentDescriptor,
-    ComponentType,
-} from "./ecs/componentsV2";
-import { Chunk } from "./ecs/chunkV2";
-import { Storage } from "./ecs/storageV2";
-import { EntityPool, EntityMetaSet, EntityId } from "./ecs/entityV2";
-import { CommandBuffer } from "./ecs/cmdV2";
+import { Archetype } from "./ecs/archetype";
+import { Chunk } from "./ecs/chunk";
+import { Storage } from "./ecs/storage";
+import { EntityPool, EntityMetaSet, EntityId } from "./ecs/entity";
+import { CommandBuffer } from "./ecs/cmd";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -25,7 +26,7 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
  * which is called with the elapsed time since the last update.
  */
 export abstract class UpdateableSystem {
-    abstract update(world: World, dt: number): void;
+    abstract update(view: WorldView, dt: number): void;
 }
 
 /**
@@ -35,53 +36,54 @@ export abstract class UpdateableSystem {
  * which is called with an interpolation alpha value.
  */
 export abstract class RenderableSystem {
-    abstract render(world: World, alpha: number): void;
+    abstract render(view: WorldView, alpha: number): void;
 }
 
 // 5. system to make the rectangles bouncing on screen
 class MovementSystem implements UpdateableSystem {
-    update(world: World, dt: number) {
+    update(view: WorldView, dt: number) {
         const renderer = Renderer.getInstance();
+        view.forEachChunkWith(
+            [
+                Component.Position,
+                Component.Velocity,
+                Component.Size,
+                Component.PreviousPosition,
+            ],
+            (chunk) => {
+                for (let i = 0; i < chunk.count; i++) {
+                    const vx = chunk.views.Velocity[i * 2];
+                    const vy = chunk.views.Velocity[i * 2 + 1];
 
-        const storage = world.archetypes.get(rectangleArchetype.signature);
-        if (storage === undefined) return;
+                    // Store previous position for smooth movement
+                    chunk.views.PreviousPosition[i * 2] =
+                        chunk.views.Position[i * 2];
+                    chunk.views.PreviousPosition[i * 2 + 1] =
+                        chunk.views.Position[i * 2 + 1];
 
-        // const start = window.performance.now();
-        storage.forEachChunk((chunk) => {
-            for (let i = 0; i < chunk.count; i++) {
-                const vx = chunk.views.Velocity[i * 2];
-                const vy = chunk.views.Velocity[i * 2 + 1];
+                    // Update position
+                    chunk.views.Position[i * 2] += vx * dt;
+                    chunk.views.Position[i * 2 + 1] += vy * dt;
 
-                // Store previous position for smooth movement
-                chunk.views.PreviousPosition[i * 2] =
-                    chunk.views.Position[i * 2];
-                chunk.views.PreviousPosition[i * 2 + 1] =
-                    chunk.views.Position[i * 2 + 1];
+                    // Bounce off walls
+                    const x = chunk.views.Position[i * 2];
+                    const y = chunk.views.Position[i * 2 + 1];
 
-                // Update position
-                chunk.views.Position[i * 2] += vx * dt;
-                chunk.views.Position[i * 2 + 1] += vy * dt;
-
-                // Bounce off walls
-                const x = chunk.views.Position[i * 2];
-                const y = chunk.views.Position[i * 2 + 1];
-
-                if (
-                    x < 0 ||
-                    x + chunk.views.Size[i * 2] > renderer.worldWidth
-                ) {
-                    chunk.views.Velocity[i * 2] *= -1; // Reverse horizontal velocity
-                }
-                if (
-                    y < 0 ||
-                    y + chunk.views.Size[i * 2 + 1] > renderer.worldHeight
-                ) {
-                    chunk.views.Velocity[i * 2 + 1] *= -1; // Reverse vertical velocity
+                    if (
+                        x < 0 ||
+                        x + chunk.views.Size[i * 2] > renderer.worldWidth
+                    ) {
+                        chunk.views.Velocity[i * 2] *= -1; // Reverse horizontal velocity
+                    }
+                    if (
+                        y < 0 ||
+                        y + chunk.views.Size[i * 2 + 1] > renderer.worldHeight
+                    ) {
+                        chunk.views.Velocity[i * 2 + 1] *= -1; // Reverse vertical velocity
+                    }
                 }
             }
-        });
-        // const end = window.performance.now();
-        // console.log((end - start).toFixed(3));
+        );
     }
 }
 
@@ -95,65 +97,85 @@ class RendererSystem implements RenderableSystem {
         "Color",
     ]);
 
-    render(world: World, alpha: number) {
-        const storage = world.archetypes.get(rectangleArchetype.signature);
-        if (storage === undefined) return;
+    render(view: WorldView, alpha: number) {
+        view.forEachChunkWith(
+            [
+                Component.Position,
+                Component.Color,
+                Component.Size,
+                Component.PreviousPosition,
+            ],
+            (chunk) => {
+                const count = chunk.count;
+                if (count === 0) return;
 
-        this.renderer.clear();
-        storage.forEachChunk((chunk) => {
-            const count = chunk.count;
-            if (count === 0) return;
+                // at the first iteration initialize the scratch
+                if (!this.interpPos) {
+                    this.interpPos = Float32Array.from(
+                        chunk.views.PreviousPosition
+                    );
+                }
 
-            // at the first iteration initialize the scratch
-            if (!this.interpPos) {
-                this.interpPos = Float32Array.from(
-                    chunk.views.PreviousPosition
-                );
+                // use alpha to interpolate positions for smooth movement
+                const cur = chunk.views.Position;
+                const prev = chunk.views.PreviousPosition;
+
+                for (let i = 0; i < count * 2; ++i) {
+                    this.interpPos[i] = prev[i] + (cur[i] - prev[i]) * alpha;
+                }
+
+                // rect data from subarrays
+                const rectData: RectData = {
+                    positions: this.interpPos.subarray(0, count * 2),
+                    sizes: chunk.views.Size.subarray(0, count * 2),
+                    colors: chunk.views.Color.subarray(0, count * 4),
+                };
+
+                const { gl } = this.renderer;
+
+                this.rectPipeline.bind(gl);
+
+                this.rectPipeline.draw(gl, rectData, count);
             }
-
-            // use alpha to interpolate positions for smooth movement
-            const cur = chunk.views.Position;
-            const prev = chunk.views.PreviousPosition;
-
-            for (let i = 0; i < count * 2; ++i) {
-                this.interpPos[i] = prev[i] + (cur[i] - prev[i]) * alpha;
-            }
-
-            // rect data from subarrays
-            const rectData: RectData = {
-                positions: this.interpPos.subarray(0, count * 2),
-                sizes: chunk.views.Size.subarray(0, count * 2),
-                colors: chunk.views.Color.subarray(0, count * 4),
-            };
-
-            const { gl } = this.renderer;
-
-            this.rectPipeline.bind(gl);
-
-            this.rectPipeline.draw(gl, rectData, count);
-        });
+        );
     }
 }
 
 class WorldView {
     constructor(
         private readonly archetypeMap: Map<
-            number,
+            Signature,
             Storage<ComponentDescriptor[]>
         >
     ) {}
 
-    // forEachChunkWith(...components: ComponentType[]) {
-
-    // }
+    forEachChunkWith(
+        comps: ComponentType[],
+        cb: (
+            chunk: Readonly<Chunk<ComponentDescriptor[]>>,
+            chunkId: number
+        ) => void
+    ) {
+        const componentSignature = Archetype.makeSignature(...comps);
+        for (let [archetypeSignature, storage] of this.archetypeMap) {
+            if (
+                (archetypeSignature & componentSignature) ===
+                componentSignature
+            ) {
+                storage.forEachChunk(cb);
+            }
+        }
+    }
 }
+
 class World {
     private updateableSystems: UpdateableSystem[] = [];
     private renderableSystems: RenderableSystem[] = [];
     private cmd: CommandBuffer = new CommandBuffer();
     private entities: EntityMetaSet = new EntityMetaSet();
 
-    readonly archetypes: Map<number, Storage<ComponentDescriptor[]>> =
+    readonly worldView: WorldView;
+    readonly archetypes: Map<Signature, Storage<ComponentDescriptor[]>> =
         new Map();
 
     constructor(options: {
@@ -162,9 +184,10 @@ class World {
     }) {
         this.updateableSystems = options.updateableSystems;
         this.renderableSystems = options.renderableSystems;
+        this.worldView = new WorldView(this.archetypes);
     }
 
-    createEntity(archetype: Archetype, comps: ComponentAssignmentMap) {
+    createEntity(archetype: Archetype, comps: ComponentValueMap) {
         let storage = this.archetypes.get(archetype.signature);
         if (storage === undefined) {
             const descriptors = archetype.types.map((c) =>
@@ -222,11 +245,15 @@ class World {
 
     // ⚠️ these methods should be part of a Game class owning the world instance
     update(dt: number) {
-        this.updateableSystems.forEach((system) => system.update(this, dt));
+        this.updateableSystems.forEach((system) =>
+            system.update(this.worldView, dt)
+        );
     }
 
     render(alpha: number) {
-        this.renderableSystems.forEach((system) => system.render(this, alpha));
+        this.renderableSystems.forEach((system) =>
+            system.render(this.worldView, alpha)
+        );
     }
 
     done() {
@@ -240,14 +267,14 @@ const world = new World({
     renderableSystems: [new RendererSystem()],
 });
 
-const Component = {
-    Position: 0,
-    Velocity: 1,
-    Radius: 2,
-    Size: 3,
-    Color: 4,
-    PreviousPosition: 5,
-} as const;
+enum Component {
+    Position,
+    Velocity,
+    Radius,
+    Size,
+    Color,
+    PreviousPosition,
+}
 
 const DESCRIPTORS: readonly ComponentDescriptor[] = [
     {
@@ -272,7 +299,7 @@ const DESCRIPTORS: readonly ComponentDescriptor[] = [
         default: [1],
     },
     {
-        type: Component.Size, // width and height
+        type: Component.Size,
         name: "Size",
         count: 2,
         buffer: Float32Array,
@@ -293,7 +320,7 @@ const DESCRIPTORS: readonly ComponentDescriptor[] = [
         default: [0, 0],
     },
 ] as const;
-Archetype.register(...DESCRIPTORS);
+Archetype.register(...(DESCRIPTORS as ComponentDescriptor[]));
 
 // 1. create a rectangle archetype
 const rectangleArchetype = Archetype.create(
@@ -304,7 +331,16 @@ const rectangleArchetype = Archetype.create(
     Component.PreviousPosition
 );
 
-for (let i = 0; i < 10000; i++) {
+// 2. create an obstacle archetype (red rectangle, no velocity)
+const obstacleArchetype = Archetype.create(
+    Component.Position,
+    Component.Size,
+    Component.Color,
+    Component.PreviousPosition
+);
+
+// Add moving rectangles
+for (let i = 0; i < 256 * 4; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
     const ppx = px;
@@ -318,7 +354,7 @@ for (let i = 0; i < 10000; i++) {
     const vx = (Math.random() - 0.5) * 200;
     const vy = (Math.random() - 0.5) * 200;
 
-    const comps: ComponentAssignmentMap = {
+    const comps: ComponentValueMap = {
         [Component.Position]: [px, py],
         [Component.Size]: [sx, sy],
         [Component.Color]: [r, g, b, a],
@@ -328,6 +364,16 @@ for (let i = 0; i < 10000; i++) {
 
     world.createEntity(rectangleArchetype, comps);
 }
+
+// Add a static red obstacle rectangle
+const obstacleComps: ComponentValueMap = {
+    [Component.Position]: [50, 50],
+    [Component.Size]: [10, 10],
+    [Component.Color]: [255, 0, 0, 255], // Red
+    [Component.PreviousPosition]: [50, 50],
+};
+
+world.createEntity(obstacleArchetype, obstacleComps);
 
 export default () => {
     const engine = new Engine(60);

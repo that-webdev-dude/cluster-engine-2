@@ -4,9 +4,6 @@
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 import { IDPool } from "../tools/IDPool";
-import { Storage } from "./storage";
-import { ComponentDescriptor } from "./components";
-import * as Types from "../types";
 import { Archetype } from "./archetype";
 
 /**

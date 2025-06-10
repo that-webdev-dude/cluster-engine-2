@@ -1,36 +1,40 @@
-/** Buffer type used to store entity component data. */
+/**
+ * Buffer related types
+ * used to store entity component data.
+ */
 export type Buffer = Float32Array | Int32Array | Uint32Array | Uint8Array;
 
-/** Constructor for creating `Buffer` instances from `ArrayBuffer`. */
-export interface BufferConstructor {
+export type BufferConstructor = {
     readonly BYTES_PER_ELEMENT: number;
     new (buffer: ArrayBuffer, byteOffset: number, length: number): Buffer;
-}
+};
 
-/** Numeric type uniquely identifying an entity component type. */
-export enum ComponentType {
-    EntityId = 0,
-    Position,
-    Velocity,
-    Radius,
-    Size,
-    Color,
-    PreviousPosition,
-}
+/**
+ * Component related types
+ * used to represent and describe an entity component
+ */
+export type ComponentType = number;
 
-/** Partial mapping associating entity component types (excluding type `0`) with numerical arrays. */
-export type ComponentMap = Partial<{
-    [K in Exclude<ComponentType, 0>]: number[];
-}>;
+export type ComponentValue = number[];
 
-/** Metadata and configuration descriptor for an entity component. */
+export type ComponentName = string;
+
+export type ComponentCount = number;
+
+export type ComponentAlignement = number;
+
+/** @deprecated - use componentValueMap instead */
+export type ComponentAssignmentMap = Record<ComponentType, ComponentValue>;
+
+export type ComponentValueMap = Record<ComponentType, ComponentValue>;
+
 export interface ComponentDescriptor {
     buffer: BufferConstructor;
     type: ComponentType;
-    name: string;
-    count: number;
-    default: number[];
-    alignment?: number;
+    name: ComponentName;
+    count: ComponentCount;
+    default: ComponentValue;
+    alignment?: ComponentAlignement;
 }
 
 /** Unique, strongly-typed identifier for entities within the ECS framework. */

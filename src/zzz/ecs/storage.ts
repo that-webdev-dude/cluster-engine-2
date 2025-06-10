@@ -1,19 +1,21 @@
-import { Chunk } from "./chunk";
-import { Archetype } from "./archetype";
 import {
-    ComponentDescriptor,
+    Buffer,
     ComponentType,
-    ComponentAssignmentMap,
-    DESCRIPTORS,
-} from "./components";
-import { BufferInstance } from "./buffer";
+    ComponentDescriptor,
+    ComponentValueMap,
+} from "../types";
+import { Chunk } from "./chunk";
 import { IDPool } from "../tools/IDPool";
+import { Archetype } from "./archetype";
+
+// type ComponentType = number & { __brand: "ComponentType" };
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
+// export class Storage<S extends readonly ComponentDescriptor[]> {
 export class Storage<S extends readonly ComponentDescriptor[]> {
     private chunkIdPool: IDPool = new IDPool();
 
@@ -43,7 +45,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
     assign(
         entityId: number,
-        comps: ComponentAssignmentMap
+        comps: ComponentValueMap
     ): { chunkId: number; row: number } | undefined {
         this.validateEntityId(entityId);
 
@@ -63,20 +65,20 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             const type = Number(typeStr) as ComponentType; // case to a number for getting the ComponentType
 
             // first check if the actual component is in this archetype
-            if (!Archetype.includes(this.archetype, type)) {
+            const descriptor = this.archetype.descriptors.get(type);
+            if (descriptor === undefined) {
                 if (DEBUG) {
                     console.log(
-                        `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype`
+                        `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype descriptors`
                     );
                 }
                 continue;
             }
 
-            const descriptor = DESCRIPTORS[type];
-            const view = chunk.getView<BufferInstance>(descriptor);
+            const view = chunk.getView<Buffer>(descriptor);
             // now check if the component values has the same length of the descriptor
             const count = descriptor.count;
-            if (value.length !== count) {
+            if (value?.length !== count) {
                 throw new Error(
                     `Storage.assign: illegal assignement - component value must be an array of length ${count}. user value: ${value}`
                 );
@@ -94,7 +96,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
     allocate(
         entityId: number,
-        comps?: ComponentAssignmentMap | undefined
+        comps?: ComponentValueMap | undefined
     ): { chunkId: number; row: number } {
         this.validateEntityId(entityId);
 

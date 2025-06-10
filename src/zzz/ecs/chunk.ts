@@ -1,6 +1,5 @@
-import { BufferInstance } from "./buffer";
+import { Buffer, ComponentDescriptor } from "../types";
 import { Archetype } from "./archetype";
-import { ComponentDescriptor, ComponentType, DESCRIPTORS } from "./components";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -9,6 +8,8 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 type ComponentViews<D extends readonly ComponentDescriptor[]> = {
     [K in D[number] as K["name"]]: InstanceType<K["buffer"]>;
+} & {
+    EntityId: Uint32Array;
 };
 
 type MovedEntityId = number & { __brand: "MovedEntityId" }; // used in the delete method
@@ -64,12 +65,16 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return this.count >= Chunk.ENTITIES_PER_CHUNK;
     }
 
-    get entityIdView(): Uint32Array {
+    get entityIdVeiw(): Uint32Array {
         this.assertAlive();
-        return this.getView<Uint32Array>(DESCRIPTORS[ComponentType.EntityId]);
+        const view = (this.views as any)["EntityId"] as Uint32Array;
+        if (!view) {
+            throw new Error(`View for ${"EntityId"} not found`);
+        }
+        return view;
     }
 
-    getView<T extends BufferInstance>(descriptor: ComponentDescriptor): T {
+    getView<T extends Buffer>(descriptor: ComponentDescriptor): T {
         this.assertAlive();
         const view = (this.views as any)[descriptor.name] as T;
         if (!view) {
@@ -79,7 +84,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
     }
 
     // should return the first free slot in the chunk
-    allocate(entityId: number): number {
+    allocate(recordId: number): number {
         this.assertAlive();
 
         if (this.count >= Chunk.ENTITIES_PER_CHUNK) {
@@ -92,8 +97,13 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
         // let's copy the default values for each component type before returning the row
         for (const type of this.archetype.types) {
-            const descriptor = DESCRIPTORS[type];
-            const view = this.getView<BufferInstance>(descriptor);
+            const descriptor = this.archetype.descriptors.get(type);
+            if (descriptor === undefined)
+                throw new Error(
+                    `Chunk.allocate: descriptor for type ${type} not found`
+                );
+
+            const view = this.getView<Buffer>(descriptor);
 
             const elementCount = descriptor.count;
             const defaults = descriptor.default;
@@ -109,10 +119,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         }
 
         // overwrite the entity ID in the EntityId component
-        const idView = this.getView<Uint32Array>(
-            DESCRIPTORS[ComponentType.EntityId]
-        );
-        idView[row] = entityId;
+        this.entityIdVeiw[row] = recordId;
 
         return row;
     }
@@ -139,13 +146,18 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             return undefined;
         }
 
-        const movedEntityId = this.entityIdView[lastRow];
+        const movedEntityId = this.entityIdVeiw[lastRow];
 
         if (row !== lastRow) {
             // copy last row → hole, column by column
             for (const type of this.archetype.types) {
-                const d = DESCRIPTORS[type];
-                const view = this.getView<BufferInstance>(d);
+                const d = this.archetype.descriptors.get(type);
+                if (d === undefined)
+                    throw new Error(
+                        `Chunk.delete: descriptor for type ${type} not found`
+                    );
+
+                const view = this.getView<Buffer>(d);
 
                 const elems = d.count;
                 const src = lastRow * elems;
@@ -201,7 +213,11 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
                 );
             }
 
-            const descriptor = DESCRIPTORS[type];
+            const descriptor = this.archetype.descriptors.get(type);
+            if (descriptor === undefined)
+                throw new Error(
+                    `Chunk.buildViews: descriptor for type ${type} not found`
+                );
 
             const align =
                 descriptor.alignment ?? descriptor.buffer.BYTES_PER_ELEMENT;
@@ -220,6 +236,12 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
                 descriptor.count *
                 descriptor.buffer.BYTES_PER_ELEMENT;
         }
+
+        // here we add a EntityId view for book-keeping
+        const entityIdVeiw = new Uint32Array(
+            Chunk.ENTITIES_PER_CHUNK * 1 * Uint32Array.BYTES_PER_ELEMENT
+        );
+        (map as any)["EntityId"] = entityIdVeiw;
 
         if (offset > this.buffer!.byteLength)
             throw new Error("stride mis-match (buffer too small)"); // final guard

@@ -1,10 +1,14 @@
-import { DESCRIPTORS } from "./components";
 import { Obj } from "../tools";
-import { ComponentType } from "../types";
-import type { Signature } from "../types";
+import { IDPool } from "../tools";
+import { SparseSet } from "../tools";
+import type { ComponentType, ComponentDescriptor, Signature } from "../types";
 
 /**  cache for already backed archetypes */
 const cache: Map<Signature, Archetype> = new Map();
+
+const registry: SparseSet<ComponentDescriptor> = new SparseSet();
+
+const idPool: IDPool = new IDPool(); // the component types start at index: 1
 
 /** utility to compute the signature from a provided list of component types */
 function makeSignature(...comps: ComponentType[]): Signature {
@@ -12,11 +16,26 @@ function makeSignature(...comps: ComponentType[]): Signature {
     return signature as Signature;
 }
 
+function register(...desc: ComponentDescriptor[]) {
+    desc.forEach((descriptor) => {
+        // check if the descriptor is laready registered
+        for (let [_, registered] of registry) {
+            if (registered !== undefined && registered.name === descriptor.name)
+                throw new Error(
+                    `Archetype.register: the descriptor name ${descriptor.name} is already registered. change name`
+                );
+        }
+
+        const typeId = idPool.acquire();
+
+        registry.insert(typeId, descriptor);
+    });
+    console.log(registry);
+}
+
 /** creates a brand new archetype */
 function create(...comps: ComponentType[]): Archetype {
-    let types = [...new Set([...comps, ComponentType.EntityId])].sort(
-        (a, b) => a - b
-    );
+    let types = [...new Set(comps)].sort((a, b) => a - b);
 
     const signature = makeSignature(...types);
 
@@ -26,9 +45,16 @@ function create(...comps: ComponentType[]): Archetype {
     let byteStride = 0;
     let elementStride = 0;
     const offsets = new Map<ComponentType, number>();
+    const descriptors = new Map<ComponentType, ComponentDescriptor>();
 
     for (const type of types) {
-        const descriptor = DESCRIPTORS[type];
+        const descriptor = registry.get(type);
+        console.log(" create ~ descriptor:", type, descriptor); // fix this error
+        if (descriptor === undefined)
+            throw new Error(
+                `Archetype:create: the type ${type} is not registered!`
+            );
+
         const align =
             descriptor.alignment ?? descriptor.buffer.BYTES_PER_ELEMENT;
 
@@ -39,6 +65,8 @@ function create(...comps: ComponentType[]): Archetype {
 
         elementStride += descriptor.count;
         byteStride += descriptor.count * descriptor.buffer.BYTES_PER_ELEMENT;
+
+        descriptors.set(type, descriptor);
     }
 
     const archetype: Archetype = {
@@ -47,6 +75,7 @@ function create(...comps: ComponentType[]): Archetype {
         offsets,
         byteStride,
         elementStride,
+        descriptors,
     };
 
     cache.set(signature, archetype);
@@ -58,7 +87,7 @@ function create(...comps: ComponentType[]): Archetype {
 
 /** returns true if the archetype has _exactly_ these comps (plus EntityId) */
 function matches(arch: Archetype, ...comps: ComponentType[]): boolean {
-    const reqMask = makeSignature(...comps, ComponentType.EntityId); // archetypes always include EntityId under the hood
+    const reqMask = makeSignature(...comps); // archetypes always include EntityId under the hood
     return arch.signature === reqMask;
 }
 
@@ -71,7 +100,7 @@ function includes(arch: Archetype, ...comps: ComponentType[]): boolean {
 /* utility to pretty print the provided archetype */
 function format(arch: Archetype): string {
     return `Archetype<${arch.types
-        .map((t) => ComponentType[t])
+        .map((t) => arch.types[t])
         .join(",")}> stride=${arch.byteStride}B`;
 }
 
@@ -82,6 +111,7 @@ export type Archetype = {
     readonly offsets: ReadonlyMap<ComponentType, number>;
     readonly byteStride: number;
     readonly elementStride: number;
+    readonly descriptors: ReadonlyMap<ComponentType, ComponentDescriptor>;
 };
 
 /** Namespace Archetype */
@@ -90,4 +120,7 @@ export const Archetype = {
     matches,
     includes,
     format,
+    register,
+    makeSignature,
+    registry,
 };

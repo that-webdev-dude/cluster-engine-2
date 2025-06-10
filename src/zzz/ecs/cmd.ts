@@ -1,14 +1,14 @@
 import { Storage } from "./storage";
-import { ComponentAssignmentMap } from "./components";
+import { ComponentValueMap } from "../types";
 
 export type Command =
-    | { type: "allocate"; entityId: number; comps?: ComponentAssignmentMap }
+    | { type: "allocate"; entityId: number; comps?: ComponentValueMap }
     | { type: "delete"; entityId: number };
 
 export class CommandBuffer {
     private commands: Command[] = [];
 
-    allocate(entityId: number, comps?: ComponentAssignmentMap) {
+    allocate(entityId: number, comps?: ComponentValueMap) {
         this.commands.push({ type: "allocate", entityId, comps });
     }
 
@@ -20,7 +20,9 @@ export class CommandBuffer {
         for (const cmd of this.commands) {
             switch (cmd.type) {
                 case "allocate":
-                    storage.allocate(cmd.entityId, cmd.comps);
+                    if (cmd.comps !== undefined) {
+                        storage.allocate(cmd.entityId, cmd.comps);
+                    }
                     break;
 
                 case "delete":
