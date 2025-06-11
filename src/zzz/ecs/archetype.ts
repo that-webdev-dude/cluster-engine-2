@@ -1,7 +1,7 @@
 import { Obj } from "../tools";
 import { IDPool } from "../tools";
 import { SparseSet } from "../tools";
-import type { ComponentType, ComponentDescriptor, Signature } from "../types";
+import type { ComponentType, ComponentDescriptor } from "../types";
 
 /**  cache for already backed archetypes */
 const cache: Map<Signature, Archetype> = new Map();
@@ -111,6 +111,8 @@ export type Archetype = {
     readonly elementStride: number;
     readonly descriptors: ReadonlyMap<ComponentType, ComponentDescriptor>;
 };
+
+export type Signature = number;
 
 /** Namespace Archetype */
 export const Archetype = {

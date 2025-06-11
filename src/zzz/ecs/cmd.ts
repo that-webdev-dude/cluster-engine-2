@@ -1,13 +1,14 @@
 import { Storage } from "./storage";
-import { EntityMetaSet } from "./entity";
+// import { EntityMetaSet } from "./entity";
 import {
-    Signature,
     ComponentDescriptor,
     ComponentValueMap,
     ComponentType,
     EntityId,
+    EntityMeta,
 } from "../types";
-import { Archetype } from "./archetype";
+import { Archetype, Signature } from "./archetype";
+import { SparseSet } from "../tools";
 
 export type Command =
     | { type: "allocate"; entityId: EntityId; comps?: ComponentValueMap }
@@ -21,7 +22,7 @@ export class CommandBuffer {
             Signature,
             Storage<ComponentDescriptor[]>
         >,
-        private readonly entityMetaSet: EntityMetaSet
+        private readonly entityMetaSet: SparseSet<EntityId, EntityMeta>
     ) {}
 
     private getStorageByEntityId(
@@ -73,7 +74,7 @@ export class CommandBuffer {
                                 cmd.entityId,
                                 cmd.comps
                             );
-                            this.entityMetaSet.insert({
+                            this.entityMetaSet.insert(cmd.entityId, {
                                 archetype: storage.archetype,
                                 entityId: cmd.entityId,
                                 chunkId,

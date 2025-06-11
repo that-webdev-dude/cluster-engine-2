@@ -1,3 +1,5 @@
+import type { Archetype } from "../ecs/archetype";
+
 /**
  * Buffer related types
  * used to store entity component data.
@@ -34,17 +36,15 @@ export interface ComponentDescriptor {
     alignment?: ComponentAlignement;
 }
 
-/** Unique, strongly-typed identifier for entities within the ECS framework. */
+/**
+ * Entity related types
+ * to represent entity ids and meta data
+ */
 export type EntityId = number;
 
-/** A branded type representing an archetype signature as a number. */
-export type Signature = number & { __brand: "Signature" };
-
-// /** metadata descriptor for an archetype */
-// export type Archetype = {
-//     readonly signature: Signature;
-//     readonly types: readonly ComponentType[];
-//     readonly offsets: ReadonlyMap<ComponentType, number>;
-//     readonly byteStride: number;
-//     readonly elementStride: number;
-// };
+export type EntityMeta = {
+    archetype: Archetype;
+    entityId: EntityId;
+    chunkId: number;
+    row: number;
+};

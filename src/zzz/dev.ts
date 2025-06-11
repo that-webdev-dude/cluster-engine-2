@@ -1,59 +1,43 @@
 import { ComponentDescriptor, ComponentValueMap } from "./types";
-import { RectPipeline } from "../cluster/gl/pipelines/rect";
-import { RectData } from "../cluster/gl/pipelines/rectData";
-import { Renderer } from "../cluster/gl/Renderer";
-import { Engine } from "../cluster/core/Engine";
+import { Renderer } from "./gl/Renderer";
+import { Engine } from "./core/Engine";
 import { Archetype } from "./ecs/archetype";
 import { CommandBuffer } from "./ecs/cmd";
 import { World, WorldView } from "./ecs/world";
-import { UpdateableSystem, RenderableSystem } from "./ecs/system";
+import { UpdateableSystem } from "./ecs/system";
+import { MovementSystem } from "./commons/systems/movement";
+import { RendererSystem } from "./commons/systems/renderer";
+import { Component } from "./commons/components";
+import { DESCRIPTORS } from "./commons/components";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
-// 5. system to make the rectangles bouncing on screen
-class MovementSystem implements UpdateableSystem {
+// // 1. systems to update the entities
+class ObstacleSystem implements UpdateableSystem {
     update(view: WorldView, cmd: CommandBuffer, dt: number) {
         const renderer = Renderer.getInstance();
         view.forEachChunkWith(
-            [
-                Component.Position,
-                Component.Velocity,
-                Component.Size,
-                Component.PreviousPosition,
-            ],
+            [Component.Position, Component.Size, Component.LifeSpan],
             (chunk) => {
                 for (let i = 0; i < chunk.count; i++) {
-                    const vx = chunk.views.Velocity[i * 2];
-                    const vy = chunk.views.Velocity[i * 2 + 1];
+                    let life = chunk.views.LifeSpan[i];
+                    life -= dt;
+                    if (life < 0) {
+                        // Update position to a new random location within the world bounds
+                        chunk.views.Position[i * 2] =
+                            Math.random() *
+                            (renderer.worldWidth - chunk.views.Size[i * 2]);
+                        chunk.views.Position[i * 2 + 1] =
+                            Math.random() *
+                            (renderer.worldHeight -
+                                chunk.views.Size[i * 2 + 1]);
 
-                    // Store previous position for smooth movement
-                    chunk.views.PreviousPosition[i * 2] =
-                        chunk.views.Position[i * 2];
-                    chunk.views.PreviousPosition[i * 2 + 1] =
-                        chunk.views.Position[i * 2 + 1];
-
-                    // Update position
-                    chunk.views.Position[i * 2] += vx * dt;
-                    chunk.views.Position[i * 2 + 1] += vy * dt;
-
-                    // Bounce off walls
-                    const x = chunk.views.Position[i * 2];
-                    const y = chunk.views.Position[i * 2 + 1];
-
-                    if (
-                        x < 0 ||
-                        x + chunk.views.Size[i * 2] > renderer.worldWidth
-                    ) {
-                        chunk.views.Velocity[i * 2] *= -1; // Reverse horizontal velocity
-                    }
-                    if (
-                        y < 0 ||
-                        y + chunk.views.Size[i * 2 + 1] > renderer.worldHeight
-                    ) {
-                        chunk.views.Velocity[i * 2 + 1] *= -1; // Reverse vertical velocity
+                        chunk.views.LifeSpan[i] = 1; // Reset lifespan
+                    } else {
+                        chunk.views.LifeSpan[i] = life;
                     }
                 }
             }
@@ -61,122 +45,10 @@ class MovementSystem implements UpdateableSystem {
     }
 }
 
-// 5. system to make the rectangles bouncing on screen
-class RendererSystem implements RenderableSystem {
-    private interpPos = null as Float32Array | null;
-    private renderer = Renderer.getInstance();
-    private rectPipeline = new RectPipeline(this.renderer, [
-        "Position",
-        "Size",
-        "Color",
-    ]);
-
-    render(view: WorldView, alpha: number) {
-        view.forEachChunkWith(
-            [
-                Component.Position,
-                Component.Color,
-                Component.Size,
-                Component.PreviousPosition,
-            ],
-            (chunk) => {
-                const count = chunk.count;
-                if (count === 0) return;
-
-                // at the first iteration initialize the scratch
-                if (!this.interpPos) {
-                    this.interpPos = Float32Array.from(
-                        chunk.views.PreviousPosition
-                    );
-                }
-
-                // use alpha to interpolate positions for smooth movement
-                const cur = chunk.views.Position;
-                const prev = chunk.views.PreviousPosition;
-
-                for (let i = 0; i < count * 2; ++i) {
-                    this.interpPos[i] = prev[i] + (cur[i] - prev[i]) * alpha;
-                }
-
-                // rect data from subarrays
-                const rectData: RectData = {
-                    positions: this.interpPos.subarray(0, count * 2),
-                    sizes: chunk.views.Size.subarray(0, count * 2),
-                    colors: chunk.views.Color.subarray(0, count * 4),
-                };
-
-                const { gl } = this.renderer;
-
-                this.rectPipeline.bind(gl);
-
-                this.rectPipeline.draw(gl, rectData, count);
-            }
-        );
-    }
-}
-
-// 6. create the world
-const world = new World({
-    updateableSystems: [new MovementSystem()],
-    renderableSystems: [new RendererSystem()],
-});
-
-enum Component {
-    Position,
-    Velocity,
-    Radius,
-    Size,
-    Color,
-    PreviousPosition,
-}
-
-const DESCRIPTORS: readonly ComponentDescriptor[] = [
-    {
-        type: Component.Position,
-        name: "Position",
-        count: 2,
-        buffer: Float32Array,
-        default: [10, 11],
-    },
-    {
-        type: Component.Velocity,
-        name: "Velocity",
-        count: 2,
-        buffer: Float32Array,
-        default: [20, 21],
-    },
-    {
-        type: Component.Radius,
-        name: "Radius",
-        count: 1,
-        buffer: Float32Array,
-        default: [1],
-    },
-    {
-        type: Component.Size,
-        name: "Size",
-        count: 2,
-        buffer: Float32Array,
-        default: [1, 1],
-    },
-    {
-        type: Component.Color,
-        name: "Color",
-        count: 4,
-        buffer: Uint8Array,
-        default: [255, 255, 255, 255],
-    },
-    {
-        type: Component.PreviousPosition,
-        name: "PreviousPosition",
-        count: 2,
-        buffer: Float32Array,
-        default: [0, 0],
-    },
-] as const;
+// activate the components for the game first
 Archetype.register(...(DESCRIPTORS as ComponentDescriptor[]));
 
-// 1. create a rectangle archetype
+// 4. archetypes
 const rectangleArchetype = Archetype.create(
     Component.Position,
     Component.Size,
@@ -184,17 +56,20 @@ const rectangleArchetype = Archetype.create(
     Component.Velocity,
     Component.PreviousPosition
 );
-
-// 2. create an obstacle archetype (red rectangle, no velocity)
 const obstacleArchetype = Archetype.create(
     Component.Position,
     Component.Size,
     Component.Color,
-    Component.PreviousPosition
+    Component.LifeSpan
 );
 
-// Add moving rectangles
-for (let i = 0; i < 256 * 4; i++) {
+// 5. populate the world
+const world = new World({
+    updateableSystems: [new MovementSystem(), new ObstacleSystem()],
+    renderableSystems: [new RendererSystem()],
+});
+
+for (let i = 0; i < 256 * 8; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
     const ppx = px;
@@ -219,12 +94,11 @@ for (let i = 0; i < 256 * 4; i++) {
     world.createEntity(rectangleArchetype, comps);
 }
 
-// Add a static red obstacle rectangle
 const obstacleComps: ComponentValueMap = {
     [Component.Position]: [50, 50],
     [Component.Size]: [10, 10],
     [Component.Color]: [255, 0, 0, 255], // Red
-    [Component.PreviousPosition]: [50, 50],
+    [Component.LifeSpan]: [1],
 };
 
 world.createEntity(obstacleArchetype, obstacleComps);
@@ -237,7 +111,4 @@ export default () => {
     engine.addRenderable(world);
     engine.addCallback(world);
     engine.start();
-    // setTimeout(() => {
-    //     engine.stop();
-    // }, 100);
 };

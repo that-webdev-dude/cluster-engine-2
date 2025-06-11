@@ -1,15 +1,15 @@
 import {
-    Signature,
     ComponentDescriptor,
     ComponentValueMap,
     ComponentType,
     EntityId,
+    EntityMeta,
 } from "../types";
-import { Storage } from "./storage";
-import { Archetype } from "./archetype";
 import { Chunk } from "./chunk";
+import { Storage } from "./storage";
 import { CommandBuffer } from "./cmd";
-import { EntityMetaSet, EntityPool } from "./entity";
+import { IDPool, SparseSet } from "../tools";
+import { Archetype, Signature } from "./archetype";
 import { UpdateableSystem, RenderableSystem } from "./system";
 
 /**
@@ -47,8 +47,9 @@ export class WorldView {
 export class World {
     private updateableSystems: UpdateableSystem[] = [];
     private renderableSystems: RenderableSystem[] = [];
-    private entities: EntityMetaSet = new EntityMetaSet();
-    private archetypes: Map<Signature, Storage<ComponentDescriptor[]>> =
+    private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
+    private entityPool: IDPool<EntityId> = new IDPool();
+    private components: Map<Signature, Storage<ComponentDescriptor[]>> =
         new Map();
 
     readonly cmd: CommandBuffer;
@@ -61,8 +62,8 @@ export class World {
         this.updateableSystems = options.updateableSystems;
         this.renderableSystems = options.renderableSystems;
 
-        this.worldView = new WorldView(this.archetypes);
-        this.cmd = new CommandBuffer(this.archetypes, this.entities);
+        this.worldView = new WorldView(this.components);
+        this.cmd = new CommandBuffer(this.components, this.entityMeta);
     }
 
     initialize(): void {
@@ -71,26 +72,26 @@ export class World {
     }
 
     createEntity(archetype: Archetype, comps: ComponentValueMap) {
-        let storage = this.archetypes.get(archetype.signature);
+        let storage = this.components.get(archetype.signature);
         if (storage === undefined) {
             const descriptors = archetype.types.map((c) =>
                 Archetype.registry.get(c)
             ) as ComponentDescriptor[]; // archetype.types includes EntityId type so it's fine
-            this.archetypes.set(
+            this.components.set(
                 archetype.signature,
                 new Storage<typeof descriptors>(archetype)
             );
-            storage = this.archetypes.get(archetype.signature)!; // just created one
+            storage = this.components.get(archetype.signature)!; // just created one
         }
 
-        const entityId = EntityPool.acquire();
+        const entityId = this.entityPool.acquire();
 
         // this is done via cmd
         this.cmd.allocate(entityId, comps);
     }
 
     removeEntity(entityId: EntityId): boolean {
-        const meta = this.entities.get(entityId);
+        const meta = this.entityMeta.get(entityId);
         if (meta === undefined) {
             if (DEBUG)
                 throw new Error(
@@ -100,7 +101,7 @@ export class World {
         }
 
         const { archetype } = meta;
-        const storage = this.archetypes.get(archetype.signature);
+        const storage = this.components.get(archetype.signature);
         if (storage === undefined) {
             if (DEBUG)
                 throw new Error(
@@ -109,7 +110,7 @@ export class World {
             return false;
         }
 
-        EntityPool.release(entityId);
+        this.entityPool.release(entityId);
 
         // this is done via cmd
         this.cmd.delete(entityId);
