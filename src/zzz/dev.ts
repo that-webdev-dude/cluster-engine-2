@@ -1,6 +1,5 @@
 import { ComponentDescriptor, ComponentValueMap } from "./types";
 import { Renderer } from "./gl/Renderer";
-import { Engine } from "./core/Engine";
 import { Archetype } from "./ecs/archetype";
 import { CommandBuffer } from "./ecs/cmd";
 import { World, WorldView } from "./ecs/world";
@@ -10,6 +9,7 @@ import { RendererSystem } from "./commons/systems/renderer";
 import { Component } from "./commons/components";
 import { DESCRIPTORS } from "./commons/components";
 import { Keyboard } from "./core/Input";
+import { Game } from "./ecs/game";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -161,13 +161,10 @@ const playerComps: ComponentValueMap = {
 };
 world.createEntity(controllableArchetype, playerComps);
 
-// init the world
-world.initialize();
+// init the game
+const game = new Game();
 
 export default () => {
-    const engine = new Engine(60);
-    engine.addUpdateable(world);
-    engine.addRenderable(world);
-    engine.addCallback(world);
-    engine.start();
+    game.setWorld(world);
+    game.start();
 };

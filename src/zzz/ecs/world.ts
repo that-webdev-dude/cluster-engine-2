@@ -117,22 +117,4 @@ export class World {
 
         return true;
     }
-
-    // ⚠️ these methods should be part of a Game class owning the world instance
-    update(dt: number) {
-        this.updateableSystems.forEach((system) =>
-            system.update(this.worldView, this.cmd, dt)
-        );
-        this.cmd.flush();
-    }
-
-    render(alpha: number) {
-        this.renderableSystems.forEach((system) =>
-            system.render(this.worldView, alpha)
-        );
-    }
-
-    done() {
-        // console.log("events and flush");
-    }
 }
