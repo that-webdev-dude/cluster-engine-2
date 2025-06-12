@@ -8,6 +8,7 @@ export enum Component {
     Color,
     PreviousPosition,
     LifeSpan,
+    InputKey,
 }
 
 export const DESCRIPTORS: readonly ComponentDescriptor[] = [
@@ -59,5 +60,12 @@ export const DESCRIPTORS: readonly ComponentDescriptor[] = [
         count: 1,
         buffer: Float32Array,
         default: [1], // in ms
+    },
+    {
+        type: Component.InputKey,
+        name: "InputKey",
+        count: 2,
+        buffer: Uint8Array,
+        default: [0, 0],
     },
 ] as const;

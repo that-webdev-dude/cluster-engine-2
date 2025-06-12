@@ -74,6 +74,10 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return view;
     }
 
+    get formattedArchetype() {
+        return Archetype.format(this.archetype);
+    }
+
     getView<T extends Buffer>(descriptor: ComponentDescriptor): T {
         this.assertAlive();
         const view = (this.views as any)[descriptor.name] as T;

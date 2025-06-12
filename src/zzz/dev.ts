@@ -9,6 +9,7 @@ import { MovementSystem } from "./commons/systems/movement";
 import { RendererSystem } from "./commons/systems/renderer";
 import { Component } from "./commons/components";
 import { DESCRIPTORS } from "./commons/components";
+import { Keyboard } from "./core/Input";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -16,6 +17,27 @@ import { DESCRIPTORS } from "./commons/components";
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 // // 1. systems to update the entities
+class PlayerSystem implements UpdateableSystem {
+    private keyboard = Keyboard;
+    update(view: WorldView, cmd: CommandBuffer, dt: number) {
+        view.forEachChunkWith(
+            [Component.InputKey, Component.Velocity],
+            (chunk) => {
+                for (let i = 0; i < chunk.count; i++) {
+                    if (this.keyboard.active) {
+                        chunk.views.InputKey[i * 2] = this.keyboard.x();
+                        chunk.views.InputKey[i * 2 + 1] = this.keyboard.y();
+
+                        const vx = 200 * this.keyboard.x();
+                        const vy = 200 * this.keyboard.y();
+                        chunk.views.Velocity[i * 2] = vx;
+                        chunk.views.Velocity[i * 2 + 1] = vy;
+                    }
+                }
+            }
+        );
+    }
+}
 class ObstacleSystem implements UpdateableSystem {
     update(view: WorldView, cmd: CommandBuffer, dt: number) {
         const renderer = Renderer.getInstance();
@@ -62,14 +84,27 @@ const obstacleArchetype = Archetype.create(
     Component.Color,
     Component.LifeSpan
 );
+const controllableArchetype = Archetype.create(
+    Component.InputKey,
+    Component.Position,
+    Component.Size,
+    Component.Color,
+    Component.Velocity,
+    Component.PreviousPosition
+);
 
 // 5. populate the world
 const world = new World({
-    updateableSystems: [new MovementSystem(), new ObstacleSystem()],
+    updateableSystems: [
+        new PlayerSystem(),
+        new MovementSystem(),
+        new ObstacleSystem(),
+    ],
     renderableSystems: [new RendererSystem()],
 });
 
-for (let i = 0; i < 256 * 8; i++) {
+// create bouncing rects
+for (let i = 0; i < 256 * 1; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
     const ppx = px;
@@ -94,15 +129,39 @@ for (let i = 0; i < 256 * 8; i++) {
     world.createEntity(rectangleArchetype, comps);
 }
 
-const obstacleComps: ComponentValueMap = {
-    [Component.Position]: [50, 50],
-    [Component.Size]: [10, 10],
-    [Component.Color]: [255, 0, 0, 255], // Red
-    [Component.LifeSpan]: [1],
+// create obstacles
+for (let i = 0; i < 2; i++) {
+    const px = Math.random() * 100;
+    const py = Math.random() * 100;
+    const sx = 12;
+    const sy = 12;
+    const r = 255;
+    const g = 0;
+    const b = 0;
+    const a = 255;
+
+    const comps: ComponentValueMap = {
+        [Component.Position]: [px, py],
+        [Component.Size]: [sx, sy],
+        [Component.Color]: [r, g, b, a],
+        [Component.LifeSpan]: [1],
+    };
+
+    world.createEntity(obstacleArchetype, comps);
+}
+
+// create playerRect
+const playerComps: ComponentValueMap = {
+    [Component.Position]: [200, 100],
+    [Component.Size]: [24, 24],
+    [Component.Color]: [0, 255, 0, 255],
+    [Component.Velocity]: [0, 0],
+    [Component.PreviousPosition]: [400, 400],
+    [Component.InputKey]: [0, 0],
 };
+world.createEntity(controllableArchetype, playerComps);
 
-world.createEntity(obstacleArchetype, obstacleComps);
-
+// init the world
 world.initialize();
 
 export default () => {

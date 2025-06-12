@@ -45,8 +45,6 @@ export class WorldView {
 }
 
 export class World {
-    private updateableSystems: UpdateableSystem[] = [];
-    private renderableSystems: RenderableSystem[] = [];
     private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
     private entityPool: IDPool<EntityId> = new IDPool();
     private components: Map<Signature, Storage<ComponentDescriptor[]>> =
@@ -54,6 +52,8 @@ export class World {
 
     readonly cmd: CommandBuffer;
     readonly worldView: WorldView;
+    readonly updateableSystems: UpdateableSystem[] = [];
+    readonly renderableSystems: RenderableSystem[] = [];
 
     constructor(options: {
         updateableSystems: UpdateableSystem[];
