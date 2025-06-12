@@ -17,7 +17,7 @@ import { UpdateableSystem, RenderableSystem } from "./system";
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
-export class WorldView {
+export class View {
     constructor(
         private readonly archetypeMap: Map<
             Signature,
@@ -44,14 +44,14 @@ export class WorldView {
     }
 }
 
-export class World {
+export class Scene {
     private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
     private entityPool: IDPool<EntityId> = new IDPool();
     private components: Map<Signature, Storage<ComponentDescriptor[]>> =
         new Map();
 
     readonly cmd: CommandBuffer;
-    readonly worldView: WorldView;
+    readonly view: View;
     readonly updateableSystems: UpdateableSystem[] = [];
     readonly renderableSystems: RenderableSystem[] = [];
 
@@ -62,7 +62,7 @@ export class World {
         this.updateableSystems = options.updateableSystems;
         this.renderableSystems = options.renderableSystems;
 
-        this.worldView = new WorldView(this.components);
+        this.view = new View(this.components);
         this.cmd = new CommandBuffer(this.components, this.entityMeta);
     }
 
@@ -95,7 +95,7 @@ export class World {
         if (meta === undefined) {
             if (DEBUG)
                 throw new Error(
-                    `World.removeEntity: entityId ${entityId} does not exists in the world`
+                    `Scene.removeEntity: entityId ${entityId} does not exists in the world`
                 );
             return false;
         }
@@ -105,7 +105,7 @@ export class World {
         if (storage === undefined) {
             if (DEBUG)
                 throw new Error(
-                    `World.removeEntity: entityId ${entityId} does not exists in the world`
+                    `Scene.removeEntity: entityId ${entityId} does not exists in the world`
                 );
             return false;
         }

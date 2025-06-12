@@ -1,4 +1,4 @@
-import { WorldView } from "./world";
+import { View } from "./scene";
 import { CommandBuffer } from "./cmd";
 /**
  * Abstract base class for systems that can be updated each frame.
@@ -7,7 +7,7 @@ import { CommandBuffer } from "./cmd";
  * which is called with the elapsed time since the last update.
  */
 export abstract class UpdateableSystem {
-    abstract update(view: WorldView, cmd: CommandBuffer, dt: number): void;
+    abstract update(view: View, cmd: CommandBuffer, dt: number): void;
 }
 
 /**
@@ -17,5 +17,5 @@ export abstract class UpdateableSystem {
  * which is called with an interpolation alpha value.
  */
 export abstract class RenderableSystem {
-    abstract render(view: WorldView, alpha: number): void;
+    abstract render(view: View, alpha: number): void;
 }

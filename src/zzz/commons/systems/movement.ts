@@ -1,11 +1,11 @@
 import { UpdateableSystem } from "../../ecs/system";
 import { CommandBuffer } from "../../ecs/cmd";
-import { WorldView } from "../../ecs/world";
+import { View } from "../../ecs/scene";
 import { Renderer } from "../../gl/Renderer";
 import { Component } from "../components";
 
 export class MovementSystem implements UpdateableSystem {
-    update(view: WorldView, cmd: CommandBuffer, dt: number) {
+    update(view: View, cmd: CommandBuffer, dt: number) {
         const renderer = Renderer.getInstance();
         view.forEachChunkWith(
             [

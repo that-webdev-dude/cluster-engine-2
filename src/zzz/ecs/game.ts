@@ -1,28 +1,28 @@
 import { Engine } from "../core/Engine";
-import { World } from "./world";
+import { Scene } from "./scene";
 
 export class Game {
     private engine: Engine = new Engine(60);
-    private worlds: Array<World> = []; // a stack of World instances
+    private scenes: Array<Scene> = []; // a stack of Scene instances
 
-    setWorld(world: World): void {
-        world.initialize();
-        this.worlds.push(world);
+    setScene(scene: Scene): void {
+        scene.initialize();
+        this.scenes.push(scene);
     }
 
     update(dt: number) {
-        this.worlds.forEach((world) => {
-            world.updateableSystems.forEach((system) =>
-                system.update(world.worldView, world.cmd, dt)
+        this.scenes.forEach((scene) => {
+            scene.updateableSystems.forEach((system) =>
+                system.update(scene.view, scene.cmd, dt)
             );
-            world.cmd.flush();
+            scene.cmd.flush();
         });
     }
 
     render(alpha: number) {
-        this.worlds.forEach((world) => {
-            world.renderableSystems.forEach((system) =>
-                system.render(world.worldView, alpha)
+        this.scenes.forEach((scene) => {
+            scene.renderableSystems.forEach((system) =>
+                system.render(scene.view, alpha)
             );
         });
     }

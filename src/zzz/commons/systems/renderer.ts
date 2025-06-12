@@ -2,7 +2,8 @@ import { RectPipeline } from "../../gl/pipelines/rect";
 import { RectData } from "../../gl/pipelines/rectData";
 import { Renderer } from "../../gl/Renderer";
 import { RenderableSystem } from "../../ecs/system";
-import { WorldView } from "../../ecs/world";
+// import { View } from "../../ecs/world";
+import { View } from "../../ecs/scene";
 import { Component } from "../components";
 
 export class RendererSystem implements RenderableSystem {
@@ -14,7 +15,7 @@ export class RendererSystem implements RenderableSystem {
         "Color",
     ]);
 
-    render(view: WorldView, alpha: number) {
+    render(view: View, alpha: number) {
         view.forEachChunkWith(
             [Component.Position, Component.Color, Component.Size],
             (chunk) => {

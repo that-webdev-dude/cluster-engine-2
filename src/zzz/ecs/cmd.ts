@@ -1,5 +1,4 @@
 import { Storage } from "./storage";
-// import { EntityMetaSet } from "./entity";
 import {
     ComponentDescriptor,
     ComponentValueMap,
