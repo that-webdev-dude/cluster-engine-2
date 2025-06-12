@@ -16,7 +16,7 @@ import { Scene, View } from "./ecs/scene";
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
-// // 1. systems to update the entities
+// systems to update the entities
 class PlayerSystem implements UpdateableSystem {
     private keyboard = Keyboard;
     update(view: View, cmd: CommandBuffer, dt: number) {
@@ -70,7 +70,7 @@ class ObstacleSystem implements UpdateableSystem {
 // activate the components for the game first
 Archetype.register(...(DESCRIPTORS as ComponentDescriptor[]));
 
-// 4. archetypes
+// archetypes
 const rectangleArchetype = Archetype.create(
     Component.Position,
     Component.Size,
@@ -93,7 +93,7 @@ const controllableArchetype = Archetype.create(
     Component.PreviousPosition
 );
 
-// 5. populate the world
+// populate the world
 const scene = new Scene({
     updateableSystems: [
         new PlayerSystem(),
