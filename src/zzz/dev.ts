@@ -4,7 +4,7 @@ import { Archetype } from "./ecs/archetype";
 import { CommandBuffer } from "./ecs/cmd";
 import { UpdateableSystem } from "./ecs/system";
 import { MovementSystem } from "./commons/systems/movement";
-import { RendererSystem } from "./commons/systems/renderer";
+import { RendererSystem } from "./commons/systems/camRenderer";
 import { Component } from "./commons/components";
 import { DESCRIPTORS } from "./commons/components";
 import { Keyboard } from "./core/Input";

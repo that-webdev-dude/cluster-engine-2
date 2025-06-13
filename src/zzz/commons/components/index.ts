@@ -9,6 +9,7 @@ export enum Component {
     PreviousPosition,
     LifeSpan,
     InputKey,
+    Visible,
 }
 
 export const DESCRIPTORS: readonly ComponentDescriptor[] = [
@@ -67,5 +68,12 @@ export const DESCRIPTORS: readonly ComponentDescriptor[] = [
         count: 2,
         buffer: Uint8Array,
         default: [0, 0],
+    },
+    {
+        type: Component.Visible,
+        name: "Visible",
+        count: 1,
+        buffer: Uint8Array,
+        default: [1], // means visible
     },
 ] as const;
