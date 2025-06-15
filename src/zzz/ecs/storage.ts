@@ -23,11 +23,21 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
     private chunks: Map<number, Chunk<S>> = new Map();
 
+    private liveEntities: number = 0;
+
     private partialChunkIds: Set<number> = new Set();
 
     // TODO
     // Storage<S> can be instantiated with an Archetype whose component list does not match S. TypeScript can’t prove the two are consistent.
     constructor(readonly archetype: Archetype) {}
+
+    get entityCount() {
+        return this.liveEntities;
+    }
+
+    get maxEntities(): Readonly<number> | undefined {
+        return this.archetype.maxEntities || undefined;
+    }
 
     /* _______________ public API _______________ */
     getChunk(chunkId: number): Readonly<Chunk<S>> | undefined {
@@ -100,6 +110,15 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
     ): { chunkId: number; row: number } {
         this.validateEntityId(entityId);
 
+        // check for an entity limit in the archetype before allocate
+        if (
+            this.archetype.maxEntities &&
+            this.liveEntities >= this.archetype.maxEntities
+        )
+            throw new Error(
+                `Storage.allocate: this.storage has a limited number of entities set to ${this.archetype.maxEntities}`
+            );
+
         if (this.entities.has(entityId))
             throw new Error(
                 `Storage.allocate: entityId: ${entityId} already exists in the storage. cannot allocate!`
@@ -116,7 +135,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
         const row = chunk.allocate(entityId); // safe as at this point a chunk must exist
 
-        if (row === Chunk.ENTITIES_PER_CHUNK - 1) {
+        if (row === chunk.entityCapacity - 1) {
             this.partialChunkIds.delete(chunkId);
         } // the chunk is full so remove it from the partialChunkIds
 
@@ -124,6 +143,8 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
         // update the entity address
         this.entities.set(entityId, address);
+
+        this.liveEntities++;
 
         // if (DEBUG) {
         //     console.log(

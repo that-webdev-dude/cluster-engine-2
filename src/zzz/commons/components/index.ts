@@ -10,6 +10,7 @@ export enum Component {
     LifeSpan,
     InputKey,
     Visible,
+    Camera,
 }
 
 export const DESCRIPTORS: readonly ComponentDescriptor[] = [
@@ -75,5 +76,12 @@ export const DESCRIPTORS: readonly ComponentDescriptor[] = [
         count: 1,
         buffer: Uint8Array,
         default: [1], // means visible
+    },
+    {
+        type: Component.Camera,
+        name: "Camera",
+        count: 1,
+        buffer: Float32Array,
+        default: [0], // means speed
     },
 ] as const;

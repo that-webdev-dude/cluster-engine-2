@@ -15,8 +15,6 @@ type ComponentViews<D extends readonly ComponentDescriptor[]> = {
 type MovedEntityId = number & { __brand: "MovedEntityId" }; // used in the delete method
 
 export class Chunk<S extends readonly ComponentDescriptor[]> {
-    static readonly ENTITIES_PER_CHUNK = 256 * 2; // entities per chunk
-
     static readonly HEADER_BYTE_SIZE = 32; // size of the header in bytes, can be used for metadata
 
     private buffer: ArrayBuffer | null;
@@ -27,8 +25,12 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
     readonly views: ComponentViews<S>;
 
+    readonly entityCapacity: number;
+
     constructor(private readonly archetype: Archetype) {
-        const payloadBytes = Chunk.ENTITIES_PER_CHUNK * archetype.byteStride;
+        this.entityCapacity = archetype.maxEntities || 256;
+
+        const payloadBytes = this.entityCapacity * archetype.byteStride;
 
         this.buffer = new ArrayBuffer(Chunk.HEADER_BYTE_SIZE + payloadBytes);
 
@@ -42,16 +44,11 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
     }
 
     /* _______________ public API _______________ */
-    get capacity(): number {
-        this.assertAlive();
-        return Chunk.ENTITIES_PER_CHUNK;
-    }
-
-    get byteSize(): number {
+    get byteCapacity(): number {
         this.assertAlive();
         return (
             Chunk.HEADER_BYTE_SIZE +
-            Chunk.ENTITIES_PER_CHUNK * this.archetype.byteStride
+            this.entityCapacity * this.archetype.byteStride
         );
     }
 
@@ -62,7 +59,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
     get full(): boolean {
         this.assertAlive();
-        return this.count >= Chunk.ENTITIES_PER_CHUNK;
+        return this.count >= this.entityCapacity;
     }
 
     get entityIdVeiw(): Uint32Array {
@@ -91,8 +88,10 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
     allocate(recordId: number): number {
         this.assertAlive();
 
-        if (this.count >= Chunk.ENTITIES_PER_CHUNK) {
-            throw new Error("Chunk is full");
+        if (this.count >= this.entityCapacity) {
+            throw new Error(
+                `[Chunk.allocate]: Chunk is full - maxEntities = ${this.entityCapacity}`
+            );
         }
 
         const row = this.count;
@@ -230,20 +229,20 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             const view = new descriptor.buffer(
                 this.buffer!,
                 offset,
-                Chunk.ENTITIES_PER_CHUNK * descriptor.count
+                this.entityCapacity * descriptor.count
             );
 
             (map as any)[descriptor.name] = view;
 
             offset +=
-                Chunk.ENTITIES_PER_CHUNK *
+                this.entityCapacity *
                 descriptor.count *
                 descriptor.buffer.BYTES_PER_ELEMENT;
         }
 
         // here we add a EntityId view for book-keeping
         const entityIdVeiw = new Uint32Array(
-            Chunk.ENTITIES_PER_CHUNK * 1 * Uint32Array.BYTES_PER_ELEMENT
+            this.entityCapacity * 1 * Uint32Array.BYTES_PER_ELEMENT
         );
         (map as any)["EntityId"] = entityIdVeiw;
 
@@ -255,7 +254,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
     private incrementCount(): void {
         const currentCount = this.count;
-        if (currentCount >= Chunk.ENTITIES_PER_CHUNK) {
+        if (currentCount >= this.entityCapacity) {
             throw new Error("Chunk is full");
         }
         this.header!.setUint32(0, currentCount + 1, true); // Increment the count in the header

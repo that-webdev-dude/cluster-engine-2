@@ -1,12 +1,12 @@
-import { RectPipeline } from "../../gl/pipelines/rect";
-import { RectData } from "../../gl/pipelines/rectData";
+import { RectPipeline } from "../../gl/pipelines/camRect";
+import { RectData } from "../../gl/pipelines/camRectData";
 import { Renderer } from "../../gl/Renderer";
 import { RenderableSystem } from "../../ecs/system";
-// import { View } from "../../ecs/world";
 import { View } from "../../ecs/scene";
 import { Component } from "../components";
 
 export class RendererSystem implements RenderableSystem {
+    private cameraPos = [0, 0];
     private interpPos = null as Float32Array | null;
     private renderer = Renderer.getInstance();
     private rectPipeline = new RectPipeline(this.renderer, [
@@ -16,6 +16,25 @@ export class RendererSystem implements RenderableSystem {
     ]);
 
     render(view: View, alpha: number) {
+        view.forEachChunkWith([Component.Camera], (chunk) => {
+            const count = chunk.count;
+            if (count > 1)
+                console.warn(
+                    `[Renderer.Camera]: this view should have 1 record only!`
+                );
+
+            // 💥 no camera smooth movement is implemented here
+            // need to redefine the archetype
+            const i = 0;
+            const cur = chunk.views.Position;
+            const prev = chunk.views.PreviousPosition;
+
+            this.cameraPos[i * 2] =
+                prev[i * 2] + (cur[i * 2] - prev[i * 2]) * alpha;
+            this.cameraPos[i * 2 + 1] =
+                prev[i * 2 + 1] + (cur[i * 2 + 1] - prev[i * 2 + 1]) * alpha;
+        });
+
         view.forEachChunkWith(
             [Component.Position, Component.Color, Component.Size],
             (chunk) => {
@@ -49,6 +68,13 @@ export class RendererSystem implements RenderableSystem {
 
                     const { gl } = this.renderer;
 
+                    // ❗️ this is the place where we pass in the camera values
+                    this.rectPipeline.setCamera(
+                        gl,
+                        this.cameraPos[0],
+                        this.cameraPos[1]
+                    );
+
                     this.rectPipeline.bind(gl);
 
                     this.rectPipeline.draw(gl, rectData, count);
@@ -65,6 +91,13 @@ export class RendererSystem implements RenderableSystem {
                     };
 
                     const { gl } = this.renderer;
+
+                    // ❗️ this is the place where we pass in the camera values
+                    this.rectPipeline.setCamera(
+                        gl,
+                        this.cameraPos[0],
+                        this.cameraPos[1]
+                    );
 
                     this.rectPipeline.bind(gl);
 

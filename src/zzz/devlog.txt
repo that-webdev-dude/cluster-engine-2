@@ -5,3 +5,4 @@ TODO:
 - make the Archetype a generic so the Storage works with generics
 - If you plan to reset a scene or level, consider exposing a .reset() method in Storage that calls chunkIdPool.reset() and clears all internal maps. This would make recycling the whole world easier without creating new instances.
 - EntityMetaSet should be instanciated via SparseSet
+- in renderer system refactor common consider- in camera archetype add position and prev position for smooth movement + adjustthe systems

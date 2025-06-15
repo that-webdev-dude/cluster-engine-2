@@ -68,6 +68,7 @@ export class Scene {
 
     initialize(): void {
         this.cmd.flush();
+        console.log(this.components);
         // ... and other init stuff
     }
 

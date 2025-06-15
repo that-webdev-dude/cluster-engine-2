@@ -15,5 +15,6 @@ void main() {
     vec2 view = pos.xy - uCamPos;
 
     gl_Position = uProj * vec4(view, 0.0f, 1.0f);
+
     vColor = aInstanceColor;
 }

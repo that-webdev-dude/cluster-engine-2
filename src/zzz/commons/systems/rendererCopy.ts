@@ -1,7 +1,8 @@
-import { RectPipeline } from "../../gl/pipelines/camRect";
-import { RectData } from "../../gl/pipelines/camRectData";
+import { RectPipeline } from "../../gl/pipelines/rect";
+import { RectData } from "../../gl/pipelines/rectData";
 import { Renderer } from "../../gl/Renderer";
 import { RenderableSystem } from "../../ecs/system";
+// import { View } from "../../ecs/world";
 import { View } from "../../ecs/scene";
 import { Component } from "../components";
 
@@ -48,8 +49,6 @@ export class RendererSystem implements RenderableSystem {
 
                     const { gl } = this.renderer;
 
-                    // ❗️ this is the place where we pass in the camera values
-
                     this.rectPipeline.bind(gl);
 
                     this.rectPipeline.draw(gl, rectData, count);
@@ -66,8 +65,6 @@ export class RendererSystem implements RenderableSystem {
                     };
 
                     const { gl } = this.renderer;
-
-                    // ❗️ this is the place where we pass in the camera values
 
                     this.rectPipeline.bind(gl);
 

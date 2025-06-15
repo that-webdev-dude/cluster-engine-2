@@ -102,15 +102,13 @@ export class RectPipeline extends Pipeline<RectData> {
             0,    0,    1,    0,
            -1,    1,    0,    1,
         ]);
-        gl.uniformMatrix4fv(this.uProjLoc, false, proj);
 
-        // ❗️ this is the place where we set the camera uniform from the rendererSystem
-        this.setCameraUniform();
-        gl.uniform2f(this.uCamPosLoc, 100, 100);
+        gl.uniformMatrix4fv(this.uProjLoc, false, proj);
     }
 
-    public setCameraUniform() {
-        // ❗️ Set camera uniform here!
+    public setCamera(gl: WebGL2RenderingContext, x: number, y: number) {
+        gl.useProgram(this.program);
+        gl.uniform2f(this.uCamPosLoc, x, y);
     }
 
     /**

@@ -4,7 +4,8 @@ import { Archetype } from "./ecs/archetype";
 import { CommandBuffer } from "./ecs/cmd";
 import { UpdateableSystem } from "./ecs/system";
 import { MovementSystem } from "./commons/systems/movement";
-import { RendererSystem } from "./commons/systems/camRenderer";
+import { RendererSystem } from "./commons/systems/renderer";
+import { CameraSystem } from "./commons/systems/camera";
 import { Component } from "./commons/components";
 import { DESCRIPTORS } from "./commons/components";
 import { Keyboard } from "./core/Input";
@@ -70,40 +71,50 @@ class ObstacleSystem implements UpdateableSystem {
 // activate the components for the game first
 Archetype.register(...(DESCRIPTORS as ComponentDescriptor[]));
 
-// archetypes
-const rectangleArchetype = Archetype.create(
-    Component.Position,
-    Component.Size,
-    Component.Color,
-    Component.Velocity,
-    Component.PreviousPosition
-);
-const obstacleArchetype = Archetype.create(
-    Component.Position,
-    Component.Size,
-    Component.Color,
-    Component.LifeSpan
-);
-const controllableArchetype = Archetype.create(
-    Component.InputKey,
-    Component.Position,
-    Component.Size,
-    Component.Color,
-    Component.Velocity,
-    Component.PreviousPosition
-);
-
 // populate the world
 const scene = new Scene({
     updateableSystems: [
         new PlayerSystem(),
+        new CameraSystem(),
         new MovementSystem(),
         new ObstacleSystem(),
     ],
     renderableSystems: [new RendererSystem()],
 });
 
-// create bouncing rects
+// camera archetype
+// const mainCameraArchetype = Archetype.create([Component.MainCamera], 1);
+const renderer = Renderer.getInstance();
+const cameraW = renderer.worldWidth;
+const cameraH = renderer.worldHeight;
+// scene.createEntity(mainCameraArchetype, {
+//     // [Component.MainCamera]: [0, 0, cameraW, cameraH],
+//     [Component.MainCamera]: [0, 0, cameraW, cameraH],
+// });
+
+const cameraArchetype = Archetype.create(
+    [
+        Component.Position,
+        Component.Size,
+        Component.Camera,
+        Component.PreviousPosition,
+    ],
+    1
+);
+scene.createEntity(cameraArchetype, {
+    [Component.Position]: [0, 0],
+    [Component.Size]: [cameraW, cameraH],
+    [Component.Camera]: [200],
+    [Component.PreviousPosition]: [0, 0],
+});
+
+const rectangleArchetype = Archetype.create([
+    Component.Position,
+    Component.Size,
+    Component.Color,
+    Component.Velocity,
+    Component.PreviousPosition,
+]);
 for (let i = 0; i < 256 * 1; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
@@ -129,7 +140,12 @@ for (let i = 0; i < 256 * 1; i++) {
     scene.createEntity(rectangleArchetype, comps);
 }
 
-// create obstacles
+const obstacleArchetype = Archetype.create([
+    Component.Position,
+    Component.Size,
+    Component.Color,
+    Component.LifeSpan,
+]);
 for (let i = 0; i < 2; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
@@ -150,7 +166,17 @@ for (let i = 0; i < 2; i++) {
     scene.createEntity(obstacleArchetype, comps);
 }
 
-// create playerRect
+const controllableArchetype = Archetype.create(
+    [
+        Component.InputKey,
+        Component.Position,
+        Component.Size,
+        Component.Color,
+        Component.Velocity,
+        Component.PreviousPosition,
+    ],
+    1
+);
 const playerComps: ComponentValueMap = {
     [Component.Position]: [200, 100],
     [Component.Size]: [24, 24],

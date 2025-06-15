@@ -33,7 +33,7 @@ function register(...desc: ComponentDescriptor[]) {
 }
 
 /** creates a brand new archetype */
-function create(...comps: ComponentType[]): Archetype {
+function create(comps: ComponentType[], maxEntities?: number): Archetype {
     let types = [...new Set(comps)].sort((a, b) => a - b);
 
     const signature = makeSignature(...types);
@@ -74,6 +74,7 @@ function create(...comps: ComponentType[]): Archetype {
         byteStride,
         elementStride,
         descriptors,
+        maxEntities,
     };
 
     cache.set(signature, archetype);
@@ -110,6 +111,7 @@ export type Archetype = {
     readonly byteStride: number;
     readonly elementStride: number;
     readonly descriptors: ReadonlyMap<ComponentType, ComponentDescriptor>;
+    readonly maxEntities?: number;
 };
 
 export type Signature = number;
