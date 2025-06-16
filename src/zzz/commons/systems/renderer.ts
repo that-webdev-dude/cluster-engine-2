@@ -4,10 +4,11 @@ import { Renderer } from "../../gl/Renderer";
 import { RenderableSystem } from "../../ecs/system";
 import { View } from "../../ecs/scene";
 import { Component } from "../components";
+import { Chunk } from "../../ecs/chunk";
 
 export class RendererSystem implements RenderableSystem {
     private cameraPos = [0, 0];
-    private interpPos = null as Float32Array | null;
+    private interpPos = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
     private renderer = Renderer.getInstance();
     private rectPipeline = new RectPipeline(this.renderer, [
         "Position",
@@ -42,13 +43,6 @@ export class RendererSystem implements RenderableSystem {
                 if (chunk.views.PreviousPosition !== undefined) {
                     const count = chunk.count;
                     if (count === 0) return;
-
-                    // at the first iteration initialize the scratch
-                    if (!this.interpPos) {
-                        this.interpPos = Float32Array.from(
-                            chunk.views.PreviousPosition
-                        );
-                    }
 
                     // use alpha to interpolate positions for smooth movement
                     const cur = chunk.views.Position;

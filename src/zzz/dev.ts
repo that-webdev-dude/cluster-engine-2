@@ -76,22 +76,18 @@ const scene = new Scene({
     updateableSystems: [
         new PlayerSystem(),
         new CameraSystem(),
-        new MovementSystem(),
         new ObstacleSystem(),
+        new MovementSystem(),
     ],
     renderableSystems: [new RendererSystem()],
 });
 
-// camera archetype
-// const mainCameraArchetype = Archetype.create([Component.MainCamera], 1);
+// keep this for world size
 const renderer = Renderer.getInstance();
 const cameraW = renderer.worldWidth;
 const cameraH = renderer.worldHeight;
-// scene.createEntity(mainCameraArchetype, {
-//     // [Component.MainCamera]: [0, 0, cameraW, cameraH],
-//     [Component.MainCamera]: [0, 0, cameraW, cameraH],
-// });
 
+// entities
 const cameraArchetype = Archetype.create(
     [
         Component.Position,
@@ -106,6 +102,26 @@ scene.createEntity(cameraArchetype, {
     [Component.Size]: [cameraW, cameraH],
     [Component.Camera]: [200],
     [Component.PreviousPosition]: [0, 0],
+});
+
+const playerArchetype = Archetype.create(
+    [
+        Component.Position,
+        Component.InputKey,
+        Component.Size,
+        Component.Color,
+        Component.Velocity,
+        Component.PreviousPosition,
+    ],
+    1
+);
+scene.createEntity(playerArchetype, {
+    [Component.Position]: [200, 100],
+    [Component.Size]: [24, 24],
+    [Component.Color]: [0, 255, 0, 255],
+    [Component.Velocity]: [0, 0],
+    [Component.PreviousPosition]: [400, 400],
+    [Component.InputKey]: [0, 0],
 });
 
 const rectangleArchetype = Archetype.create([
@@ -165,27 +181,6 @@ for (let i = 0; i < 2; i++) {
 
     scene.createEntity(obstacleArchetype, comps);
 }
-
-const controllableArchetype = Archetype.create(
-    [
-        Component.InputKey,
-        Component.Position,
-        Component.Size,
-        Component.Color,
-        Component.Velocity,
-        Component.PreviousPosition,
-    ],
-    1
-);
-const playerComps: ComponentValueMap = {
-    [Component.Position]: [200, 100],
-    [Component.Size]: [24, 24],
-    [Component.Color]: [0, 255, 0, 255],
-    [Component.Velocity]: [0, 0],
-    [Component.PreviousPosition]: [400, 400],
-    [Component.InputKey]: [0, 0],
-};
-scene.createEntity(controllableArchetype, playerComps);
 
 // init the game
 const game = new Game();

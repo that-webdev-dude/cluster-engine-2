@@ -1,5 +1,4 @@
 import { Obj } from "../tools";
-import { IDPool } from "../tools";
 import { SparseSet } from "../tools";
 import type { ComponentType, ComponentDescriptor } from "../types";
 
@@ -7,8 +6,6 @@ import type { ComponentType, ComponentDescriptor } from "../types";
 const cache: Map<Signature, Archetype> = new Map();
 
 const registry: SparseSet<ComponentType, ComponentDescriptor> = new SparseSet();
-
-const idPool: IDPool<ComponentType> = new IDPool(); // the component types start at index: 1
 
 /** utility to compute the signature from a provided list of component types */
 function makeSignature(...comps: ComponentType[]): Signature {
@@ -26,7 +23,7 @@ function register(...desc: ComponentDescriptor[]) {
                 );
         }
 
-        const typeId = idPool.acquire();
+        const typeId = descriptor.type;
 
         registry.insert(typeId, descriptor);
     });

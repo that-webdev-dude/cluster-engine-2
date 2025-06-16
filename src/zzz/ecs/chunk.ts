@@ -15,6 +15,8 @@ type ComponentViews<D extends readonly ComponentDescriptor[]> = {
 type MovedEntityId = number & { __brand: "MovedEntityId" }; // used in the delete method
 
 export class Chunk<S extends readonly ComponentDescriptor[]> {
+    static readonly DEFAULT_CAPACITY = 256;
+
     static readonly HEADER_BYTE_SIZE = 32; // size of the header in bytes, can be used for metadata
 
     private buffer: ArrayBuffer | null;
@@ -28,7 +30,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
     readonly entityCapacity: number;
 
     constructor(private readonly archetype: Archetype) {
-        this.entityCapacity = archetype.maxEntities || 256;
+        this.entityCapacity = archetype.maxEntities || Chunk.DEFAULT_CAPACITY;
 
         const payloadBytes = this.entityCapacity * archetype.byteStride;
 

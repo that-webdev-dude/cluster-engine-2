@@ -1,12 +1,12 @@
 import { ComponentDescriptor } from "../../types";
 
 export enum Component {
+    PreviousPosition,
     Position,
     Velocity,
     Radius,
     Size,
     Color,
-    PreviousPosition,
     LifeSpan,
     InputKey,
     Visible,

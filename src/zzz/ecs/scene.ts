@@ -68,7 +68,6 @@ export class Scene {
 
     initialize(): void {
         this.cmd.flush();
-        console.log(this.components);
         // ... and other init stuff
     }
 
@@ -82,6 +81,14 @@ export class Scene {
                 archetype.signature,
                 new Storage<typeof descriptors>(archetype)
             );
+
+            if (DEBUG)
+                console.log(
+                    `[Scene.createEntity]: created storage for ${Archetype.format(
+                        archetype
+                    )}`
+                );
+
             storage = this.components.get(archetype.signature)!; // just created one
         }
 
