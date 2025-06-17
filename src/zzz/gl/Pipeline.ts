@@ -4,7 +4,7 @@ import { Renderer } from "./Renderer";
  * A GPU-managed resource that can be initialized (or re-initialized)
  * when the WebGL context is first created or after it is restored.
  */
-export interface GLResource {
+interface GLResource {
     /** Compile shaders, allocate buffers/textures, etc. */
     initialize(gl: WebGL2RenderingContext): void;
 }
@@ -12,7 +12,7 @@ export interface GLResource {
 /**
  * Explicit contract between Pipeline and GLResource.
  */
-export interface PipelineResource extends GLResource {
+interface PipelineResource extends GLResource {
     /** Bind global pipeline state (shaders, blend modes, uniforms, etc.) */
     bind(gl: WebGL2RenderingContext): void;
 
@@ -134,5 +134,32 @@ export abstract class Pipeline<DataSoA> {
             gl.deleteProgram(program);
             throw new Error(`Program link error: ${log}`);
         }
+    }
+}
+
+interface AttributeSpec {
+    location: number;
+    size: number;
+    type: number;
+    divisor?: number;
+}
+
+export class InstancedPipeline<DataSoA> extends Pipeline<DataSoA> {
+    private attributeSpecs: Map<string, AttributeSpec> = new Map();
+
+    public initialize(gl: WebGL2RenderingContext): void {
+        // ...
+    }
+
+    public bind(gl: WebGL2RenderingContext): void {
+        // ...
+    }
+
+    public draw(
+        gl: WebGL2RenderingContext,
+        data: DataSoA,
+        count: number
+    ): void {
+        // ...
     }
 }
