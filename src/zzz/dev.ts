@@ -11,6 +11,7 @@ import { DESCRIPTORS } from "./commons/components";
 import { Keyboard } from "./core/Input";
 import { Game } from "./ecs/game";
 import { Scene, View } from "./ecs/scene";
+import { CirclePipeline } from "./gl/pipelines/circle";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -156,13 +157,44 @@ for (let i = 0; i < 256 * 1; i++) {
     scene.createEntity(rectangleArchetype, comps);
 }
 
+const circleArchetype = Archetype.create([
+    Component.Position,
+    Component.Radius,
+    Component.Color,
+    Component.Velocity,
+    Component.PreviousPosition,
+]);
+for (let i = 0; i < 1 * 1; i++) {
+    const px = 250;
+    const py = 250;
+    const ppx = px;
+    const ppy = py;
+    const rad = 10;
+    const r = 255;
+    const g = 255;
+    const b = 255;
+    const a = 255;
+    const vx = (Math.random() - 0.5) * 200;
+    const vy = (Math.random() - 0.5) * 200;
+
+    const comps: ComponentValueMap = {
+        [Component.Position]: [px, py],
+        [Component.Radius]: [rad],
+        [Component.Color]: [r, g, b, a],
+        [Component.Velocity]: [vx, vy],
+        [Component.PreviousPosition]: [ppx, ppy],
+    };
+
+    scene.createEntity(circleArchetype, comps);
+}
+
 const obstacleArchetype = Archetype.create([
     Component.Position,
     Component.Size,
     Component.Color,
     Component.LifeSpan,
 ]);
-for (let i = 0; i < 2; i++) {
+for (let i = 0; i < 10; i++) {
     const px = Math.random() * 100;
     const py = Math.random() * 100;
     const sx = 12;

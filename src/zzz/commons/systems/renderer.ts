@@ -1,5 +1,5 @@
-import { RectPipeline } from "../../gl/pipelines/camRect";
-import { RectData } from "../../gl/pipelines/camRectData";
+import { RectPipeline, RectData } from "../../gl/pipelines/rect";
+import { CirclePipeline, CircleData } from "../../gl/pipelines/circle";
 import { Renderer } from "../../gl/Renderer";
 import { RenderableSystem } from "../../ecs/system";
 import { View } from "../../ecs/scene";
@@ -10,93 +10,127 @@ export class RendererSystem implements RenderableSystem {
     private cameraPos = [0, 0];
     private interpPos = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
     private renderer = Renderer.getInstance();
-    private rectPipeline = new RectPipeline(this.renderer, [
-        "Position",
-        "Size",
-        "Color",
-    ]);
+    private rectPipe = RectPipeline.create(this.renderer);
+    private circlePipe = CirclePipeline.create(this.renderer);
 
     render(view: View, alpha: number) {
+        const gl = this.renderer.gl;
+
+        // Update cameraPos (interpolated)
         view.forEachChunkWith([Component.Camera], (chunk) => {
-            const count = chunk.count;
-            if (count > 1)
-                console.warn(
-                    `[Renderer.Camera]: this view should have 1 record only!`
-                );
-
-            // 💥 no camera smooth movement is implemented here
-            // need to redefine the archetype
-            const i = 0;
             const cur = chunk.views.Position;
-            const prev = chunk.views.PreviousPosition;
-
-            this.cameraPos[i * 2] =
-                prev[i * 2] + (cur[i * 2] - prev[i * 2]) * alpha;
-            this.cameraPos[i * 2 + 1] =
-                prev[i * 2 + 1] + (cur[i * 2 + 1] - prev[i * 2 + 1]) * alpha;
+            const prev = chunk.views.PreviousPosition!;
+            // only one camera entity expected
+            const i = 0;
+            this.cameraPos[0] = prev[0] + (cur[0] - prev[0]) * alpha;
+            this.cameraPos[1] = prev[1] + (cur[1] - prev[1]) * alpha;
         });
 
+        // Gather rectangle instances
         view.forEachChunkWith(
-            [Component.Position, Component.Color, Component.Size],
+            [Component.Position, Component.Size, Component.Color],
             (chunk) => {
-                // dynamic entities have position interpolation
-                if (chunk.views.PreviousPosition !== undefined) {
-                    const count = chunk.count;
-                    if (count === 0) return;
+                const count = chunk.count;
+                if (count === 0) return;
 
-                    // use alpha to interpolate positions for smooth movement
-                    const cur = chunk.views.Position;
-                    const prev = chunk.views.PreviousPosition;
-
-                    for (let i = 0; i < count * 2; ++i) {
+                // interpolate positions if needed
+                let translations: Float32Array;
+                if (chunk.views.PreviousPosition) {
+                    for (let i = 0; i < count * 2; i++) {
                         this.interpPos[i] =
-                            prev[i] + (cur[i] - prev[i]) * alpha;
+                            chunk.views.PreviousPosition![i] +
+                            (chunk.views.Position[i] -
+                                chunk.views.PreviousPosition![i]) *
+                                alpha;
                     }
-
-                    // rect data from subarrays
-                    const rectData: RectData = {
-                        positions: this.interpPos.subarray(0, count * 2),
-                        sizes: chunk.views.Size.subarray(0, count * 2),
-                        colors: chunk.views.Color.subarray(0, count * 4),
-                    };
-
-                    const { gl } = this.renderer;
-
-                    // ❗️ this is the place where we pass in the camera values
-                    this.rectPipeline.setCamera(
-                        gl,
-                        this.cameraPos[0],
-                        this.cameraPos[1]
-                    );
-
-                    this.rectPipeline.bind(gl);
-
-                    this.rectPipeline.draw(gl, rectData, count);
+                    translations = this.interpPos.subarray(0, count * 2);
                 } else {
-                    // static entities have NOT position interpolation
-                    const count = chunk.count;
-                    if (count === 0) return;
-
-                    // rect data from subarrays
-                    const rectData: RectData = {
-                        positions: chunk.views.Position.subarray(0, count * 2),
-                        sizes: chunk.views.Size.subarray(0, count * 2),
-                        colors: chunk.views.Color.subarray(0, count * 4),
-                    };
-
-                    const { gl } = this.renderer;
-
-                    // ❗️ this is the place where we pass in the camera values
-                    this.rectPipeline.setCamera(
-                        gl,
-                        this.cameraPos[0],
-                        this.cameraPos[1]
-                    );
-
-                    this.rectPipeline.bind(gl);
-
-                    this.rectPipeline.draw(gl, rectData, count);
+                    translations = chunk.views.Position.subarray(
+                        0,
+                        count * 2
+                    ) as Float32Array;
                 }
+
+                // sizes and colors come straight from the chunk
+                const scales = chunk.views.Size.subarray(
+                    0,
+                    count * 2
+                ) as Float32Array;
+                const colors = chunk.views.Color.subarray(0, count * 4);
+
+                // 3) Build the SoA for this batch
+                const data: RectData = {
+                    a_translation: translations,
+                    a_scale: scales,
+                    a_color: new Uint8Array(
+                        colors.buffer,
+                        colors.byteOffset,
+                        colors.byteLength
+                    ),
+                };
+
+                // 4) Issue one instanced draw
+                this.rectPipe.bind(gl);
+                this.rectPipe.setCamera(
+                    gl,
+                    this.cameraPos[0],
+                    this.cameraPos[1]
+                );
+                this.rectPipe.draw(gl, data, count);
+            }
+        );
+
+        // Gather rectangle instances
+        view.forEachChunkWith(
+            [Component.Position, Component.Radius, Component.Color],
+            (chunk) => {
+                const count = chunk.count;
+                if (count === 0) return;
+
+                // interpolate positions if needed
+                let translations: Float32Array;
+                if (chunk.views.PreviousPosition) {
+                    for (let i = 0; i < count * 2; i++) {
+                        this.interpPos[i] =
+                            chunk.views.PreviousPosition![i] +
+                            (chunk.views.Position[i] -
+                                chunk.views.PreviousPosition![i]) *
+                                alpha;
+                    }
+                    translations = this.interpPos.subarray(0, count * 2);
+                } else {
+                    translations = chunk.views.Position.subarray(
+                        0,
+                        count * 2
+                    ) as Float32Array;
+                }
+
+                // sizes and colors come straight from the chunk
+                const scales = chunk.views.Radius.subarray(
+                    0,
+                    count * 1
+                ) as Float32Array;
+                const colors = chunk.views.Color.subarray(0, count * 4);
+
+                // 3) Build the SoA for this batch
+                const data: RectData = {
+                    a_translation: translations,
+                    a_scale: scales,
+                    a_color: new Uint8Array(
+                        colors.buffer,
+                        colors.byteOffset,
+                        colors.byteLength
+                    ),
+                };
+
+                // 4) Issue one instanced draw
+                this.circlePipe.bind(gl);
+                this.circlePipe.setCamera(
+                    gl,
+                    this.cameraPos[0],
+                    this.cameraPos[1]
+                );
+                this.circlePipe.draw(gl, data, count);
             }
         );
     }
