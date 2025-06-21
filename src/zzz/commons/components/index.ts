@@ -11,6 +11,10 @@ export enum Component {
     InputKey,
     Visible,
     Camera,
+    Angle,
+    PreviousAngle,
+    Pivot,
+    AngularVelocity,
 }
 
 export const DESCRIPTORS: readonly ComponentDescriptor[] = [
@@ -23,6 +27,16 @@ export const DESCRIPTORS: readonly ComponentDescriptor[] = [
         count: 2,
         buffer: Float32Array,
         default: [0, 0],
+    },
+    /**
+     * Stores the previous angle of an entity.
+     */
+    {
+        type: Component.PreviousAngle,
+        name: "PreviousAngle",
+        count: 1,
+        buffer: Float32Array,
+        default: [0],
     },
     /**
      * Stores the current position (x, y) of an entity.
@@ -113,5 +127,35 @@ export const DESCRIPTORS: readonly ComponentDescriptor[] = [
         count: 1,
         buffer: Float32Array,
         default: [0], // means speed
+    },
+    /**
+     * Stores the rotation angle of an entity.
+     */
+    {
+        type: Component.Angle,
+        name: "Angle",
+        count: 1,
+        buffer: Float32Array,
+        default: [0], // in radians
+    },
+    /**
+     * Stores the current rotational pivot (x, y) of an entity.
+     */
+    {
+        type: Component.Pivot,
+        name: "Pivot",
+        count: 2,
+        buffer: Float32Array,
+        default: [0, 0],
+    },
+    /**
+     * Stores the rotation velocity of an entity.
+     */
+    {
+        type: Component.AngularVelocity,
+        name: "AngularVelocity",
+        count: 1,
+        buffer: Float32Array,
+        default: [0], // in cycles/sec
     },
 ] as const;

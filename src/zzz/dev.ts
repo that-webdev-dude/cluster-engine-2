@@ -11,7 +11,6 @@ import { DESCRIPTORS } from "./commons/components";
 import { Keyboard } from "./core/Input";
 import { Game } from "./ecs/game";
 import { Scene, View } from "./ecs/scene";
-import { CirclePipeline } from "./gl/pipelines/circle";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -35,6 +34,18 @@ class PlayerSystem implements UpdateableSystem {
                         chunk.views.Velocity[i * 2] = vx;
                         chunk.views.Velocity[i * 2 + 1] = vy;
                     }
+                }
+            }
+        );
+    }
+}
+class RotationSystem implements UpdateableSystem {
+    update(view: View, cmd: CommandBuffer, dt: number) {
+        view.forEachChunkWith(
+            [Component.Angle, Component.AngularVelocity],
+            (chunk) => {
+                for (let i = 0; i < chunk.count; i++) {
+                    chunk.views.Angle[i] += chunk.views.AngularVelocity[i] * dt;
                 }
             }
         );
@@ -79,6 +90,7 @@ const scene = new Scene({
         new CameraSystem(),
         new ObstacleSystem(),
         new MovementSystem(),
+        new RotationSystem(),
     ],
     renderableSystems: [new RendererSystem()],
 });
@@ -113,6 +125,10 @@ const playerArchetype = Archetype.create(
         Component.Color,
         Component.Velocity,
         Component.PreviousPosition,
+        // Component.PreviousAngle,
+        Component.Angle,
+        Component.Pivot,
+        Component.AngularVelocity,
     ],
     1
 );
@@ -122,7 +138,11 @@ scene.createEntity(playerArchetype, {
     [Component.Color]: [0, 255, 0, 255],
     [Component.Velocity]: [0, 0],
     [Component.PreviousPosition]: [400, 400],
+    // [Component.PreviousAngle]: [0],
     [Component.InputKey]: [0, 0],
+    [Component.Angle]: [0],
+    [Component.Pivot]: [0, 0],
+    [Component.AngularVelocity]: [-4],
 });
 
 const rectangleArchetype = Archetype.create([
@@ -169,7 +189,7 @@ for (let i = 0; i < 1 * 1; i++) {
     const py = 250;
     const ppx = px;
     const ppy = py;
-    const rad = 10;
+    const rad = 48;
     const r = 255;
     const g = 255;
     const b = 255;

@@ -4,6 +4,10 @@ import { View } from "../../ecs/scene";
 import { Renderer } from "../../gl/Renderer";
 import { Component } from "../components";
 
+export function degToRad(degrees: number): number {
+    return (degrees * Math.PI) / 180;
+}
+
 export class MovementSystem implements UpdateableSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         const renderer = Renderer.getInstance();
