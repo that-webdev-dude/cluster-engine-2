@@ -133,8 +133,8 @@ const playerArchetype = Archetype.create(
     1
 );
 scene.createEntity(playerArchetype, {
-    [Component.Position]: [200, 100],
-    [Component.Size]: [24, 24],
+    [Component.Position]: [2, 2],
+    [Component.Size]: [-48, -48],
     [Component.Color]: [0, 255, 0, 255],
     [Component.Velocity]: [0, 0],
     [Component.PreviousPosition]: [400, 400],
@@ -142,7 +142,7 @@ scene.createEntity(playerArchetype, {
     [Component.InputKey]: [0, 0],
     [Component.Angle]: [0],
     [Component.Pivot]: [0, 0],
-    [Component.AngularVelocity]: [-4],
+    [Component.AngularVelocity]: [0],
 });
 
 const rectangleArchetype = Archetype.create([
@@ -179,17 +179,19 @@ for (let i = 0; i < 256 * 1; i++) {
 
 const circleArchetype = Archetype.create([
     Component.Position,
-    Component.Radius,
+    Component.Size,
     Component.Color,
-    Component.Velocity,
+    // Component.Velocity,
     Component.PreviousPosition,
 ]);
 for (let i = 0; i < 1 * 1; i++) {
-    const px = 250;
-    const py = 250;
+    const px = 2;
+    const py = 2;
     const ppx = px;
     const ppy = py;
-    const rad = 48;
+    // const rad = 48;
+    const w = -24;
+    const h = -24;
     const r = 255;
     const g = 255;
     const b = 255;
@@ -199,9 +201,9 @@ for (let i = 0; i < 1 * 1; i++) {
 
     const comps: ComponentValueMap = {
         [Component.Position]: [px, py],
-        [Component.Radius]: [rad],
+        [Component.Size]: [w, h],
         [Component.Color]: [r, g, b, a],
-        [Component.Velocity]: [vx, vy],
+        // [Component.Velocity]: [vx, vy],
         [Component.PreviousPosition]: [ppx, ppy],
     };
 

@@ -59,10 +59,10 @@ export abstract class Pipeline<DataSoA> {
      */
     constructor(
         protected readonly renderer: Renderer,
-        componentTypes: string[]
+        componentTypes?: string[]
     ) {
         this.gl = renderer.gl;
-        this.componentTypes = componentTypes;
+        this.componentTypes = componentTypes || [];
 
         // Reinitialize resources after context restore
         this.contextRestoreCallback = () => this.initialize(this.gl);
@@ -164,9 +164,9 @@ export class InstancedPipeline<
         private fsSource: string,
         private vCount: number,
         private primitive: GLenum,
-        componentTypes: string[]
+        componentTypes?: string[]
     ) {
-        super(renderer, componentTypes);
+        super(renderer, componentTypes || []);
     }
 
     /**
@@ -233,41 +233,4 @@ export class InstancedPipeline<
         // Unbind
         gl.bindVertexArray(null);
     }
-
-    // public draw(
-    //     gl: WebGL2RenderingContext,
-    //     data: DataSoA,
-    //     count: number
-    // ): void {
-    //     // For each field in your SoA data, upload into its buffer:
-    //     for (const key of Object.keys(data) as (keyof DataSoA)[]) {
-    //         const array = data[key] as unknown as BufferSource;
-    //         let buf = this.buffers[key as string];
-    //         if (!buf) {
-    //             buf = gl.createBuffer()!;
-    //             this.buffers[key as string] = buf;
-    //         }
-    //         gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    //         gl.bufferData(gl.ARRAY_BUFFER, array, gl.DYNAMIC_DRAW);
-    //     }
-
-    //     // Now that buffers contain fresh data, bind program + VAO + attributes:
-    //     this.bind(gl);
-    //     for (const [name, spec] of this.attributeSpecs) {
-    //         const loc = spec.location;
-    //         const buffer = this.buffers[name];
-    //         if (!buffer) continue;
-
-    //         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    //         gl.enableVertexAttribArray(loc);
-    //         gl.vertexAttribPointer(loc, spec.size, spec.type, false, 0, 0);
-    //         gl.vertexAttribDivisor(loc, spec.divisor ?? 0);
-    //     }
-
-    //     // Finally issue one instanced draw call:
-    //     gl.drawArraysInstanced(gl.TRIANGLES, 0, this.vCount, count);
-
-    //     // Cleanup (unbind VAO so we don’t pollute global state)
-    //     gl.bindVertexArray(null);
-    // }
 }

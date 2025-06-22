@@ -1,47 +1,43 @@
 import { InstancedPipeline } from "../Pipeline";
 import { Renderer } from "../Renderer";
-import vsSource from "./rrectVs.glsl";
-import fsSource from "./rrectFs.glsl";
+import vsSource from "../shaders/circleVs.glsl";
+import fsSource from "../shaders/circleFs.glsl";
 
-// private utility to define the rect mesh vertices
-function createUnitQuadMesh(): Float32Array {
-    // prettier-ignore
-    return new Float32Array([
-        0, 0, 
-        1, 0, 
-        0, 1, 
-        0, 1, 
-        1, 0, 
-        1, 1
-    ])
+// private utility to define the circle mesh vertices
+function createUnitCircleMesh(segments = 36): Float32Array {
+    const verts: number[] = [0, 0];
+
+    for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        verts.push(Math.cos(theta), Math.sin(theta));
+    }
+    return new Float32Array(verts);
 }
 
 /**
- * Represents the data structure required for rendering rectangles in a WebGL pipeline.
+ * Represents the data structure required for rendering circles in a WebGL pipeline.
  *
  * @remarks
  * This interface extends a generic record mapping string keys to `BufferSource` values,
- * and defines specific attributes for rectangle rendering.
+ * and defines specific attributes for circle rendering.
  *
  * @property a_translation - [x0, y0, x1, y1, …]
- * @property a_scale - [w0, h0, w1, h2, …]
+ * @property a_scale - [r0, r1, …]
  * @property a_color - [r,g,b,a,  r,g,b,a, …]
  */
-export interface RectData extends Record<string, BufferSource> {
+export interface CircleData extends Record<string, BufferSource> {
     a_translation: Float32Array; // [x0, y0, x1, y1, …]
     a_scale: Float32Array; // [r0, r1, …]
     a_color: Uint8Array; // [r,g,b,a,  r,g,b,a, …]
-    a_rotation: Float32Array; // [r0, r1, ...]
-    a_pivot: Float32Array;
 }
 
-export class RectPipeline extends InstancedPipeline<RectData> {
+export class CirclePipeline extends InstancedPipeline<CircleData> {
     private uCamPosLoc!: WebGLUniformLocation;
     private uProjLoc!: WebGLUniformLocation;
     private mesh: Float32Array;
 
-    private constructor(renderer: Renderer) {
-        const mesh = createUnitQuadMesh();
+    constructor(renderer: Renderer) {
+        const mesh = createUnitCircleMesh();
         const vertexCount = mesh.length / 2;
 
         super(
@@ -49,15 +45,15 @@ export class RectPipeline extends InstancedPipeline<RectData> {
             vsSource,
             fsSource,
             vertexCount,
-            renderer.gl.TRIANGLES,
-            ["Position", "Size", "Color"]
+            renderer.gl.TRIANGLE_FAN,
+            ["Position", "Radius", "Color"]
         );
 
         this.mesh = mesh;
     }
 
     public static create(renderer: Renderer) {
-        const pipe = new RectPipeline(renderer);
+        const pipe = new CirclePipeline(renderer);
         pipe.initialize(renderer.gl);
         return pipe;
     }
@@ -69,9 +65,9 @@ export class RectPipeline extends InstancedPipeline<RectData> {
         this.uProjLoc = gl.getUniformLocation(this.program, "uProj")!;
         this.uCamPosLoc = gl.getUniformLocation(this.program, "uCamPos")!;
 
-        // base mesh: a rect fan
+        // base mesh: a circle fan
         this.registerAttribute("a_vertex", {
-            location: 0, // must match 'layout(location=0)' in rectVs.glsl
+            location: 0, // must match 'layout(location=0)' in circleVs.glsl
             size: 2, // vec2
             type: gl.FLOAT,
             divisor: 0, // per-vertex
@@ -87,7 +83,7 @@ export class RectPipeline extends InstancedPipeline<RectData> {
         });
         this.registerAttribute("a_scale", {
             location: 2, // layout(location=2)
-            size: 2, // vec2
+            size: 1, // float (radius)
             type: gl.FLOAT,
             divisor: 1,
         });
@@ -96,18 +92,6 @@ export class RectPipeline extends InstancedPipeline<RectData> {
             size: 4, // u8 vec4
             type: gl.UNSIGNED_BYTE,
             divisor: 1,
-        });
-        this.registerAttribute("a_rotation", {
-            location: 4, // layout(location=4)
-            size: 1, // float rotation in radians
-            type: gl.FLOAT,
-            divisor: 1,
-        });
-        this.registerAttribute("a_pivot", {
-            location: 5, // layout(location=5)
-            size: 2, // vec2
-            type: gl.FLOAT,
-            divisor: 1, // advance once per instance
         });
 
         // pre-allocate instance buffers to max expected capacity (optional perf)
@@ -119,22 +103,12 @@ export class RectPipeline extends InstancedPipeline<RectData> {
         );
         this.setAttributeData(
             "a_scale",
-            new Float32Array(maxInstances * 2),
+            new Float32Array(maxInstances * 1),
             gl.DYNAMIC_DRAW
         );
         this.setAttributeData(
             "a_color",
             new Uint8Array(maxInstances * 4),
-            gl.DYNAMIC_DRAW
-        );
-        this.setAttributeData(
-            "a_rotation",
-            new Float32Array(maxInstances * 1),
-            gl.DYNAMIC_DRAW
-        );
-        this.setAttributeData(
-            "a_pivot",
-            new Float32Array(maxInstances * 2),
             gl.DYNAMIC_DRAW
         );
 

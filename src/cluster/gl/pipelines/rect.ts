@@ -1,7 +1,7 @@
 import { InstancedPipeline } from "../Pipeline";
 import { Renderer } from "../Renderer";
-import vsSource from "./rectVs.glsl";
-import fsSource from "./rectFs.glsl";
+import vsSource from "../shaders/rectVs.glsl";
+import fsSource from "../shaders/rectFs.glsl";
 
 // private utility to define the rect mesh vertices
 function createUnitQuadMesh(): Float32Array {
@@ -31,6 +31,8 @@ export interface RectData extends Record<string, BufferSource> {
     a_translation: Float32Array; // [x0, y0, x1, y1, …]
     a_scale: Float32Array; // [r0, r1, …]
     a_color: Uint8Array; // [r,g,b,a,  r,g,b,a, …]
+    a_rotation: Float32Array; // [r0, r1, ...]
+    a_pivot: Float32Array;
 }
 
 export class RectPipeline extends InstancedPipeline<RectData> {
@@ -95,6 +97,18 @@ export class RectPipeline extends InstancedPipeline<RectData> {
             type: gl.UNSIGNED_BYTE,
             divisor: 1,
         });
+        this.registerAttribute("a_rotation", {
+            location: 4, // layout(location=4)
+            size: 1, // float rotation in radians
+            type: gl.FLOAT,
+            divisor: 1,
+        });
+        this.registerAttribute("a_pivot", {
+            location: 5, // layout(location=5)
+            size: 2, // vec2
+            type: gl.FLOAT,
+            divisor: 1, // advance once per instance
+        });
 
         // pre-allocate instance buffers to max expected capacity (optional perf)
         const maxInstances = 1024;
@@ -111,6 +125,16 @@ export class RectPipeline extends InstancedPipeline<RectData> {
         this.setAttributeData(
             "a_color",
             new Uint8Array(maxInstances * 4),
+            gl.DYNAMIC_DRAW
+        );
+        this.setAttributeData(
+            "a_rotation",
+            new Float32Array(maxInstances * 1),
+            gl.DYNAMIC_DRAW
+        );
+        this.setAttributeData(
+            "a_pivot",
+            new Float32Array(maxInstances * 2),
             gl.DYNAMIC_DRAW
         );
 

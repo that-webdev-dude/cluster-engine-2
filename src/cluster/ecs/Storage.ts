@@ -1,233 +1,225 @@
-// Storage.ts
+import {
+    Buffer,
+    ComponentType,
+    ComponentDescriptor,
+    ComponentValueMap,
+} from "../types";
+import { Chunk } from "./chunk";
+import { IDPool } from "../tools/IDPool";
+import { Archetype } from "./archetype";
 
-import { Entity } from "./Entity"; // alias for `number`
-import { Schema } from "./Schema";
-import { ComponentLayout } from "./Component";
-
-// Helpers for turning field names into “prevXxx”
-type PrevFieldName<K extends string> = `prev${Capitalize<K>}`;
-
-// A strongly-typed chunk: one Float32Array per field (and its “prev”)
-export type Chunk<S extends Schema> = {
-    entities: Entity[];
-    length: number;
-} & {
-    [K in keyof S["fields"]]: Float32Array;
-} & {
-    [K in keyof S["fields"] as PrevFieldName<Extract<K, string>>]: Float32Array;
-};
+// type ComponentType = number & { __brand: "ComponentType" };
 
 /**
- * Generic, chunked SoA storage driven by a Schema.
+ * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
  */
-export class Storage<S extends Schema> {
-    private chunks: Array<Chunk<S>> = [];
-    private entityToLocation = new Map<
-        Entity,
-        { chunk: number; index: number }
-    >();
-    private readonly fields: Array<keyof S["fields"] & string>;
-    private readonly layout: {
-        stride: number;
-        layout: Record<string, { offset: number; size: number }>;
-    };
-    private currentChunk = 0;
+const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
-    constructor(
-        private readonly CHUNK_SIZE: number,
-        private readonly schema: S
-    ) {
-        // Build byte-layout (offsets, total stride) once
-        this.layout = new ComponentLayout(schema, "std140").build();
-        // Field names in declaration order
-        this.fields = Object.keys(this.layout.layout) as any;
+// export class Storage<S extends readonly ComponentDescriptor[]> {
+export class Storage<S extends readonly ComponentDescriptor[]> {
+    private chunkIdPool: IDPool<number> = new IDPool();
+
+    private entities: Map<number, { chunkId: number; row: number }> = new Map();
+
+    private chunks: Map<number, Chunk<S>> = new Map();
+
+    private liveEntities: number = 0;
+
+    private partialChunkIds: Set<number> = new Set();
+
+    // TODO
+    // Storage<S> can be instantiated with an Archetype whose component list does not match S. TypeScript can’t prove the two are consistent.
+    constructor(readonly archetype: Archetype) {}
+
+    get entityCount() {
+        return this.liveEntities;
     }
 
-    get chunkCount(): number {
-        return this.chunks.length;
+    get maxEntities(): Readonly<number> | undefined {
+        return this.archetype.maxEntities || undefined;
     }
 
-    add(entity: Entity, comp: { [K in keyof S["fields"]]: any }): void {
-        // 1) grab or create the “current write” chunk
-        let ci = this.currentChunk;
-        let chunk = this.chunks[ci];
-        if (!chunk || chunk.length >= this.CHUNK_SIZE) {
-            ci = this.chunks.length;
-            chunk = this.createEmptyChunk();
-            this.chunks.push(chunk);
-            this.currentChunk = ci;
+    /* _______________ public API _______________ */
+    getChunk(chunkId: number): Readonly<Chunk<S>> | undefined {
+        return this.chunks.get(chunkId);
+    }
+
+    /**
+     * Iterates all chunks for this Storage.
+     * Structural changes (allocate/delete) MUST NOT be made during iteration.
+     * Use CommandBuffer to defer operations and call `flushCommands()` after.
+     */
+    forEachChunk(cb: (chunk: Readonly<Chunk<S>>, id: number) => void): void {
+        this.chunks.forEach((chunk, id) => cb(chunk, id)); // ⚠️ DO NOT modify this.chunks inside the callback!
+    }
+
+    assign(
+        entityId: number,
+        comps: ComponentValueMap
+    ): { chunkId: number; row: number } | undefined {
+        this.validateEntityId(entityId);
+
+        const address = this.entities.get(entityId);
+        if (!address) {
+            return undefined;
         }
 
-        // 2) assign entity → location
-        const idx = chunk.length++;
-        chunk.entities[idx] = entity;
-        this.entityToLocation.set(entity, { chunk: ci, index: idx });
+        const { chunkId, row } = address;
 
-        // 3) copy component values into current & prev arrays
-        for (const field of this.fields) {
-            const { size } = this.layout.layout[field];
-            const floatsPerEntity = size / 4;
-            const base = idx * floatsPerEntity;
-            const data = (comp as any)[field];
+        const chunk = this.chunks.get(chunkId);
+        if (!chunk) {
+            return undefined;
+        }
 
-            const curArr = chunk[field];
-            const prevArr = (chunk as any)[
-                `prev${
-                    field[0].toUpperCase() + field.slice(1)
-                }` as PrevFieldName<typeof field>
-            ];
+        for (const [typeStr, value] of Object.entries(comps)) {
+            const type = Number(typeStr) as ComponentType; // case to a number for getting the ComponentType
 
-            if (Array.isArray(data)) {
-                for (let j = 0; j < floatsPerEntity; j++) {
-                    curArr[base + j] = data[j];
-                    prevArr[base + j] = data[j];
+            // first check if the actual component is in this archetype
+            const descriptor = this.archetype.descriptors.get(type);
+            if (descriptor === undefined) {
+                if (DEBUG) {
+                    console.log(
+                        `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype descriptors`
+                    );
                 }
-            } else {
-                // scalar
-                curArr[base] = data;
-                prevArr[base] = data;
+                continue;
             }
-        }
-    }
 
-    remove(entity: Entity): void {
-        const loc = this.entityToLocation.get(entity);
-        if (!loc) return;
-
-        const chunk = this.chunks[loc.chunk];
-        const lastIdx = --chunk.length;
-        const lastEnt = chunk.entities[lastIdx]!;
-
-        // swap-remove if needed
-        if (loc.index !== lastIdx) {
-            for (const field of this.fields) {
-                const { size } = this.layout.layout[field];
-                const floatsPerEntity = size / 4;
-                const srcOff = lastIdx * floatsPerEntity;
-                const dstOff = loc.index * floatsPerEntity;
-
-                chunk[field].copyWithin(
-                    dstOff,
-                    srcOff,
-                    srcOff + floatsPerEntity
+            const view = chunk.getView<Buffer>(descriptor);
+            // now check if the component values has the same length of the descriptor
+            const count = descriptor.count;
+            if (value?.length !== count) {
+                throw new Error(
+                    `Storage.assign: illegal assignement - component value must be an array of length ${count}. user value: ${value}`
                 );
-                (chunk as any)[
-                    `prev${field[0].toUpperCase() + field.slice(1)}`
-                ].copyWithin(dstOff, srcOff, srcOff + floatsPerEntity);
             }
-            // move entity id
-            chunk.entities[loc.index] = lastEnt;
-            this.entityToLocation.set(lastEnt, {
-                chunk: loc.chunk,
-                index: loc.index,
-            });
-        }
 
-        this.entityToLocation.delete(entity);
-    }
-
-    update(entity: Entity, comp: { [K in keyof S["fields"]]: any }): void {
-        const loc = this.entityToLocation.get(entity);
-        if (!loc) return;
-        const chunk = this.chunks[loc.chunk];
-        const idx = loc.index;
-
-        for (const field of this.fields) {
-            const { size } = this.layout.layout[field];
-            const floatsPerEntity = size / 4;
-            const base = idx * floatsPerEntity;
-            const data = (comp as any)[field];
-            const arr = chunk[field];
-
-            if (Array.isArray(data)) {
-                for (let j = 0; j < floatsPerEntity; j++) {
-                    arr[base + j] = data[j];
-                }
-            } else {
-                arr[base] = data;
-            }
-        }
-    }
-
-    read(entity: Entity): { [K in keyof S["fields"]]: any } | undefined {
-        const loc = this.entityToLocation.get(entity);
-        if (!loc) return;
-
-        const chunk = this.chunks[loc.chunk];
-        const idx = loc.index;
-        const result: { [K in keyof S["fields"]]: any } = {} as any;
-
-        for (const field of this.fields) {
-            const { size } = this.layout.layout[field];
-            const floatsPerEntity = size / 4;
-            const base = idx * floatsPerEntity;
-            const arr = chunk[field];
-
-            if (floatsPerEntity > 1) {
-                result[field] = Array.from(
-                    arr.subarray(base, base + floatsPerEntity)
-                );
-            } else {
-                result[field] = arr[base];
+            // copy the values now
+            const base = row * count;
+            for (let i = 0; i < count; i++) {
+                view[base + i] = value[i];
             }
         }
 
-        return result;
+        return address;
     }
 
-    snapshotPrev(): void {
-        for (const chunk of this.chunks) {
-            const n = chunk.length;
-            for (const field of this.fields) {
-                const { size } = this.layout.layout[field];
-                const floatsPerEntity = size / 4;
-                const sliceEnd = n * floatsPerEntity;
+    allocate(
+        entityId: number,
+        comps?: ComponentValueMap | undefined
+    ): { chunkId: number; row: number } {
+        this.validateEntityId(entityId);
 
-                const curArr = chunk[field];
-                const prevArr = (chunk as any)[
-                    `prev${field[0].toUpperCase() + field.slice(1)}`
-                ];
-                prevArr.set(curArr.subarray(0, sliceEnd), 0);
-            }
+        // check for an entity limit in the archetype before allocate
+        if (
+            this.archetype.maxEntities &&
+            this.liveEntities >= this.archetype.maxEntities
+        )
+            throw new Error(
+                `Storage.allocate: this.storage has a limited number of entities set to ${this.archetype.maxEntities}`
+            );
+
+        if (this.entities.has(entityId))
+            throw new Error(
+                `Storage.allocate: entityId: ${entityId} already exists in the storage. cannot allocate!`
+            );
+
+        // finds the first available (non-full) chunk. if no available chunks, need to create a new one
+        let chunkId = this.findAvailableChunk();
+        if (chunkId === undefined) {
+            chunkId = this.createChunk();
+            this.partialChunkIds.add(chunkId);
+        }
+
+        const chunk = this.getChunk(chunkId)!;
+
+        const row = chunk.allocate(entityId); // safe as at this point a chunk must exist
+
+        if (row === chunk.entityCapacity - 1) {
+            this.partialChunkIds.delete(chunkId);
+        } // the chunk is full so remove it from the partialChunkIds
+
+        const address = { chunkId, row };
+
+        // update the entity address
+        this.entities.set(entityId, address);
+
+        this.liveEntities++;
+
+        // if (DEBUG) {
+        //     console.log(
+        //         `Storage.allocate.DEBUG: entityId: ${entityId} chunkId: ${address.chunkId} row: ${address.row}`
+        //     );
+        // }
+
+        // if the user provides comps, assign comps
+        if (comps !== undefined) {
+            this.assign(entityId, comps);
+        }
+
+        return address;
+    }
+
+    delete(entityId: number) {
+        this.validateEntityId(entityId);
+
+        if (!this.entities.has(entityId))
+            throw new Error(
+                `Storage.delete: entityId: ${entityId} not found in the storage, cannot delete!`
+            );
+
+        const { chunkId, row } = this.entities.get(entityId)!; // safe due to previous check
+
+        const chunk = this.getChunk(chunkId);
+        if (!chunk) return;
+
+        const movedEntityId = chunk.delete(row);
+
+        // if an entity is been moved to the new location update the address map
+        if (movedEntityId !== undefined) {
+            this.entities.set(movedEntityId, { chunkId, row });
+        }
+
+        // delete the target entity id anyway as it must go
+        this.entities.delete(entityId);
+
+        if (chunk.count === 0) {
+            this.destroyChunkInstance(chunkId);
+        } else if (!chunk.full) {
+            this.partialChunkIds.add(chunkId);
         }
     }
 
-    forEachChunk(callback: (chunk: Chunk<S>) => void): void {
-        for (const chunk of this.chunks) {
-            if (chunk.length > 0) callback(chunk);
-        }
+    /* _______________ internals _______________ */
+    private validateEntityId(entityId: number) {
+        if (entityId < 0)
+            throw new Error(
+                `Storage.validateEntityId: invalid entityId - must be >= 0`
+            );
     }
 
-    getLocation(entity: Entity): { chunk: number; index: number } | undefined {
-        return this.entityToLocation.get(entity);
+    private findAvailableChunk(): number | undefined {
+        return this.partialChunkIds.values().next().value as number | undefined;
     }
 
-    getChunk(i: number): Chunk<S> | undefined {
-        return this.chunks[i];
+    private createChunk(): number {
+        // const chunkId = this.freeChunkIds.pop() ?? Storage.nextChunkId++;
+        const chunkId = this.chunkIdPool.acquire();
+
+        this.chunks.set(chunkId, new Chunk<S>(this.archetype));
+
+        return chunkId;
     }
 
-    private createEmptyChunk(): Chunk<S> {
-        const chunk = {
-            entities: new Array<Entity>(this.CHUNK_SIZE),
-            length: 0,
-        } as unknown as Chunk<S>;
+    private destroyChunkInstance(chunkId: number) {
+        // consider to add a destroy to Chunk to free memory
+        const chunk = this.getChunk(chunkId);
+        if (!chunk) return;
 
-        // For each field, allocate its own SoA buffers
-        for (const field of this.fields) {
-            const { size } = this.layout.layout[field];
-            const totalBytes = size * this.CHUNK_SIZE;
-            const floatsPerEntity = size / 4;
-            const totalFloats = floatsPerEntity * this.CHUNK_SIZE;
+        chunk.dispose();
 
-            const bufCur = new ArrayBuffer(totalBytes);
-            const bufPrev = new ArrayBuffer(totalBytes);
-
-            // assign the Float32Arrays
-            (chunk as any)[field] = new Float32Array(bufCur, 0, totalFloats);
-            (chunk as any)[`prev${field[0].toUpperCase() + field.slice(1)}`] =
-                new Float32Array(bufPrev, 0, totalFloats);
-        }
-
-        return chunk;
+        this.chunks.delete(chunkId);
+        this.partialChunkIds.delete(chunkId);
+        this.chunkIdPool.release(chunkId);
     }
 }

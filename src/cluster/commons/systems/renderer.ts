@@ -1,45 +1,41 @@
-import { RectPipeline, RectData } from "../../gl/pipelines/rrect";
-import { CirclePipeline, CircleData } from "../../gl/pipelines/circle";
+import { Component, DESCRIPTORS } from "../components";
+import { View } from "../../ecs/scene";
+import { Chunk } from "../../ecs/chunk";
 import { Renderer } from "../../gl/Renderer";
 import { RenderableSystem } from "../../ecs/system";
-import { View } from "../../ecs/scene";
-import { Component, DESCRIPTORS } from "../components";
-import { Chunk } from "../../ecs/chunk";
+import { MeshPipeline, MeshData } from "../../gl/pipelines/mesh";
 
 export class RendererSystem implements RenderableSystem {
     private renderer = Renderer.getInstance();
-    private rectPipe = RectPipeline.create(this.renderer);
-    private circlePipe = CirclePipeline.create(this.renderer);
+
+    // this ipeline will do just rectangles fornow
+    private meshPipe = MeshPipeline.create(this.renderer, 4);
 
     // cached attributes
-    private translations = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private positions = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
     private angles = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
     private pivots = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private radii = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
     private sizes = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
     private colors = new Uint8Array(Chunk.DEFAULT_CAPACITY * 4);
 
     // cached camera position
     private cameraPos = [0, 0];
 
-    private setTranslations(
+    private setPositions(
         chunk: Readonly<Chunk<typeof DESCRIPTORS>>,
         alpha: number
     ) {
         const { count } = chunk;
         if (chunk.views.PreviousPosition) {
             for (let i = 0; i < count * 2; i++) {
-                this.translations[i] =
+                this.positions[i] =
                     chunk.views.PreviousPosition![i] +
                     (chunk.views.Position[i] -
                         chunk.views.PreviousPosition![i]) *
                         alpha;
             }
         } else {
-            this.translations.set(
-                chunk.views.Position.subarray(0, count * 2),
-                0
-            );
+            this.positions.set(chunk.views.Position.subarray(0, count * 2), 0);
         }
     }
 
@@ -77,11 +73,6 @@ export class RendererSystem implements RenderableSystem {
             : this.pivots.fill(0, 0, count);
     }
 
-    private setRadii(chunk: Readonly<Chunk<typeof DESCRIPTORS>>) {
-        const { count } = chunk;
-        this.radii.set(chunk.views.Radius.subarray(0, count * 1), 0);
-    }
-
     private setSizes(chunk: Readonly<Chunk<typeof DESCRIPTORS>>) {
         const { count } = chunk;
         this.sizes.set(chunk.views.Size.subarray(0, count * 2), 0);
@@ -92,20 +83,12 @@ export class RendererSystem implements RenderableSystem {
         this.colors.set(chunk.views.Color.subarray(0, count * 4), 0);
     }
 
-    private setRectData(): RectData {
+    private setMeshData(): MeshData {
         return {
-            a_translation: this.translations,
-            a_rotation: this.angles,
+            a_position: this.positions,
+            a_angle: this.angles,
             a_pivot: this.pivots,
             a_scale: this.sizes,
-            a_color: this.colors,
-        };
-    }
-
-    private setCircleData(): CircleData {
-        return {
-            a_translation: this.translations,
-            a_scale: this.radii,
             a_color: this.colors,
         };
     }
@@ -123,55 +106,30 @@ export class RendererSystem implements RenderableSystem {
             this.cameraPos[1] = prev[1] + (cur[1] - prev[1]) * alpha;
         });
 
-        // render rectangle shapes
+        // render a mesh shapes
         view.forEachChunkWith(
             [Component.Position, Component.Size, Component.Color],
             (chunk) => {
                 const count = chunk.count;
                 if (count === 0) return;
 
-                this.setTranslations(chunk, alpha);
+                this.setPositions(chunk, alpha);
                 this.setAngles(chunk, alpha);
                 this.setSizes(chunk);
                 this.setColors(chunk);
                 this.setPivots(chunk);
 
                 // Build the SoA for this batch
-                const data = this.setRectData();
+                const data = this.setMeshData();
 
                 // Issue one instanced draw
-                this.rectPipe.bind(gl);
-                this.rectPipe.setCamera(
+                this.meshPipe.bind(gl);
+                this.meshPipe.setCamera(
                     gl,
                     this.cameraPos[0],
                     this.cameraPos[1]
                 );
-                this.rectPipe.draw(gl, data, count);
-            }
-        );
-
-        // render circle shapes
-        view.forEachChunkWith(
-            [Component.Position, Component.Radius, Component.Color],
-            (chunk) => {
-                const count = chunk.count;
-                if (count === 0) return;
-
-                this.setTranslations(chunk, alpha);
-                this.setRadii(chunk);
-                this.setColors(chunk);
-
-                // Build the SoA for this batch
-                const data = this.setCircleData();
-
-                // Issue one instanced draw
-                this.circlePipe.bind(gl);
-                this.circlePipe.setCamera(
-                    gl,
-                    this.cameraPos[0],
-                    this.cameraPos[1]
-                );
-                this.circlePipe.draw(gl, data, count);
+                this.meshPipe.draw(gl, data, count);
             }
         );
     }

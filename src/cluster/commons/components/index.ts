@@ -3,17 +3,17 @@ import { ComponentDescriptor } from "../../types";
 export enum Component {
     PreviousPosition,
     Position,
-    Velocity,
-    Radius,
     Size,
+    Angle,
+    Pivot,
     Color,
+    Velocity,
+    // Radius,
     LifeSpan,
     InputKey,
     Visible,
     Camera,
-    Angle,
     PreviousAngle,
-    Pivot,
     AngularVelocity,
 }
 
@@ -61,13 +61,13 @@ export const DESCRIPTORS: readonly ComponentDescriptor[] = [
     /**
      * Stores the radius of an entity.
      */
-    {
-        type: Component.Radius,
-        name: "Radius",
-        count: 1,
-        buffer: Float32Array,
-        default: [1],
-    },
+    // {
+    //     type: Component.Radius,
+    //     name: "Radius",
+    //     count: 1,
+    //     buffer: Float32Array,
+    //     default: [1],
+    // },
     /**
      * Stores the size (width, height) of an entity.
      */
