@@ -2,7 +2,7 @@ import { Component, DESCRIPTORS } from "../components";
 import { View } from "../../ecs/scene";
 import { Chunk } from "../../ecs/chunk";
 import { Renderer } from "../../gl/Renderer";
-import { RenderableSystem } from "../../ecs/System";
+import { RenderableSystem } from "../../ecs/system";
 import { MeshPipeline, MeshData } from "../../gl/pipelines/mesh";
 
 export class RendererSystem implements RenderableSystem {
