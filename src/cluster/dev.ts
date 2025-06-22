@@ -2,7 +2,7 @@ import { ComponentDescriptor, ComponentValueMap } from "./types";
 import { Renderer } from "./gl/Renderer";
 import { Archetype } from "./ecs/archetype";
 import { CommandBuffer } from "./ecs/cmd";
-import { UpdateableSystem } from "./ecs/system";
+import { UpdateableSystem } from "./ecs/System";
 import { MovementSystem } from "./commons/systems/movement";
 import { RendererSystem } from "./commons/systems/renderer";
 import { CameraSystem } from "./commons/systems/camera";
