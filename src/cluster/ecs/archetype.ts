@@ -1,3 +1,4 @@
+import { DEBUG } from "../tools";
 import { Obj } from "../tools";
 import { SparseSet } from "../tools";
 import type { ComponentType, ComponentDescriptor } from "../types";
@@ -13,7 +14,7 @@ function makeSignature(...comps: ComponentType[]): Signature {
     return signature as Signature;
 }
 
-function register(...desc: ComponentDescriptor[]) {
+function register(...desc: ComponentDescriptor[]): ComponentDescriptor[] {
     desc.forEach((descriptor) => {
         // check if the descriptor is laready registered
         for (let [_, registered] of registry) {
@@ -27,6 +28,11 @@ function register(...desc: ComponentDescriptor[]) {
 
         registry.insert(typeId, descriptor);
     });
+
+    if (DEBUG)
+        console.info(`Archetype.register: component descriptors registered`);
+
+    return desc;
 }
 
 /** creates a brand new archetype */

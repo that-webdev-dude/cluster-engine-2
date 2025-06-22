@@ -163,6 +163,14 @@ export class Renderer {
         return this.instance;
     }
 
+    public static worldWidth() {
+        return Renderer.getInstance().worldWidth;
+    }
+
+    public static worldHeight() {
+        return Renderer.getInstance().worldHeight;
+    }
+
     /**
      * Creates an independent Renderer instance.
      */

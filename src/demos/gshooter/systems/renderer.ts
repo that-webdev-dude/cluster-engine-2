@@ -1,15 +1,19 @@
 import { Component, DESCRIPTORS } from "../components";
-import { View } from "../../ecs/scene";
-import { Chunk } from "../../ecs/chunk";
-import { Renderer } from "../../gl/Renderer";
-import { RenderableSystem } from "../../ecs/system";
-import { MeshPipeline, MeshData } from "../../gl/pipelines/mesh";
+import { RenderableSystem } from "../../../cluster/ecs/system";
+import { DEBUG } from "../../../cluster/tools";
+import { View } from "../../../cluster/ecs/scene";
+import { Chunk } from "../../../cluster/ecs/chunk";
+import { Renderer } from "../../../cluster/gl/Renderer";
+import { MeshPipeline, MeshData } from "../../../cluster/gl/pipelines/mesh";
 
 export class RendererSystem implements RenderableSystem {
     private renderer = Renderer.getInstance();
 
     // this ipeline will do just rectangles fornow
     private meshPipe = MeshPipeline.create(this.renderer, 4);
+    private rectanglePipe = MeshPipeline.create(this.renderer, 4);
+    private trianglePipe = MeshPipeline.create(this.renderer, 3);
+    private hexagonPipe = MeshPipeline.create(this.renderer, 6);
 
     // cached attributes
     private positions = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
@@ -79,6 +83,11 @@ export class RendererSystem implements RenderableSystem {
         this.sizes.set(chunk.views.Size.subarray(0, count * 2), 0);
     }
 
+    private setOffsets(chunk: Readonly<Chunk<typeof DESCRIPTORS>>) {
+        const { count } = chunk;
+        this.offsets.set(chunk.views.Offset.subarray(0, count * 2), 0);
+    }
+
     private setColors(chunk: Readonly<Chunk<typeof DESCRIPTORS>>) {
         const { count } = chunk;
         this.colors.set(chunk.views.Color.subarray(0, count * 4), 0);
@@ -102,37 +111,42 @@ export class RendererSystem implements RenderableSystem {
         view.forEachChunkWith([Component.Camera], (chunk) => {
             const cur = chunk.views.Position;
             const prev = chunk.views.PreviousPosition!;
+
+            // if (chunk.count > 1) {
+            //     if (DEBUG)
+            //         console.warn(
+            //             `[RendererSystem.camera]: the camera chunk has more than one camera!`
+            //         );
+            // }
+
             // only one camera entity expected
-            const i = 0;
             this.cameraPos[0] = prev[0] + (cur[0] - prev[0]) * alpha;
             this.cameraPos[1] = prev[1] + (cur[1] - prev[1]) * alpha;
         });
 
-        // render a mesh shapes
-        view.forEachChunkWith(
-            [Component.Position, Component.Size, Component.Color],
-            (chunk) => {
-                const count = chunk.count;
-                if (count === 0) return;
+        // render the player
+        view.forEachChunkWith([Component.Player], (chunk) => {
+            const count = chunk.count;
+            if (count === 0) return;
 
-                this.setPositions(chunk, alpha);
-                this.setAngles(chunk, alpha);
-                this.setSizes(chunk);
-                this.setColors(chunk);
-                this.setPivots(chunk);
+            this.setPositions(chunk, alpha);
+            this.setAngles(chunk, alpha);
+            this.setOffsets(chunk);
+            this.setColors(chunk);
+            this.setSizes(chunk);
+            this.setPivots(chunk);
 
-                // Build the SoA for this batch
-                const data = this.setMeshData();
+            // Build the SoA for this batch
+            const data = this.setMeshData();
 
-                // Issue one instanced draw
-                this.meshPipe.bind(gl);
-                this.meshPipe.setCamera(
-                    gl,
-                    this.cameraPos[0],
-                    this.cameraPos[1]
-                );
-                this.meshPipe.draw(gl, data, count);
-            }
-        );
+            // Issue one instanced draw
+            this.trianglePipe.bind(gl);
+            this.trianglePipe.setCamera(
+                gl,
+                this.cameraPos[0],
+                this.cameraPos[1]
+            );
+            this.trianglePipe.draw(gl, data, count);
+        });
     }
 }

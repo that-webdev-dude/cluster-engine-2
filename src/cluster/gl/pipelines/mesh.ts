@@ -70,6 +70,7 @@ function createUnitMeshMesh(sides: number): Float32Array {
  */
 export interface MeshData extends Record<string, BufferSource> {
     a_position: Float32Array;
+    a_offset: Float32Array;
     a_scale: Float32Array;
     a_color: Uint8Array;
     a_angle: Float32Array;
@@ -125,22 +126,22 @@ export class MeshPipeline extends InstancedPipeline<MeshData> {
             type: gl.FLOAT,
             divisor: 1, // advance once per instance
         });
-        this.registerAttribute("a_scale", {
+        this.registerAttribute("a_offset", {
             location: 2, // layout(location=2)
             size: 2, // w h
             type: gl.FLOAT,
             divisor: 1,
         });
-        this.registerAttribute("a_color", {
-            location: 3, // layout(location=3)
-            size: 4, // u8 vec4
-            type: gl.UNSIGNED_BYTE,
+        this.registerAttribute("a_scale", {
+            location: 3, // layout(location=2)
+            size: 2, // w h
+            type: gl.FLOAT,
             divisor: 1,
         });
-        this.registerAttribute("a_angle", {
-            location: 4, // layout(location=4)
-            size: 1, // float rotation in radians
-            type: gl.FLOAT,
+        this.registerAttribute("a_color", {
+            location: 4, // layout(location=3)
+            size: 4, // u8 vec4
+            type: gl.UNSIGNED_BYTE,
             divisor: 1,
         });
         this.registerAttribute("a_pivot", {
@@ -149,11 +150,22 @@ export class MeshPipeline extends InstancedPipeline<MeshData> {
             type: gl.FLOAT,
             divisor: 1, // advance once per instance
         });
+        this.registerAttribute("a_angle", {
+            location: 6, // layout(location=4)
+            size: 1, // float rotation in radians
+            type: gl.FLOAT,
+            divisor: 1,
+        });
 
         // pre-allocate instance buffers to max expected capacity (optional perf)
         const maxInstances = 1024;
         this.setAttributeData(
             "a_position",
+            new Float32Array(maxInstances * 2),
+            gl.DYNAMIC_DRAW
+        );
+        this.setAttributeData(
+            "a_offset",
             new Float32Array(maxInstances * 2),
             gl.DYNAMIC_DRAW
         );
@@ -168,13 +180,13 @@ export class MeshPipeline extends InstancedPipeline<MeshData> {
             gl.DYNAMIC_DRAW
         );
         this.setAttributeData(
-            "a_angle",
-            new Float32Array(maxInstances * 1),
+            "a_pivot",
+            new Float32Array(maxInstances * 2),
             gl.DYNAMIC_DRAW
         );
         this.setAttributeData(
-            "a_pivot",
-            new Float32Array(maxInstances * 2),
+            "a_angle",
+            new Float32Array(maxInstances * 1),
             gl.DYNAMIC_DRAW
         );
 

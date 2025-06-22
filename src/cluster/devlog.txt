@@ -10,3 +10,4 @@ TODO:
 - make a unique mesh pipeline if possible
 - fix the interp angles for smooth rotation
 - time to import Cmath
+- we can think of passing a base shape attribute to the pipeline fo we avoid multiple pipeline instancess and draw calls?
