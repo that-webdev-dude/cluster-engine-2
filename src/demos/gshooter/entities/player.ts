@@ -23,7 +23,7 @@ export function createPlayer(scene: Scene) {
     scene.createEntity(archetype, {
         [Component.Player]: [1],
         [Component.Position]: [worldW / 2, worldH / 2],
-        [Component.Offset]: [16, 16],
+        [Component.Offset]: [0, 0],
         [Component.Angle]: [0],
         [Component.Pivot]: [0, 0],
         [Component.Size]: [32, 32],

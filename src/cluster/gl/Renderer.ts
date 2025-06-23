@@ -123,6 +123,9 @@ export class Renderer {
         Renderer.instance = this;
     }
 
+    get canvasElement(): HTMLCanvasElement {
+        return this.canvas;
+    }
     get width(): number {
         return this.bufW;
     }
@@ -163,12 +166,24 @@ export class Renderer {
         return this.instance;
     }
 
+    public static canvasElement() {
+        return Renderer.getInstance().canvasElement;
+    }
+
     public static worldWidth() {
         return Renderer.getInstance().worldWidth;
     }
 
     public static worldHeight() {
         return Renderer.getInstance().worldHeight;
+    }
+
+    public static cssWidth() {
+        return Renderer.getInstance().cssWidth;
+    }
+
+    public static cssHeight() {
+        return Renderer.getInstance().cssHeight;
     }
 
     /**
