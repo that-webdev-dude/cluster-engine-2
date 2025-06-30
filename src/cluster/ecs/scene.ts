@@ -47,7 +47,7 @@ export class View {
 export class Scene {
     private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
     private entityPool: IDPool<EntityId> = new IDPool();
-    private components: Map<Signature, Storage<ComponentDescriptor[]>> =
+    readonly components: Map<Signature, Storage<ComponentDescriptor[]>> =
         new Map();
 
     readonly cmd: CommandBuffer;

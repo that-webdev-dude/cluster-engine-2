@@ -163,10 +163,12 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
     delete(entityId: number) {
         this.validateEntityId(entityId);
 
-        if (!this.entities.has(entityId))
+        if (!this.entities.has(entityId)) {
             throw new Error(
                 `Storage.delete: entityId: ${entityId} not found in the storage, cannot delete!`
             );
+            // return;
+        }
 
         const { chunkId, row } = this.entities.get(entityId)!; // safe due to previous check
 
@@ -182,6 +184,8 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
         // delete the target entity id anyway as it must go
         this.entities.delete(entityId);
+
+        this.liveEntities--;
 
         if (chunk.count === 0) {
             this.destroyChunkInstance(chunkId);

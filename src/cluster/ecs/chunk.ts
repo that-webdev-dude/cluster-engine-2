@@ -55,7 +55,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
     }
 
     get count(): number {
-        this.assertAlive();
+        // this.assertAlive();
         return this.header ? this.header.getUint32(0, true) : 0; // Assuming the count is stored at the start of the header
     }
 
@@ -194,14 +194,14 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         this.header = null;
 
         if (DEBUG) {
-            for (const key in this.views) {
-                (this.views as any)[key] = null;
-            }
+            // for (const key in this.views) {
+            //     (this.views as any)[key] = null;
+            // }
         }
 
         Object.freeze(this.views);
 
-        if (DEBUG) console.log("chunk has been disposed");
+        if (DEBUG) console.log("[Chunk.dispose]: chunk has been disposed");
     }
 
     /* _______________ internals _______________ */

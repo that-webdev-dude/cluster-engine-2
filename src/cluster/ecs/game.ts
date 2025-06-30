@@ -15,7 +15,6 @@ export class Game {
             scene.updateableSystems.forEach((system) =>
                 system.update(scene.view, scene.cmd, dt)
             );
-            scene.cmd.flush();
         });
     }
 
@@ -28,6 +27,9 @@ export class Game {
     }
 
     done() {
+        this.scenes.forEach((scene) => {
+            scene.cmd.flush();
+        });
         // console.log("is running ...");
     }
 

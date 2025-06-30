@@ -1,0 +1,36 @@
+import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { CommandBuffer } from "../../../cluster/ecs/cmd";
+import { View } from "../../../cluster/ecs/scene";
+import { Cmath } from "../../../cluster/tools";
+import { Mouse } from "../input";
+import { Component } from "../components";
+
+export class MotionSystem implements UpdateableSystem {
+    update(view: View, cmd: CommandBuffer, dt: number) {
+        view.forEachChunkWith(
+            [
+                Component.PreviousPosition,
+                Component.Position,
+                Component.Velocity,
+            ],
+            (chunk) => {
+                const count = chunk.count;
+                if (count === 0) return;
+
+                for (let i = 0; i < count; i++) {
+                    chunk.views.PreviousPosition[i * 2] =
+                        chunk.views.Position[i * 2];
+                    chunk.views.PreviousPosition[i * 2 + 1] =
+                        chunk.views.Position[i * 2 + 1];
+
+                    chunk.views.Position[i * 2] +=
+                        chunk.views.Velocity[i * 2] * dt;
+                    chunk.views.Position[i * 2 + 1] +=
+                        chunk.views.Velocity[i * 2 + 1] * dt;
+                }
+            }
+        );
+
+        // Mouse.update();
+    }
+}

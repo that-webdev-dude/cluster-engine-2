@@ -25,5 +25,7 @@ export class PlayerSystem implements UpdateableSystem {
                 chunk.views.Angle[i] = Cmath.angle(px, py, mx, my) + Math.PI;
             }
         });
+
+        Mouse.update();
     }
 }

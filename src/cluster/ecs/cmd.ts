@@ -88,6 +88,13 @@ export class CommandBuffer {
                     if (storage !== undefined) {
                         storage.delete(cmd.entityId);
                         this.entityMetaSet.remove(cmd.entityId);
+
+                        // remove the entire storage if there are no entities left
+                        if (storage.entityCount === 0) {
+                            this.archetypeMap.delete(
+                                storage.archetype.signature
+                            );
+                        }
                     }
                     break;
 
