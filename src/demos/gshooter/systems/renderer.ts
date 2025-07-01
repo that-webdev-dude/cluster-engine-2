@@ -40,7 +40,12 @@ export class RendererSystem implements RenderableSystem {
                         alpha;
             }
         } else {
-            this.positions.set(chunk.views.Position.subarray(0, count * 2), 0);
+            chunk.full
+                ? (this.positions = chunk.views.Position as Float32Array)
+                : this.positions.set(
+                      chunk.views.Position.subarray(0, count * 2),
+                      0
+                  );
         }
     }
 

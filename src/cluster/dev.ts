@@ -102,6 +102,7 @@ const cameraH = renderer.worldHeight;
 
 // entities
 const cameraArchetype = Archetype.create(
+    "camera",
     [
         Component.Position,
         Component.Size,
@@ -118,6 +119,7 @@ scene.createEntity(cameraArchetype, {
 });
 
 const playerArchetype = Archetype.create(
+    "player",
     [
         Component.Position,
         Component.InputKey,
@@ -145,7 +147,7 @@ scene.createEntity(playerArchetype, {
     [Component.AngularVelocity]: [0],
 });
 
-const rectangleArchetype = Archetype.create([
+const rectangleArchetype = Archetype.create("rect", [
     Component.Position,
     Component.Size,
     Component.Color,
@@ -177,7 +179,7 @@ for (let i = 0; i < 256 * 1; i++) {
     scene.createEntity(rectangleArchetype, comps);
 }
 
-const circleArchetype = Archetype.create([
+const circleArchetype = Archetype.create("circle", [
     Component.Position,
     Component.Size,
     Component.Color,
@@ -210,7 +212,7 @@ for (let i = 0; i < 1 * 1; i++) {
     scene.createEntity(circleArchetype, comps);
 }
 
-const obstacleArchetype = Archetype.create([
+const obstacleArchetype = Archetype.create("obstacle", [
     Component.Position,
     Component.Size,
     Component.Color,

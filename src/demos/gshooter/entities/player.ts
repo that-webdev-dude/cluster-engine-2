@@ -7,6 +7,7 @@ const worldW = Renderer.worldWidth();
 const worldH = Renderer.worldHeight();
 
 const archetype = Archetype.create(
+    "player",
     [
         Component.Player,
         Component.Position,

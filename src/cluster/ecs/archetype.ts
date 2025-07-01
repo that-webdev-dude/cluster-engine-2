@@ -36,7 +36,11 @@ function register(...desc: ComponentDescriptor[]): ComponentDescriptor[] {
 }
 
 /** creates a brand new archetype */
-function create(comps: ComponentType[], maxEntities?: number): Archetype {
+function create(
+    name: string,
+    comps: ComponentType[],
+    maxEntities?: number
+): Archetype {
     let types = [...new Set(comps)].sort((a, b) => a - b);
 
     const signature = makeSignature(...types);
@@ -71,6 +75,7 @@ function create(comps: ComponentType[], maxEntities?: number): Archetype {
     }
 
     const archetype: Archetype = {
+        name,
         signature,
         types,
         offsets,
@@ -101,13 +106,14 @@ function includes(arch: Archetype, ...comps: ComponentType[]): boolean {
 
 /* utility to pretty print the provided archetype */
 function format(arch: Archetype): string {
-    return `Archetype<${arch.types
+    return `Archetype.${arch.name}<${arch.types
         .map((t) => arch.descriptors.get(t)?.name ?? t)
-        .join(",")}> stride=${arch.byteStride}B`;
+        .join(",\n")}> stride=${arch.byteStride}B`;
 }
 
 /** metadata descriptor for an archetype */
 export type Archetype = {
+    readonly name: string;
     readonly signature: Signature;
     readonly types: readonly ComponentType[];
     readonly offsets: ReadonlyMap<ComponentType, number>;

@@ -3,6 +3,7 @@ import { Scene } from "../../../cluster/ecs/scene";
 import { Component } from "../components";
 
 const archetype = Archetype.create(
+    "meteor",
     [
         Component.Meteor,
         Component.PreviousPosition,
