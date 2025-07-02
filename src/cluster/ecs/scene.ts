@@ -94,8 +94,15 @@ export class Scene {
 
         const entityId = this.entityPool.acquire();
 
-        // this is done via cmd
-        this.cmd.allocate(entityId, comps);
+        // 💥 this is done via cmd - DELETE THIS
+        // this.cmd.allocate(entityId, comps);
+
+        const { chunkId, row } = storage.allocate(entityId, comps);
+        this.entityMeta.insert(entityId, {
+            archetype: storage.archetype,
+            chunkId,
+            row,
+        });
     }
 
     removeEntity(entityId: EntityId): boolean {
@@ -120,8 +127,16 @@ export class Scene {
 
         this.entityPool.release(entityId);
 
-        // this is done via cmd
-        this.cmd.delete(entityId);
+        // 💥 this is done via cmd - DELETE THIS
+        // this.cmd.delete(entityId);
+
+        storage.delete(entityId);
+        this.entityMeta.remove(entityId);
+
+        // remove the entire storage if there are no entities left
+        if (storage.entityCount === 0) {
+            this.components.delete(storage.archetype.signature);
+        }
 
         return true;
     }

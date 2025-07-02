@@ -40,12 +40,15 @@ export class RendererSystem implements RenderableSystem {
                         alpha;
             }
         } else {
-            chunk.full
-                ? (this.positions = chunk.views.Position as Float32Array)
-                : this.positions.set(
-                      chunk.views.Position.subarray(0, count * 2),
-                      0
-                  );
+            // chunk.full
+            //     ? (this.positions = chunk.views.Position as Float32Array)
+            //     : this.positions.set(
+            //           chunk.views.Position.subarray(0, count * 2),
+            //           0
+            //       );
+
+            // chunk.views.Position.subarray(0, count * 2);
+            this.positions.set(chunk.views.Position.subarray(0, count * 2), 0);
         }
     }
 
@@ -134,6 +137,7 @@ export class RendererSystem implements RenderableSystem {
             const count = chunk.count;
             if (count === 0) return;
 
+            // ⚠️ add the whole chunk if chunk is full instead of subarrays
             this.setPositions(chunk, alpha);
             this.setAngles(chunk, alpha);
             this.setOffsets(chunk);

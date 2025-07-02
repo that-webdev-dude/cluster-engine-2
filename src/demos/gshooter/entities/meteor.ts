@@ -18,7 +18,15 @@ const archetype = Archetype.create(
     1 // only one player exists
 );
 
-export function createMeteor(scene: Scene) {
+export function createMeteor(
+    scene: Scene,
+    px: number,
+    py: number,
+    vx: number,
+    vy: number,
+    sz: number,
+    color: [number, number, number, number]
+) {
     scene.createEntity(archetype, {
         [Component.Meteor]: [1],
         [Component.PreviousPosition]: [0, 0],

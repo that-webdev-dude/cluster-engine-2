@@ -8,6 +8,7 @@ import {
 } from "../types";
 import { Archetype, Signature } from "./archetype";
 import { SparseSet } from "../tools";
+import { Scene } from "./scene";
 
 export type Command =
     | { type: "allocate"; entityId: EntityId; comps?: ComponentValueMap }
@@ -75,7 +76,7 @@ export class CommandBuffer {
                             );
                             this.entityMetaSet.insert(cmd.entityId, {
                                 archetype: storage.archetype,
-                                entityId: cmd.entityId,
+                                // entityId: cmd.entityId,
                                 chunkId,
                                 row,
                             });
