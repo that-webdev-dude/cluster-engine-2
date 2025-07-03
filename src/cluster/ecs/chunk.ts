@@ -171,10 +171,10 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
                 view.copyWithin(dst, src, src + elems);
             }
             // update the world-side entity-lookup table *outside* the chunk - world must swap the moved entity's row index)
-            if (DEBUG)
-                console.warn(
-                    `Moved entity from row ${lastRow} to row ${row} in chunk. you must update the world-side entity-lookup table!`
-                );
+            // if (DEBUG)
+            //     console.warn(
+            //         `Moved entity from row ${lastRow} to row ${row} in chunk. you must update the world-side entity-lookup table!`
+            //     );
         }
 
         // finally shrink count

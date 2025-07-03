@@ -12,7 +12,9 @@ import { Scene } from "./scene";
 
 export type Command =
     | { type: "allocate"; entityId: EntityId; comps?: ComponentValueMap }
-    | { type: "delete"; entityId: EntityId };
+    | { type: "delete"; entityId: EntityId }
+    | { type: "create"; archetype: Archetype; comps: ComponentValueMap }
+    | { type: "remove"; entityId: EntityId };
 
 export class CommandBuffer {
     private commands: Command[] = [];
@@ -22,7 +24,8 @@ export class CommandBuffer {
             Signature,
             Storage<ComponentDescriptor[]>
         >,
-        private readonly entityMetaSet: SparseSet<EntityId, EntityMeta>
+        private readonly entityMetaSet: SparseSet<EntityId, EntityMeta>,
+        private readonly scene: Scene
     ) {}
 
     private getStorageByEntityId(
@@ -57,9 +60,25 @@ export class CommandBuffer {
         this.commands.push({ type: "delete", entityId });
     }
 
+    create(archetype: Archetype, comps: ComponentValueMap) {
+        this.commands.push({ type: "create", archetype, comps });
+    }
+
+    remove(entityId: EntityId) {
+        this.commands.push({ type: "remove", entityId });
+    }
+
     flush() {
         for (const cmd of this.commands) {
             switch (cmd.type) {
+                case "create":
+                    this.scene.createEntity(cmd.archetype, cmd.comps);
+                    break;
+
+                case "remove":
+                    this.scene.removeEntity(cmd.entityId);
+                    break;
+
                 case "allocate":
                     if (cmd.comps !== undefined) {
                         const signature = Archetype.makeSignature(

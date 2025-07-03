@@ -21,13 +21,14 @@ export class MeteorSystem implements UpdateableSystem {
                 const hh = chunk.views.Size[i * 2 + 1] / 2;
 
                 if (
-                    px + hw < 0 ||
-                    px - hw > Renderer.worldWidth() ||
-                    py + hh < 0 ||
-                    py - hh > Renderer.worldHeight()
+                    px + 4 * hw < 0 ||
+                    px - 4 * hw > Renderer.worldWidth() ||
+                    py + 4 * hh < 0 ||
+                    py - 4 * hh > Renderer.worldHeight()
                 ) {
                     const id = chunk.views.EntityId[i];
-                    cmd.delete(id);
+
+                    cmd.remove(id);
                 }
             }
         });

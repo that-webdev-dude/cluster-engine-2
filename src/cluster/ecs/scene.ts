@@ -63,7 +63,7 @@ export class Scene {
         this.renderableSystems = options.renderableSystems;
 
         this.view = new View(this.components);
-        this.cmd = new CommandBuffer(this.components, this.entityMeta);
+        this.cmd = new CommandBuffer(this.components, this.entityMeta, this);
     }
 
     initialize(): void {
@@ -132,6 +132,8 @@ export class Scene {
 
         storage.delete(entityId);
         this.entityMeta.remove(entityId);
+
+        // console.log(this.entityMeta.ids);
 
         // remove the entire storage if there are no entities left
         if (storage.entityCount === 0) {

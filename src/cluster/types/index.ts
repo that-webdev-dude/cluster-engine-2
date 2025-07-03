@@ -44,7 +44,6 @@ export type EntityId = number;
 
 export type EntityMeta = {
     archetype: Archetype;
-    // entityId: EntityId;
     chunkId: number;
     row: number;
 };

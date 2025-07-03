@@ -2,21 +2,17 @@ import { Archetype } from "../../../cluster/ecs/archetype";
 import { Scene } from "../../../cluster/ecs/scene";
 import { Component } from "../components";
 
-const archetype = Archetype.create(
-    "meteor",
-    [
-        Component.Meteor,
-        Component.PreviousPosition,
-        Component.Position,
-        Component.Velocity,
-        Component.Offset,
-        Component.Angle,
-        Component.Pivot,
-        Component.Size,
-        Component.Color,
-    ],
-    1 // only one player exists
-);
+export const archetype = Archetype.create("meteor", [
+    Component.Meteor,
+    Component.PreviousPosition,
+    Component.Position,
+    Component.Velocity,
+    Component.Offset,
+    Component.Angle,
+    Component.Pivot,
+    Component.Size,
+    Component.Color,
+]);
 
 export function createMeteor(
     scene: Scene,
