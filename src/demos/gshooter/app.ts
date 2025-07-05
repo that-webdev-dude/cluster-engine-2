@@ -1,10 +1,10 @@
-import { Game } from "../../cluster/ecs/game";
-import { createGamePlay } from "./scenes/gamePlay";
+// import { Game } from "../../cluster/ecs/game";
+// import { createGamePlay } from "./scenes/gamePlay";
 
-const game = new Game();
+// const game = new Game();
 
-game.setScene(createGamePlay());
+// game.setScene(createGamePlay());
 
-export function app() {
-    game.start();
-}
+// export function app() {
+//     game.start();
+// }

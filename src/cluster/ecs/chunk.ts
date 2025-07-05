@@ -8,11 +8,7 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 type ComponentViews<D extends readonly ComponentDescriptor[]> = {
     [K in D[number] as K["name"]]: InstanceType<K["buffer"]>;
-} & {
-    EntityId: Uint32Array;
 };
-
-type MovedEntityId = number & { __brand: "MovedEntityId" }; // used in the delete method
 
 export class Chunk<S extends readonly ComponentDescriptor[]> {
     static readonly DEFAULT_CAPACITY = 256;
@@ -27,12 +23,12 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
     readonly views: ComponentViews<S>;
 
-    readonly entityCapacity: number;
+    readonly capacity: number;
 
-    constructor(private readonly archetype: Archetype) {
-        this.entityCapacity = archetype.maxEntities || Chunk.DEFAULT_CAPACITY;
+    constructor(readonly archetype: Archetype) {
+        this.capacity = archetype.maxEntities || Chunk.DEFAULT_CAPACITY;
 
-        const payloadBytes = this.entityCapacity * archetype.byteStride;
+        const payloadBytes = this.capacity * archetype.byteStride;
 
         this.buffer = new ArrayBuffer(Chunk.HEADER_BYTE_SIZE + payloadBytes);
 
@@ -49,31 +45,22 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
     get byteCapacity(): number {
         this.assertAlive();
         return (
-            Chunk.HEADER_BYTE_SIZE +
-            this.entityCapacity * this.archetype.byteStride
+            Chunk.HEADER_BYTE_SIZE + this.capacity * this.archetype.byteStride
         );
     }
 
     get count(): number {
-        // this.assertAlive();
+        this.assertAlive();
         return this.header ? this.header.getUint32(0, true) : 0; // Assuming the count is stored at the start of the header
     }
 
     get full(): boolean {
         this.assertAlive();
-        return this.count >= this.entityCapacity;
-    }
-
-    get entityIdVeiw(): Uint32Array {
-        this.assertAlive();
-        const view = (this.views as any)["EntityId"] as Uint32Array;
-        if (!view) {
-            throw new Error(`View for ${"EntityId"} not found`);
-        }
-        return view;
+        return this.count >= this.capacity;
     }
 
     get formattedArchetype() {
+        this.assertAlive();
         return Archetype.format(this.archetype);
     }
 
@@ -87,12 +74,12 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
     }
 
     // should return the first free slot in the chunk
-    allocate(recordId: number): number {
+    allocate(): number {
         this.assertAlive();
 
-        if (this.count >= this.entityCapacity) {
+        if (this.count >= this.capacity) {
             throw new Error(
-                `[Chunk.allocate]: Chunk is full - maxEntities = ${this.entityCapacity}`
+                `[Chunk.allocate]: Chunk is full - maxEntities = ${this.capacity}`
             );
         }
 
@@ -123,14 +110,11 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             }
         }
 
-        // overwrite the entity ID in the EntityId component
-        this.entityIdVeiw[row] = recordId;
-
         return row;
     }
 
-    // this version of delete should return the movedEntityId
-    delete(row: number): MovedEntityId | undefined {
+    // this version returns void
+    delete(row: number): number | undefined {
         this.assertAlive();
 
         if (this.count <= 0) {
@@ -151,53 +135,36 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             return undefined;
         }
 
-        const movedEntityId = this.entityIdVeiw[lastRow];
+        // copy last row → hole, column by column
+        for (const type of this.archetype.types) {
+            const d = this.archetype.descriptors.get(type);
+            if (d === undefined)
+                throw new Error(
+                    `Chunk.delete: descriptor for type ${type} not found`
+                );
 
-        if (row !== lastRow) {
-            // copy last row → hole, column by column
-            for (const type of this.archetype.types) {
-                const d = this.archetype.descriptors.get(type);
-                if (d === undefined)
-                    throw new Error(
-                        `Chunk.delete: descriptor for type ${type} not found`
-                    );
+            const view = this.getView<Buffer>(d);
 
-                const view = this.getView<Buffer>(d);
+            const elems = d.count;
+            const src = lastRow * elems;
+            const dst = row * elems;
 
-                const elems = d.count;
-                const src = lastRow * elems;
-                const dst = row * elems;
-
-                view.copyWithin(dst, src, src + elems);
-            }
-            // update the world-side entity-lookup table *outside* the chunk - world must swap the moved entity's row index)
-            // if (DEBUG)
-            //     console.warn(
-            //         `Moved entity from row ${lastRow} to row ${row} in chunk. you must update the world-side entity-lookup table!`
-            //     );
+            view.copyWithin(dst, src, src + elems);
         }
 
         // finally shrink count
         this.decrementCount();
 
-        return movedEntityId as MovedEntityId; // Return the moved entity ID or undefined if no entity was moved
+        return lastRow;
     }
 
     dispose(): void {
         if (this.destroyed) return;
 
         this.destroyed = true;
-
         this.header!.setUint32(0, 0, true);
-
         this.buffer = null;
         this.header = null;
-
-        if (DEBUG) {
-            // for (const key in this.views) {
-            //     (this.views as any)[key] = null;
-            // }
-        }
 
         Object.freeze(this.views);
 
@@ -231,22 +198,16 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             const view = new descriptor.buffer(
                 this.buffer!,
                 offset,
-                this.entityCapacity * descriptor.count
+                this.capacity * descriptor.count
             );
 
             (map as any)[descriptor.name] = view;
 
             offset +=
-                this.entityCapacity *
+                this.capacity *
                 descriptor.count *
                 descriptor.buffer.BYTES_PER_ELEMENT;
         }
-
-        // here we add a EntityId view for book-keeping
-        const entityIdVeiw = new Uint32Array(
-            this.entityCapacity * 1 * Uint32Array.BYTES_PER_ELEMENT
-        );
-        (map as any)["EntityId"] = entityIdVeiw;
 
         if (offset > this.buffer!.byteLength)
             throw new Error("stride mis-match (buffer too small)"); // final guard
@@ -256,7 +217,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
     private incrementCount(): void {
         const currentCount = this.count;
-        if (currentCount >= this.entityCapacity) {
+        if (currentCount >= this.capacity) {
             throw new Error("Chunk is full");
         }
         this.header!.setUint32(0, currentCount + 1, true); // Increment the count in the header

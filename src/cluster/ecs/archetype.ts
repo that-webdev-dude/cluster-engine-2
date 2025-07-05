@@ -108,7 +108,7 @@ function includes(arch: Archetype, ...comps: ComponentType[]): boolean {
 function format(arch: Archetype): string {
     return `Archetype.${arch.name}<${arch.types
         .map((t) => arch.descriptors.get(t)?.name ?? t)
-        .join(",\n")}> stride=${arch.byteStride}B`;
+        .join(",\n")}> stride = ${arch.byteStride} Bytes`;
 }
 
 /** metadata descriptor for an archetype */

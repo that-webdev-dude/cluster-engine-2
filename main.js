@@ -1,8 +1,8 @@
 import "./src/styles/style.scss";
-// import dev from "./src/cluster/dev";
 import { app } from "./src/demos/gshooter/app";
+import { dev } from "./src/demos/gshooter/dev";
 
 window.onload = () => {
-    // dev();
-    app();
+    // app();
+    dev();
 };
