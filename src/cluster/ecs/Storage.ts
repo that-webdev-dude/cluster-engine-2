@@ -4,7 +4,7 @@ import {
     ComponentDescriptor,
     ComponentValueMap,
 } from "../types";
-import { Chunk } from "./chunk";
+import { Chunk, ChunkV2 } from "./chunk";
 import { IDPool } from "../tools/IDPool";
 import { Archetype } from "./archetype";
 
@@ -228,18 +228,46 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 }
 
 export class StorageV2<S extends readonly ComponentDescriptor[]> {
-    private chunks: Map<number, Chunk<S>> = new Map();
+    private chunks: Map<number, ChunkV2<S>> = new Map();
 
     private chunkIdPool: IDPool<number> = new IDPool();
 
     private partialChunkIds: Set<number> = new Set();
 
+    private liveRecords: number = 0;
+
     // TODO
-    // Storage<S> can be instantiated with an Archetype whose component list does not match S. TypeScript can’t prove the two are consistent.
+    /**
+     * You can instantiate a StorageV2<S> with an Archetype whose component list doesn’t actually match S. TypeScript can’t verify that the tuple of descriptors S corresponds exactly to archetype.types.
+     * Option: make Archetype generic, e.g. Archetype<S> so that create and register carry the same S through to StorageV2<S>.
+     * Option: at runtime, in your constructor, assert that archetype.types.length === S.length and that the type identifiers line up, throwing early if they don’t.
+     */
     constructor(readonly archetype: Archetype) {}
 
-    getChunk(chunkId: number): Readonly<Chunk<S>> | undefined {
+    get length() {
+        return this.liveRecords;
+    }
+
+    get isEmpty(): boolean {
+        for (const chunk of this.chunks.values()) {
+            if (chunk.count > 0) return false;
+        }
+        return true;
+    }
+
+    getChunk(chunkId: number): Readonly<ChunkV2<S>> | undefined {
         return this.chunks.get(chunkId);
+    }
+
+    /**
+     * Iterates all chunks for this Storage.
+     * Structural changes (allocate/delete) MUST NOT be made during iteration.
+     * Use CommandBuffer to defer operations and call `flushCommands()` after.
+     */
+    forEachChunk(
+        cb: (chunk: Readonly<ChunkV2<S>>, chunkId: number) => void
+    ): void {
+        this.chunks.forEach((chunk, chunkId) => cb(chunk, chunkId)); // ⚠️ DO NOT modify this.chunks inside the callback!
     }
 
     allocate(comps?: ComponentValueMap): {
@@ -247,6 +275,15 @@ export class StorageV2<S extends readonly ComponentDescriptor[]> {
         row: number;
         generation: number;
     } {
+        // check for an entity limit in the archetype before allocate
+        if (
+            this.archetype.maxEntities &&
+            this.liveRecords >= this.archetype.maxEntities
+        )
+            throw new Error(
+                `Storage.allocate: this.storage has a limited number of entities set to ${this.archetype.maxEntities}`
+            );
+
         // finds the first available (non-full) chunk. if no available chunks, need to create a new one
         let chunkId = this.findAvailableChunk();
         if (chunkId === undefined) {
@@ -257,12 +294,14 @@ export class StorageV2<S extends readonly ComponentDescriptor[]> {
         const chunk = this.getChunk(chunkId)!;
 
         // safe as at this point a chunk must exist
-        const { row, generation } = chunk.allocateV2();
+        const { row, generation } = chunk.allocate();
 
         if (row === chunk.capacity - 1) {
             // the chunk is full so remove it from the partialChunkIds
             this.partialChunkIds.delete(chunkId);
         }
+
+        this.liveRecords++;
 
         if (comps !== undefined) {
             this.assign(chunkId, row, comps);
@@ -329,7 +368,9 @@ export class StorageV2<S extends readonly ComponentDescriptor[]> {
             );
         }
 
-        const meta = chunk.deleteV2(row);
+        const meta = chunk.delete(row);
+
+        this.liveRecords--;
 
         if (chunk.count === 0) {
             this.destroyChunkInstance(chunkId);
@@ -348,7 +389,7 @@ export class StorageV2<S extends readonly ComponentDescriptor[]> {
         // const chunkId = this.freeChunkIds.pop() ?? Storage.nextChunkId++;
         const chunkId = this.chunkIdPool.acquire();
 
-        this.chunks.set(chunkId, new Chunk<S>(this.archetype));
+        this.chunks.set(chunkId, new ChunkV2<S>(this.archetype));
 
         return chunkId;
     }

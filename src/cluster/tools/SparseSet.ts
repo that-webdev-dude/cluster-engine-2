@@ -96,6 +96,33 @@ export class SparseSet<I extends number, D> {
     }
 
     /**
+     * Find the first value and id matching the predicate.
+     * Returns [id, value] or undefined if not found.
+     */
+    find(predicate: (value: D, id: I) => boolean): [I, D] | undefined {
+        for (let i = 0; i < this.data.length; i++) {
+            if (predicate(this.data[i], this.dense[i])) {
+                return [this.dense[i], this.data[i]];
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Find all (id, value) pairs matching the predicate.
+     * Returns an array of [id, value] tuples.
+     */
+    findAll(predicate: (value: D, id: I) => boolean): [I, D][] {
+        const results: [I, D][] = [];
+        for (let i = 0; i < this.data.length; i++) {
+            if (predicate(this.data[i], this.dense[i])) {
+                results.push([this.dense[i], this.data[i]]);
+            }
+        }
+        return results;
+    }
+
+    /**
      * Make the set itself iterable: yields [id, value].
      */
     *[Symbol.iterator](): IterableIterator<[I, D]> {
