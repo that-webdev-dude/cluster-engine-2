@@ -21,6 +21,8 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
     private destroyed: boolean = false;
 
+    private generations: Uint32Array;
+
     readonly views: ComponentViews<S>;
 
     readonly capacity: number;
@@ -29,6 +31,8 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         this.capacity = archetype.maxEntities || Chunk.DEFAULT_CAPACITY;
 
         const payloadBytes = this.capacity * archetype.byteStride;
+
+        this.generations = new Uint32Array(this.capacity);
 
         this.buffer = new ArrayBuffer(Chunk.HEADER_BYTE_SIZE + payloadBytes);
 
@@ -64,6 +68,14 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return Archetype.format(this.archetype);
     }
 
+    getGeneration(row: number): number {
+        this.assertAlive();
+        if (row < 0 || row >= this.capacity) {
+            throw new Error(`Chunk.getGeneration: row ${row} out of bounds`);
+        }
+        return this.generations[row];
+    }
+
     getView<T extends Buffer>(descriptor: ComponentDescriptor): T {
         this.assertAlive();
         const view = (this.views as any)[descriptor.name] as T;
@@ -73,7 +85,6 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return view;
     }
 
-    // should return the first free slot in the chunk
     allocate(): number {
         this.assertAlive();
 
@@ -113,7 +124,47 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return row;
     }
 
-    // this version returns void
+    allocateV2(): { row: number; generation: number } {
+        this.assertAlive();
+
+        if (this.count >= this.capacity) {
+            throw new Error(
+                `[Chunk.allocate]: Chunk is full - maxEntities = ${this.capacity}`
+            );
+        }
+
+        const row = this.count;
+
+        const generation = this.generations[row];
+
+        this.incrementCount(); // Increment the count in the header
+
+        // let's copy the default values for each component type before returning the row
+        for (const type of this.archetype.types) {
+            const descriptor = this.archetype.descriptors.get(type);
+            if (descriptor === undefined)
+                throw new Error(
+                    `Chunk.allocate: descriptor for type ${type} not found`
+                );
+
+            const view = this.getView<Buffer>(descriptor);
+
+            const elementCount = descriptor.count;
+            const defaults = descriptor.default;
+            if (defaults.length !== elementCount) {
+                throw new Error(
+                    `Default values for ${descriptor.name} do not match the count`
+                );
+            }
+            const base = row * elementCount;
+            for (let i = 0; i < elementCount; i++) {
+                view[base + i] = defaults[i];
+            }
+        }
+
+        return { row, generation };
+    }
+
     delete(row: number): number | undefined {
         this.assertAlive();
 
@@ -156,6 +207,64 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         this.decrementCount();
 
         return lastRow;
+    }
+
+    deleteV2(row: number): {
+        row: number;
+        generation: number;
+        movedRow: number | undefined;
+    } {
+        this.assertAlive();
+
+        if (this.count <= 0) {
+            throw new Error(`Chunk.delete: chunk is empty, nothing to delete`);
+        }
+
+        const lastRow = this.count - 1;
+        if (row < 0 || row >= this.count) {
+            throw new Error(`Row ${row} out of bounds, nothing to delete`);
+        }
+
+        // now if the row to delete is the last row, just shrink then count and return undefined
+        if (row === lastRow) {
+            this.generations[row]++;
+            this.decrementCount();
+            return {
+                row: row,
+                generation: this.generations[row] - 1,
+                movedRow: undefined,
+            };
+        }
+
+        // copy last row → hole, column by column
+        for (const type of this.archetype.types) {
+            const d = this.archetype.descriptors.get(type);
+            if (d === undefined)
+                throw new Error(
+                    `Chunk.delete: descriptor for type ${type} not found`
+                );
+
+            const view = this.getView<Buffer>(d);
+
+            const elems = d.count;
+            const src = lastRow * elems;
+            const dst = row * elems;
+
+            view.copyWithin(dst, src, src + elems);
+        }
+
+        this.generations[row] = this.generations[lastRow];
+
+        this.generations[lastRow]++;
+
+        // finally shrink count
+        this.decrementCount();
+
+        return {
+            row: row,
+            generation: this.generations[row],
+            movedRow: lastRow,
+        };
     }
 
     dispose(): void {
