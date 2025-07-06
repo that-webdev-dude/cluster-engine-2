@@ -1,6 +1,6 @@
 // src/cluster/ecs/tests/storage.v2.extras.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
-import { StorageV2 } from "../storage";
+import { StorageV2 } from "../storageV2";
 import { Archetype } from "../archetype";
 
 enum Component {

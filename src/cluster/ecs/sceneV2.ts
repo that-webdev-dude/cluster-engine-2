@@ -5,8 +5,8 @@ import {
     EntityId,
     // EntityMeta,
 } from "../types";
-import { ChunkV2 } from "./chunk";
-import { StorageV2 } from "./storage";
+import { ChunkV2 } from "./chunkV2";
+import { StorageV2 } from "./storageV2";
 import { CommandBufferV2 } from "./cmdV2";
 import { IDPool, SparseSet } from "../tools";
 import { Archetype, Signature } from "./archetype";

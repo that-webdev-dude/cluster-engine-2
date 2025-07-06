@@ -1,6 +1,6 @@
 // src/cluster/ecs/tests/chunk.v2.extras.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
-import { ChunkV2 } from "../chunk";
+import { ChunkV2 } from "../chunkV2";
 import { Archetype } from "../archetype";
 
 enum Component {

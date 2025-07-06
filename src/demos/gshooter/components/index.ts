@@ -2,7 +2,6 @@ import { Archetype } from "../../../cluster/ecs/archetype";
 // import { ComponentDescriptor } from "../../../cluster/types";
 
 export enum Component {
-    EntityId,
     PreviousPosition,
     Position,
     Offset,
@@ -25,13 +24,6 @@ export enum Component {
 
 const DESCRIPTORS = Archetype.register(
     ...[
-        {
-            type: Component.EntityId,
-            name: "EntityId",
-            count: 1,
-            buffer: Uint32Array,
-            default: [0],
-        },
         {
             type: Component.PreviousPosition,
             name: "PreviousPosition",
