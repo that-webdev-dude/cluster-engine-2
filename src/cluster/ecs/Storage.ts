@@ -84,6 +84,18 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
                 continue;
             }
 
+            if (!chunk.views.hasOwnProperty(descriptor.name)) {
+                throw new Error(
+                    `Storage.assign: view for ${descriptor.name} not found`
+                );
+            }
+
+            if (!(value instanceof descriptor.buffer)) {
+                throw new Error(
+                    `Storage.assign: Component ${descriptor.name} expects ${descriptor.buffer.name}`
+                );
+            }
+
             const view = chunk.getView<Buffer>(descriptor);
             // now check if the component values has the same length of the descriptor
             const count = descriptor.count;

@@ -7,7 +7,7 @@ import {
 } from "../types";
 import { ChunkV2 } from "./chunk";
 import { StorageV2 } from "./storage";
-import { CommandBuffer } from "./cmd";
+import { CommandBufferV2 } from "./cmdV2";
 import { IDPool, SparseSet } from "../tools";
 import { Archetype, Signature } from "./archetype";
 import { UpdateableSystem, RenderableSystem } from "./system";
@@ -58,7 +58,7 @@ export class SceneV2 {
     readonly archetypes: Map<Signature, StorageV2<ComponentDescriptor[]>> =
         new Map();
 
-    // readonly cmd: CommandBuffer;
+    readonly cmd: CommandBufferV2;
     readonly view: ViewV2;
     readonly updateableSystems: UpdateableSystem[] = [];
     readonly renderableSystems: RenderableSystem[] = [];
@@ -71,15 +71,15 @@ export class SceneV2 {
         this.renderableSystems = options.renderableSystems;
 
         this.view = new ViewV2(this.archetypes);
-        // this.cmd = new CommandBuffer(this.archetypes, this.entityMeta, this);
+        this.cmd = new CommandBufferV2(this);
     }
 
     initialize(): void {
-        // this.cmd.flush();
+        this.cmd.flush();
         // ... and other init stuff
     }
 
-    createEntity(archetype: Archetype, comps: ComponentValueMap) {
+    createEntity(archetype: Archetype, comps: ComponentValueMap): EntityId {
         let storage = this.archetypes.get(archetype.signature);
         if (storage === undefined) {
             const descriptors = archetype.types.map((c) =>
@@ -102,9 +102,6 @@ export class SceneV2 {
 
         const entityId = this.entityPool.acquire();
 
-        // 💥 this is done via cmd - DELETE THIS
-        // this.cmd.allocate(entityId, comps);
-
         const { chunkId, row, generation } = storage.allocate(comps);
         this.entityMeta.insert(entityId, {
             archetype: storage.archetype,
@@ -112,6 +109,8 @@ export class SceneV2 {
             row,
             generation,
         });
+
+        return entityId;
     }
 
     removeEntity(entityId: EntityId): boolean {
