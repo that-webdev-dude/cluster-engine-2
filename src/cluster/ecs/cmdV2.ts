@@ -9,7 +9,13 @@ export type Command =
           archetype: ArchetypeV2<any>;
           comps: ComponentValueMap;
       }
-    | { type: "removeEntity"; entityId: EntityId };
+    | { type: "removeEntity"; entityId: EntityId }
+    | {
+          type: "findEntityId";
+          archetype: ArchetypeV2<any>;
+          chunkId: number;
+          row: number;
+      };
 
 export class CommandBufferV2 {
     private commands: Command[] = [];
@@ -24,10 +30,14 @@ export class CommandBufferV2 {
         this.commands.push({ type: "removeEntity", entityId });
     }
 
+    findEntityId(archetype: ArchetypeV2<any>, chunkId: number, row: number) {
+        this.commands.push({ type: "findEntityId", archetype, chunkId, row });
+    }
+
     flush() {
-        if (DEBUG) {
-            console.log("Flushing", this.commands.length, "commands");
-        }
+        // if (DEBUG) {
+        //     console.log("Flushing", this.commands.length, "commands");
+        // }
 
         for (const cmd of this.commands) {
             switch (cmd.type) {
@@ -37,6 +47,14 @@ export class CommandBufferV2 {
 
                 case "removeEntity":
                     this.scene.removeEntity(cmd.entityId);
+                    break;
+
+                case "findEntityId":
+                    this.scene.findEntityId(
+                        cmd.archetype,
+                        cmd.chunkId,
+                        cmd.row
+                    );
                     break;
             }
         }
