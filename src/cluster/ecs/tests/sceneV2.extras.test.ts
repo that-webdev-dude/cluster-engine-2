@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { SceneV2 } from "../sceneV2";
-import { Archetype } from "../archetype";
+import { ArchetypeV2 } from "../archetypeV2";
 import { CommandBufferV2 } from "../cmdV2";
 import type { View } from "../scene";
 import type { EntityId } from "../../types";
@@ -10,7 +10,7 @@ enum Component {
     Health,
 }
 
-const [PosDesc, HealthDesc] = Archetype.register(
+const [PosDesc, HealthDesc] = ArchetypeV2.register(
     {
         type: Component.Position,
         name: "Position",
@@ -41,10 +41,23 @@ class TestSystem {
 
 let scene: SceneV2;
 let cmd: CommandBufferV2;
-let archetype = Archetype.create("cmdTest", [
-    Component.Position,
-    Component.Health,
-]);
+let schema = ArchetypeV2.register(
+    {
+        type: Component.Position,
+        name: "Position",
+        count: 2,
+        buffer: Float32Array,
+        default: [0, 0],
+    },
+    {
+        type: Component.Health,
+        name: "Health",
+        count: 1,
+        buffer: Uint32Array,
+        default: [100],
+    }
+);
+let archetype = ArchetypeV2.create("cmdTest", schema);
 
 describe("SceneV2 ▶ command buffer integration", () => {
     beforeEach(() => {

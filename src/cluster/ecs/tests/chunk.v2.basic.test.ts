@@ -1,13 +1,13 @@
 // src/cluster/ecs/tests/chunk.v2.basic.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { ChunkV2 } from "../chunkV2";
-import { Archetype } from "../archetype";
+import { ArchetypeV2 } from "../archetypeV2";
 
 export enum Component {
     Position,
 }
 
-const DESCRIPTORS = Archetype.register({
+const schema = ArchetypeV2.register({
     type: Component.Position,
     name: "Position",
     count: 2,
@@ -16,8 +16,9 @@ const DESCRIPTORS = Archetype.register({
 });
 
 describe("ChunkV2 ▶ basic functionality", () => {
-    let chunk: ChunkV2<typeof DESCRIPTORS>;
-    const archetype = Archetype.create("test", [Component.Position]);
+    let chunk: ChunkV2<typeof schema>;
+    // const archetype = ArchetypeV2.create("test", [Component.Position]);
+    const archetype = ArchetypeV2.create("test", schema);
 
     beforeEach(() => {
         chunk = new ChunkV2(archetype);
@@ -50,7 +51,7 @@ describe("ChunkV2 ▶ basic functionality", () => {
 
     it("initializes component data to defaults", () => {
         const { row } = chunk.allocate();
-        const pos = chunk.getView<Float32Array>(DESCRIPTORS[0]);
+        const pos = chunk.getView<Float32Array>(schema[0]);
         // default [0,0]
         expect(pos[row * 2 + 0]).toBe(0);
         expect(pos[row * 2 + 1]).toBe(0);
@@ -90,7 +91,7 @@ describe("ChunkV2 ▶ basic functionality", () => {
         const target = a.row; // 0
 
         // write a distinct value into lastRow’s data
-        const pos = chunk.getView<Float32Array>(DESCRIPTORS[0]);
+        const pos = chunk.getView<Float32Array>(schema[0]);
         pos[lastRow * 2 + 0] = 42;
         pos[lastRow * 2 + 1] = 99;
         const genLast = chunk.getGeneration(lastRow);
@@ -129,7 +130,7 @@ describe("ChunkV2 ▶ basic functionality", () => {
             ["getGeneration", () => chunk.getGeneration(0)],
             ["allocate()", () => chunk.allocate()],
             ["delete(0)", () => chunk.delete(0)],
-            ["getView()", () => chunk.getView(DESCRIPTORS[0])],
+            ["getView()", () => chunk.getView(schema[0])],
         ];
 
         for (const [name, fn] of methods) {

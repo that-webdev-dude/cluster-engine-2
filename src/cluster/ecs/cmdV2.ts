@@ -1,10 +1,14 @@
 import { ComponentValueMap, EntityId } from "../types";
-import { Archetype } from "./archetype";
+import { ArchetypeV2 } from "./archetypeV2";
 import { SceneV2 } from "./sceneV2";
 import { DEBUG } from "../tools";
 
 export type Command =
-    | { type: "createEntity"; archetype: Archetype; comps: ComponentValueMap }
+    | {
+          type: "createEntity";
+          archetype: ArchetypeV2<any>;
+          comps: ComponentValueMap;
+      }
     | { type: "removeEntity"; entityId: EntityId };
 
 export class CommandBufferV2 {
@@ -12,7 +16,7 @@ export class CommandBufferV2 {
 
     constructor(private readonly scene: SceneV2) {}
 
-    create(archetype: Archetype, comps: ComponentValueMap) {
+    create(archetype: ArchetypeV2<any>, comps: ComponentValueMap) {
         this.commands.push({ type: "createEntity", archetype, comps });
     }
 

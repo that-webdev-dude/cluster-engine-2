@@ -1,7 +1,7 @@
 // src/cluster/ecs/tests/storage.v2.extras.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { StorageV2 } from "../storageV2";
-import { Archetype } from "../archetype";
+import { ArchetypeV2 } from "../archetypeV2";
 
 enum Component {
     Position,
@@ -9,7 +9,7 @@ enum Component {
     Health,
 }
 
-const DESCS = Archetype.register(
+const DESCS = ArchetypeV2.register(
     {
         type: Component.Position,
         name: "Position",
@@ -33,11 +33,7 @@ const DESCS = Archetype.register(
     }
 );
 
-const archetype = Archetype.create("extras", [
-    Component.Position,
-    Component.Velocity,
-    Component.Health,
-]);
+const archetype = ArchetypeV2.create("extras", DESCS);
 
 describe("StorageV2 ▶ edge and complex cases", () => {
     let storage: StorageV2<typeof DESCS>;
@@ -88,8 +84,15 @@ describe("StorageV2 ▶ edge and complex cases", () => {
     });
 
     it("does not allow allocation past maxEntities", () => {
-        const capped = Archetype.create("limited", [Component.Health], 2);
-        const storageCapped = new StorageV2<typeof DESCS>(capped);
+        const schema = ArchetypeV2.register({
+            type: Component.Health,
+            name: "Health",
+            count: 1,
+            buffer: Uint32Array,
+            default: [100],
+        });
+        const capped = ArchetypeV2.create("limited", schema, 2);
+        const storageCapped = new StorageV2<typeof schema>(capped);
 
         storageCapped.allocate();
         storageCapped.allocate();

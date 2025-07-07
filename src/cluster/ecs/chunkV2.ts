@@ -1,5 +1,5 @@
 import { Buffer, ComponentDescriptor } from "../types";
-import { Archetype } from "./archetype";
+import { ArchetypeV2 } from "./archetypeV2";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -27,7 +27,7 @@ export class ChunkV2<S extends readonly ComponentDescriptor[]> {
 
     readonly capacity: number;
 
-    constructor(readonly archetype: Archetype) {
+    constructor(readonly archetype: ArchetypeV2<S>) {
         this.capacity = archetype.maxEntities || ChunkV2.DEFAULT_CAPACITY;
 
         const payloadBytes = this.capacity * archetype.byteStride;
@@ -65,7 +65,7 @@ export class ChunkV2<S extends readonly ComponentDescriptor[]> {
 
     get formattedArchetype() {
         this.assertAlive();
-        return Archetype.format(this.archetype);
+        return ArchetypeV2.format(this.archetype);
     }
 
     getGeneration(row: number): number {

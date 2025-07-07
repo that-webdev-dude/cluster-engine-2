@@ -1,13 +1,13 @@
 // src/cluster/ecs/tests/storage.v2.basic.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { StorageV2 } from "../storageV2";
-import { Archetype } from "../archetype";
+import { ArchetypeV2 } from "../archetypeV2";
 
 enum Component {
     Position,
 }
 
-const DESCRIPTORS = Archetype.register({
+const schema = ArchetypeV2.register({
     type: Component.Position,
     name: "Position",
     count: 2,
@@ -15,10 +15,10 @@ const DESCRIPTORS = Archetype.register({
     default: [0, 0],
 });
 
-const archetype = Archetype.create("basic", [Component.Position]);
+const archetype = ArchetypeV2.create("basic", schema);
 
 describe("StorageV2 ▶ basic operations", () => {
-    let storage: StorageV2<typeof DESCRIPTORS>;
+    let storage: StorageV2<typeof schema>;
 
     beforeEach(() => {
         storage = new StorageV2(archetype);
@@ -47,7 +47,7 @@ describe("StorageV2 ▶ basic operations", () => {
         expect(result.row).toBe(row);
 
         const chunk = storage.getChunk(chunkId)!;
-        const view = chunk.getView<Float32Array>(DESCRIPTORS[0]);
+        const view = chunk.getView<Float32Array>(schema[0]);
         expect(view[row * 2 + 0]).toBe(10);
         expect(view[row * 2 + 1]).toBe(20);
     });

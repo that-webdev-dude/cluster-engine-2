@@ -6,7 +6,7 @@ import {
 } from "../types";
 import { ChunkV2 } from "./chunkV2";
 import { IDPool } from "../tools/IDPool";
-import { Archetype } from "./archetype";
+import { ArchetypeV2 } from "./archetypeV2";
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -28,7 +28,7 @@ export class StorageV2<S extends readonly ComponentDescriptor[]> {
      * Option: make Archetype generic, e.g. Archetype<S> so that create and register carry the same S through to StorageV2<S>.
      * Option: at runtime, in your constructor, assert that archetype.types.length === S.length and that the type identifiers line up, throwing early if they don’t.
      */
-    constructor(readonly archetype: Archetype) {}
+    constructor(readonly archetype: ArchetypeV2<S>) {}
 
     get length() {
         return this.liveRecords;

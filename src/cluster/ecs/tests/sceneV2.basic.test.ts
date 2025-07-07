@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { SceneV2 } from "../sceneV2";
-import { Archetype } from "../archetype";
+import { ArchetypeV2 } from "../archetypeV2";
 
 enum Component {
     Position,
     Health,
 }
 
-const [PosDesc, HealthDesc] = Archetype.register(
+const [PosDesc, HealthDesc] = ArchetypeV2.register(
     {
         type: Component.Position,
         name: "Position",
@@ -26,10 +26,24 @@ const [PosDesc, HealthDesc] = Archetype.register(
 
 describe("SceneV2 ▶ basic functionality", () => {
     let scene: SceneV2;
-    const archetype = Archetype.create("test", [
-        Component.Position,
-        Component.Health,
-    ]);
+
+    const schema = ArchetypeV2.register(
+        {
+            type: Component.Position,
+            name: "Position",
+            count: 2,
+            buffer: Float32Array,
+            default: [0, 0],
+        },
+        {
+            type: Component.Health,
+            name: "Health",
+            count: 1,
+            buffer: Uint32Array,
+            default: [100],
+        }
+    );
+    const archetype = ArchetypeV2.create("test", schema);
 
     beforeEach(() => {
         scene = new SceneV2({ updateableSystems: [], renderableSystems: [] });

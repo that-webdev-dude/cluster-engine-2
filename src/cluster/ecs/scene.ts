@@ -5,8 +5,8 @@ import {
     EntityId,
     EntityMeta,
 } from "../types";
-import { Chunk, ChunkV2 } from "./chunk";
-import { Storage, StorageV2 } from "./storage";
+import { Chunk } from "./chunk";
+import { Storage } from "./Storage";
 import { CommandBuffer } from "./cmd";
 import { IDPool, SparseSet } from "../tools";
 import { Archetype, Signature } from "./archetype";
@@ -137,133 +137,6 @@ export class Scene {
 
         // remove the entire storage if there are no entities left
         if (storage.entityCount === 0) {
-            this.archetypes.delete(storage.archetype.signature);
-        }
-
-        return true;
-    }
-}
-
-export class ViewV2 {
-    constructor(
-        private readonly archetypeMap: Map<
-            Signature,
-            StorageV2<ComponentDescriptor[]>
-        >
-    ) {}
-
-    forEachChunkWith(
-        comps: ComponentType[],
-        cb: (
-            chunk: Readonly<ChunkV2<ComponentDescriptor[]>>,
-            chunkId: number
-        ) => void
-    ) {
-        const componentSignature = Archetype.makeSignature(...comps);
-        for (let [archetypeSignature, storage] of this.archetypeMap) {
-            if (
-                (archetypeSignature & componentSignature) ===
-                componentSignature
-            ) {
-                storage.forEachChunk(cb);
-            }
-        }
-    }
-}
-
-export class SceneV2 {
-    private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
-    private entityPool: IDPool<EntityId> = new IDPool();
-    readonly archetypes: Map<Signature, StorageV2<ComponentDescriptor[]>> =
-        new Map();
-
-    // readonly cmd: CommandBuffer;
-    readonly view: ViewV2;
-    readonly updateableSystems: UpdateableSystem[] = [];
-    readonly renderableSystems: RenderableSystem[] = [];
-
-    constructor(options: {
-        updateableSystems: UpdateableSystem[];
-        renderableSystems: RenderableSystem[];
-    }) {
-        this.updateableSystems = options.updateableSystems;
-        this.renderableSystems = options.renderableSystems;
-
-        this.view = new ViewV2(this.archetypes);
-        // this.cmd = new CommandBuffer(this.archetypes, this.entityMeta, this);
-    }
-
-    initialize(): void {
-        // this.cmd.flush();
-        // ... and other init stuff
-    }
-
-    createEntity(archetype: Archetype, comps: ComponentValueMap) {
-        let storage = this.archetypes.get(archetype.signature);
-        if (storage === undefined) {
-            const descriptors = archetype.types.map((c) =>
-                Archetype.registry.get(c)
-            ) as ComponentDescriptor[]; // archetype.types includes EntityId type so it's fine
-            this.archetypes.set(
-                archetype.signature,
-                new StorageV2<typeof descriptors>(archetype)
-            );
-
-            if (DEBUG)
-                console.log(
-                    `[Scene.createEntity]: created storage for ${Archetype.format(
-                        archetype
-                    )}`
-                );
-
-            storage = this.archetypes.get(archetype.signature)!; // just created one
-        }
-
-        const entityId = this.entityPool.acquire();
-
-        // 💥 this is done via cmd - DELETE THIS
-        // this.cmd.allocate(entityId, comps);
-
-        const { chunkId, row } = storage.allocate(comps);
-        this.entityMeta.insert(entityId, {
-            archetype: storage.archetype,
-            chunkId,
-            row,
-        });
-    }
-
-    removeEntity(entityId: EntityId): boolean {
-        const meta = this.entityMeta.get(entityId);
-        if (meta === undefined) {
-            if (DEBUG)
-                throw new Error(
-                    `Scene.removeEntity: entityId ${entityId} does not exists in the world`
-                );
-            return false;
-        }
-
-        const { archetype, chunkId, row } = meta;
-        const storage = this.archetypes.get(archetype.signature);
-        if (storage === undefined) {
-            if (DEBUG)
-                throw new Error(
-                    `Scene.removeEntity: entityId ${entityId} does not exists in the world`
-                );
-            return false;
-        }
-
-        this.entityPool.release(entityId);
-
-        // 💥 this is done via cmd - DELETE THIS
-        // this.cmd.delete(entityId);
-
-        storage.delete(chunkId, row);
-        this.entityMeta.remove(entityId);
-
-        // console.log(this.entityMeta.ids);
-
-        // remove the entire storage if there are no entities left
-        if (storage.length === 0) {
             this.archetypes.delete(storage.archetype.signature);
         }
 

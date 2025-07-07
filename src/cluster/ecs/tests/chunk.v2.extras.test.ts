@@ -1,7 +1,7 @@
 // src/cluster/ecs/tests/chunk.v2.extras.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { ChunkV2 } from "../chunkV2";
-import { Archetype } from "../archetype";
+import { ArchetypeV2 } from "../archetypeV2";
 
 enum Component {
     Position,
@@ -10,7 +10,7 @@ enum Component {
     Tag,
 }
 
-const DESCS = Archetype.register(
+const DESCS = ArchetypeV2.register(
     {
         type: Component.Position,
         name: "Position",
@@ -47,11 +47,7 @@ const [PosDesc, VelDesc, HealthDesc, TagDesc] = DESCS;
 describe("ChunkV2 ▶ multi-component support", () => {
     let chunk: ChunkV2<typeof DESCS>;
     beforeEach(() => {
-        const archetype = Archetype.create("multi", [
-            Component.Position,
-            Component.Velocity,
-            Component.Health,
-        ]);
+        const archetype = ArchetypeV2.create("multi", DESCS);
         chunk = new ChunkV2(archetype);
     });
 
@@ -100,10 +96,19 @@ describe("ChunkV2 ▶ multi-component support", () => {
 });
 
 describe("ChunkV2 ▶ alignment/padding edge case", () => {
-    let chunk: ChunkV2<typeof DESCS>;
+    let schema = ArchetypeV2.register({
+        type: Component.Tag,
+        name: "Tag",
+        count: 1,
+        buffer: Uint8Array,
+        alignment: 16,
+        default: [7],
+    });
+
+    let chunk: ChunkV2<typeof schema>;
 
     beforeEach(() => {
-        const archetype = Archetype.create("aligned", [Component.Tag]);
+        const archetype = ArchetypeV2.create("aligned", schema);
         chunk = new ChunkV2(archetype);
     });
 
@@ -118,10 +123,18 @@ describe("ChunkV2 ▶ alignment/padding edge case", () => {
 });
 
 describe("ChunkV2 ▶ error paths after dispose()", () => {
-    let chunk: ChunkV2<typeof DESCS>;
+    let schema = ArchetypeV2.register({
+        type: Component.Position,
+        name: "Position",
+        count: 2,
+        buffer: Float32Array,
+        default: [0, 0],
+    });
+
+    let chunk: ChunkV2<typeof schema>;
 
     beforeEach(() => {
-        const archetype = Archetype.create("throwy", [Component.Position]);
+        const archetype = ArchetypeV2.create("throwy", schema);
         chunk = new ChunkV2(archetype);
         chunk.allocate();
         chunk.dispose();
