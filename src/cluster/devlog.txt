@@ -10,3 +10,5 @@ TODO:
 - make a unique mesh pipeline if possible
 - fix the interp angles for smooth rotation
 - if chunk is full upload the whole thing? (no subarrays)
+
+- make consistent error messaging across the codebase
