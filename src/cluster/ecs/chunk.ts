@@ -21,14 +21,18 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
     private destroyed: boolean = false;
 
+    private generations: Uint32Array;
+
     readonly views: ComponentViews<S>;
 
     readonly capacity: number;
 
-    constructor(readonly archetype: Archetype) {
+    constructor(readonly archetype: Archetype<S>) {
         this.capacity = archetype.maxEntities || Chunk.DEFAULT_CAPACITY;
 
         const payloadBytes = this.capacity * archetype.byteStride;
+
+        this.generations = new Uint32Array(this.capacity);
 
         this.buffer = new ArrayBuffer(Chunk.HEADER_BYTE_SIZE + payloadBytes);
 
@@ -64,6 +68,14 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return Archetype.format(this.archetype);
     }
 
+    getGeneration(row: number): number {
+        this.assertAlive();
+        if (row < 0 || row >= this.capacity) {
+            throw new Error(`Chunk.getGeneration: row ${row} out of bounds`);
+        }
+        return this.generations[row];
+    }
+
     getView<T extends Buffer>(descriptor: ComponentDescriptor): T {
         this.assertAlive();
         const view = (this.views as any)[descriptor.name] as T;
@@ -73,7 +85,7 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         return view;
     }
 
-    allocate(): number {
+    allocate(): { row: number; generation: number } {
         this.assertAlive();
 
         if (this.count >= this.capacity) {
@@ -83,6 +95,8 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         }
 
         const row = this.count;
+
+        const generation = this.generations[row];
 
         this.incrementCount(); // Increment the count in the header
 
@@ -109,28 +123,34 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             }
         }
 
-        return row;
+        return { row, generation };
     }
 
-    delete(row: number): number | undefined {
+    delete(row: number): {
+        row: number;
+        generation: number;
+        movedRow: number | undefined;
+    } {
         this.assertAlive();
 
         if (this.count <= 0) {
-            if (DEBUG) console.warn("Chunk is empty, nothing to delete");
-            return undefined; // Nothing to delete
+            throw new Error(`Chunk.delete: chunk is empty, nothing to delete`);
         }
 
         const lastRow = this.count - 1;
         if (row < 0 || row >= this.count) {
-            if (DEBUG)
-                console.warn(`Row ${row} out of bounds, nothing to delete`);
-            return undefined; // Row out of bounds, nothing to delete
+            throw new Error(`Row ${row} out of bounds, nothing to delete`);
         }
 
         // now if the row to delete is the last row, just shrink then count and return undefined
         if (row === lastRow) {
+            this.generations[row]++;
             this.decrementCount();
-            return undefined;
+            return {
+                row: row,
+                generation: this.generations[row] - 1,
+                movedRow: undefined,
+            };
         }
 
         // copy last row → hole, column by column
@@ -150,10 +170,17 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
             view.copyWithin(dst, src, src + elems);
         }
 
-        // finally shrink count
-        this.decrementCount();
+        this.generations[row] = this.generations[lastRow];
 
-        return lastRow;
+        this.generations[lastRow]++;
+
+        this.decrementCount(); // finally shrink count
+
+        return {
+            row: row,
+            generation: this.generations[row],
+            movedRow: lastRow,
+        };
     }
 
     dispose(): void {

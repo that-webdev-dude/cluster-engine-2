@@ -1,4 +1,4 @@
-import { ArchetypeV2 } from "../../../cluster/ecs/archetypeV2";
+import { Archetype } from "../../../cluster/ecs/archetype";
 import { DESCRIPTORS } from "../components";
 import { Component } from "../components";
 import { Renderer } from "../../../cluster/gl/Renderer";
@@ -7,7 +7,7 @@ import { ComponentValueMap } from "../../../cluster/types";
 const worldW = Renderer.worldWidth();
 const worldH = Renderer.worldHeight();
 
-export const playerSchema = ArchetypeV2.register(
+export const playerSchema = Archetype.register(
     DESCRIPTORS.Player,
     DESCRIPTORS.Position,
     DESCRIPTORS.Offset,
@@ -29,4 +29,4 @@ export function getPlayerComponents(): ComponentValueMap {
     } as ComponentValueMap;
 }
 
-export const playerArchetype = ArchetypeV2.create("player", playerSchema, 1);
+export const playerArchetype = Archetype.create("player", playerSchema, 1);

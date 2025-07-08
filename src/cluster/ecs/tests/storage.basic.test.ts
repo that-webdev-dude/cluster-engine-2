@@ -1,13 +1,13 @@
 // src/cluster/ecs/tests/storage.v2.basic.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
-import { StorageV2 } from "../storageV2";
-import { ArchetypeV2 } from "../archetypeV2";
+import { Storage } from "../storage";
+import { Archetype } from "../archetype";
 
 enum Component {
     Position,
 }
 
-const schema = ArchetypeV2.register({
+const schema = Archetype.register({
     type: Component.Position,
     name: "Position",
     count: 2,
@@ -15,13 +15,13 @@ const schema = ArchetypeV2.register({
     default: [0, 0],
 });
 
-const archetype = ArchetypeV2.create("basic", schema);
+const archetype = Archetype.create("basic", schema);
 
 describe("StorageV2 ▶ basic operations", () => {
-    let storage: StorageV2<typeof schema>;
+    let storage: Storage<typeof schema>;
 
     beforeEach(() => {
-        storage = new StorageV2(archetype);
+        storage = new Storage(archetype);
     });
 
     it("starts empty with length = 0", () => {

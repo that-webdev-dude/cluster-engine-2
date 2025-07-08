@@ -1,7 +1,7 @@
+// src/cluster/ecs/tests/chunk.v2.extras.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { Chunk } from "../chunk";
 import { Archetype } from "../archetype";
-import type { ComponentDescriptor } from "../../types";
 
 enum Component {
     Position,
@@ -10,7 +10,6 @@ enum Component {
     Tag,
 }
 
-// Register four descriptors at once
 const DESCS = Archetype.register(
     {
         type: Component.Position,
@@ -45,91 +44,97 @@ const DESCS = Archetype.register(
 
 const [PosDesc, VelDesc, HealthDesc, TagDesc] = DESCS;
 
-describe("Chunk ▶ multi-component", () => {
+describe("ChunkV2 ▶ multi-component support", () => {
     let chunk: Chunk<typeof DESCS>;
-
     beforeEach(() => {
-        // Archetype only includes Position, Velocity, Health
-        const archetype = Archetype.create("multi", [
-            Component.Position,
-            Component.Velocity,
-            Component.Health,
-        ]);
+        const archetype = Archetype.create("multi", DESCS);
         chunk = new Chunk(archetype);
     });
 
     it("populates defaults for all components on allocate()", () => {
-        const idx = chunk.allocate();
+        const { row } = chunk.allocate();
 
         const pos = chunk.getView<Float32Array>(PosDesc);
         const vel = chunk.getView<Float32Array>(VelDesc);
         const hp = chunk.getView<Uint32Array>(HealthDesc);
 
         // Position default = [0,0]
-        expect(pos[idx * 2 + 0]).toBe(0);
-        expect(pos[idx * 2 + 1]).toBe(0);
+        expect(pos[row * 2 + 0]).toBe(0);
+        expect(pos[row * 2 + 1]).toBe(0);
 
         // Velocity default = [1,1]
-        expect(vel[idx * 2 + 0]).toBe(1);
-        expect(vel[idx * 2 + 1]).toBe(1);
+        expect(vel[row * 2 + 0]).toBe(1);
+        expect(vel[row * 2 + 1]).toBe(1);
 
         // Health default = [100]
-        expect(hp[idx]).toBe(100);
+        expect(hp[row]).toBe(100);
     });
 
     it("lets you write & read back multiple components independently", () => {
-        const idxA = chunk.allocate();
-        const idxB = chunk.allocate();
+        const { row: A } = chunk.allocate();
+        const { row: B } = chunk.allocate();
 
         const pos = chunk.getView<Float32Array>(PosDesc);
         const hp = chunk.getView<Uint32Array>(HealthDesc);
 
-        // Set distinct values
-        pos[idxA * 2 + 0] = 5;
-        pos[idxA * 2 + 1] = 6;
-        hp[idxA] = 55;
+        pos[A * 2 + 0] = 5;
+        pos[A * 2 + 1] = 6;
+        hp[A] = 55;
 
-        pos[idxB * 2 + 0] = 7;
-        pos[idxB * 2 + 1] = 8;
-        hp[idxB] = 77;
+        pos[B * 2 + 0] = 7;
+        pos[B * 2 + 1] = 8;
+        hp[B] = 77;
 
-        // Ensure no bleed-over
-        expect(pos[idxA * 2 + 0]).toBe(5);
-        expect(pos[idxA * 2 + 1]).toBe(6);
-        expect(hp[idxA]).toBe(55);
+        expect(pos[A * 2 + 0]).toBe(5);
+        expect(pos[A * 2 + 1]).toBe(6);
+        expect(hp[A]).toBe(55);
 
-        expect(pos[idxB * 2 + 0]).toBe(7);
-        expect(pos[idxB * 2 + 1]).toBe(8);
-        expect(hp[idxB]).toBe(77);
+        expect(pos[B * 2 + 0]).toBe(7);
+        expect(pos[B * 2 + 1]).toBe(8);
+        expect(hp[B]).toBe(77);
     });
 });
 
-describe("Chunk ▶ alignment/padding edge case", () => {
-    let chunk: Chunk<typeof DESCS>;
+describe("ChunkV2 ▶ alignment/padding edge case", () => {
+    let schema = Archetype.register({
+        type: Component.Tag,
+        name: "Tag",
+        count: 1,
+        buffer: Uint8Array,
+        alignment: 16,
+        default: [7],
+    });
+
+    let chunk: Chunk<typeof schema>;
 
     beforeEach(() => {
-        // Archetype includes only our Tag component with custom alignment
-        const archetype = Archetype.create("aligned", [Component.Tag]);
+        const archetype = Archetype.create("aligned", schema);
         chunk = new Chunk(archetype);
     });
 
-    it("ensures the view.byteOffset respects the descriptor.alignment", () => {
+    it("ensures view.byteOffset respects descriptor.alignment", () => {
         const view = chunk.getView<Uint8Array>(TagDesc);
-
-        // byteOffset must be a multiple of the alignment (16)
         expect(view.byteOffset % 16).toBe(0);
 
-        // We can still allocate and see our default in-place
-        const idx = chunk.allocate();
-        expect(view[idx]).toBe(7);
+        // still works on allocate
+        const { row } = chunk.allocate();
+        expect(view[row]).toBe(7);
     });
 });
 
-describe("Chunk ▶ error paths after dispose()", () => {
-    let chunk: Chunk<typeof DESCS>;
+describe("ChunkV2 ▶ error paths after dispose()", () => {
+    let schema = Archetype.register({
+        type: Component.Position,
+        name: "Position",
+        count: 2,
+        buffer: Float32Array,
+        default: [0, 0],
+    });
+
+    let chunk: Chunk<typeof schema>;
 
     beforeEach(() => {
-        const archetype = Archetype.create("throwy", [Component.Position]);
+        const archetype = Archetype.create("throwy", schema);
         chunk = new Chunk(archetype);
         chunk.allocate();
         chunk.dispose();
@@ -140,6 +145,7 @@ describe("Chunk ▶ error paths after dispose()", () => {
         ["byteCapacity getter", () => chunk.byteCapacity],
         ["full getter", () => chunk.full],
         ["formattedArchetype getter", () => chunk.formattedArchetype],
+        ["getGeneration()", () => chunk.getGeneration(0)],
         ["allocate()", () => chunk.allocate()],
         ["delete(0)", () => chunk.delete(0)],
         ["getView()", () => chunk.getView(PosDesc)],

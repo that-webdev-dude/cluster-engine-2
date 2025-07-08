@@ -1,30 +1,30 @@
 import { Component } from "../components";
-import { RenderableSystemV2 } from "../../../cluster/ecs/system";
-import { ViewV2 } from "../../../cluster/ecs/sceneV2";
-import { ChunkV2 } from "../../../cluster/ecs/chunkV2";
+import { RenderableSystem } from "../../../cluster/ecs/system";
+import { View } from "../../../cluster/ecs/scene";
+import { Chunk } from "../../../cluster/ecs/chunk";
 import { Renderer } from "../../../cluster/gl/Renderer";
 import { MeshPipeline, MeshData } from "../../../cluster/gl/pipelines/mesh";
 import { ComponentDescriptor } from "../../../cluster/types";
 
-export class RendererSystem implements RenderableSystemV2 {
+export class RendererSystem implements RenderableSystem {
     private renderer = Renderer.getInstance();
 
     private trianglePipe = MeshPipeline.create(this.renderer, 3);
     private hexagonPipe = MeshPipeline.create(this.renderer, 6);
 
     // cached attributes
-    private positions = new Float32Array(ChunkV2.DEFAULT_CAPACITY * 2);
-    private offsets = new Float32Array(ChunkV2.DEFAULT_CAPACITY * 2);
-    private angles = new Float32Array(ChunkV2.DEFAULT_CAPACITY * 1);
-    private pivots = new Float32Array(ChunkV2.DEFAULT_CAPACITY * 2);
-    private sizes = new Float32Array(ChunkV2.DEFAULT_CAPACITY * 2);
-    private colors = new Uint8Array(ChunkV2.DEFAULT_CAPACITY * 4);
+    private positions = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private offsets = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private angles = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
+    private pivots = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private sizes = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private colors = new Uint8Array(Chunk.DEFAULT_CAPACITY * 4);
 
     // cached camera position
     private cameraPos = [0, 0];
 
     private setPositions(
-        chunk: Readonly<ChunkV2<ComponentDescriptor[]>>,
+        chunk: Readonly<Chunk<ComponentDescriptor[]>>,
         alpha: number
     ) {
         const { count } = chunk;
@@ -50,7 +50,7 @@ export class RendererSystem implements RenderableSystemV2 {
     }
 
     private setAngles(
-        chunk: Readonly<ChunkV2<ComponentDescriptor[]>>,
+        chunk: Readonly<Chunk<ComponentDescriptor[]>>,
         alpha: number
     ) {
         const { count } = chunk;
@@ -75,7 +75,7 @@ export class RendererSystem implements RenderableSystemV2 {
         }
     }
 
-    private setPivots(chunk: Readonly<ChunkV2<ComponentDescriptor[]>>) {
+    private setPivots(chunk: Readonly<Chunk<ComponentDescriptor[]>>) {
         const { count } = chunk;
 
         chunk.views.Pivot
@@ -83,17 +83,17 @@ export class RendererSystem implements RenderableSystemV2 {
             : this.pivots.fill(0, 0, count);
     }
 
-    private setSizes(chunk: Readonly<ChunkV2<ComponentDescriptor[]>>) {
+    private setSizes(chunk: Readonly<Chunk<ComponentDescriptor[]>>) {
         const { count } = chunk;
         this.sizes.set(chunk.views.Size.subarray(0, count * 2), 0);
     }
 
-    private setOffsets(chunk: Readonly<ChunkV2<ComponentDescriptor[]>>) {
+    private setOffsets(chunk: Readonly<Chunk<ComponentDescriptor[]>>) {
         const { count } = chunk;
         this.offsets.set(chunk.views.Offset.subarray(0, count * 2), 0);
     }
 
-    private setColors(chunk: Readonly<ChunkV2<ComponentDescriptor[]>>) {
+    private setColors(chunk: Readonly<Chunk<ComponentDescriptor[]>>) {
         const { count } = chunk;
         this.colors.set(chunk.views.Color.subarray(0, count * 4), 0);
     }
@@ -109,7 +109,7 @@ export class RendererSystem implements RenderableSystemV2 {
         };
     }
 
-    render(view: ViewV2, alpha: number) {
+    render(view: View, alpha: number) {
         const gl = this.renderer.gl;
 
         // Update cameraPos (interpolated)

@@ -1,127 +1,67 @@
-import { Storage } from "./Storage";
-import {
-    ComponentDescriptor,
-    ComponentValueMap,
-    ComponentType,
-    EntityId,
-    EntityMeta,
-} from "../types";
-import { Archetype, Signature } from "./archetype";
-import { SparseSet } from "../tools";
+import { ComponentValueMap, EntityId } from "../types";
+import { Archetype } from "./archetype";
 import { Scene } from "./scene";
+import { DEBUG } from "../tools";
 
 export type Command =
-    | { type: "allocate"; entityId: EntityId; comps?: ComponentValueMap }
-    | { type: "delete"; entityId: EntityId }
-    | { type: "create"; archetype: Archetype; comps: ComponentValueMap }
-    | { type: "remove"; entityId: EntityId };
+    | {
+          type: "createEntity";
+          archetype: Archetype<any>;
+          comps: ComponentValueMap;
+      }
+    | { type: "removeEntity"; entityId: EntityId }
+    | {
+          type: "findEntityId";
+          archetype: Archetype<any>;
+          chunkId: number;
+          row: number;
+      };
 
 export class CommandBuffer {
     private commands: Command[] = [];
 
-    constructor(
-        private readonly archetypeMap: Map<
-            Signature,
-            Storage<ComponentDescriptor[]>
-        >,
-        private readonly entityMetaSet: SparseSet<EntityId, EntityMeta>,
-        private readonly scene: Scene
-    ) {}
+    constructor(private readonly scene: Scene) {}
 
-    private getStorageByEntityId(
-        entityId: EntityId
-    ): Storage<ComponentDescriptor[]> | undefined {
-        const meta = this.entityMetaSet.get(entityId);
-        if (meta !== undefined) {
-            const storage = this.archetypeMap.get(meta.archetype.signature);
-            if (storage !== undefined) {
-                return storage;
-            }
-        }
-        return undefined;
-    }
-
-    private getStorageBySignature(
-        signature: Signature
-    ): Storage<ComponentDescriptor[]> | undefined {
-        const storage = this.archetypeMap.get(signature);
-        if (storage !== undefined) {
-            return storage;
-        }
-
-        return undefined;
-    }
-
-    allocate(entityId: EntityId, comps?: ComponentValueMap) {
-        this.commands.push({ type: "allocate", entityId, comps });
-    }
-
-    delete(entityId: EntityId) {
-        this.commands.push({ type: "delete", entityId });
-    }
-
-    create(archetype: Archetype, comps: ComponentValueMap) {
-        this.commands.push({ type: "create", archetype, comps });
+    create(archetype: Archetype<any>, comps: ComponentValueMap) {
+        this.commands.push({ type: "createEntity", archetype, comps });
     }
 
     remove(entityId: EntityId) {
-        this.commands.push({ type: "remove", entityId });
+        this.commands.push({ type: "removeEntity", entityId });
+    }
+
+    findEntityId(archetype: Archetype<any>, chunkId: number, row: number) {
+        this.commands.push({ type: "findEntityId", archetype, chunkId, row });
     }
 
     flush() {
+        // if (DEBUG) {
+        //     console.log("Flushing", this.commands.length, "commands");
+        // }
+
         for (const cmd of this.commands) {
             switch (cmd.type) {
-                case "create":
+                case "createEntity":
                     this.scene.createEntity(cmd.archetype, cmd.comps);
                     break;
 
-                case "remove":
+                case "removeEntity":
                     this.scene.removeEntity(cmd.entityId);
                     break;
 
-                case "allocate":
-                    if (cmd.comps !== undefined) {
-                        const signature = Archetype.makeSignature(
-                            ...(Object.keys(cmd.comps).map(
-                                Number
-                            ) as ComponentType[])
-                        );
-
-                        const storage = this.getStorageBySignature(signature);
-                        if (storage !== undefined) {
-                            const { chunkId, row } = storage.allocate(
-                                cmd.entityId,
-                                cmd.comps
-                            );
-                            this.entityMetaSet.insert(cmd.entityId, {
-                                archetype: storage.archetype,
-                                // entityId: cmd.entityId,
-                                chunkId,
-                                row,
-                            });
-                        }
-                    }
-                    break;
-
-                case "delete":
-                    const storage = this.getStorageByEntityId(cmd.entityId);
-                    if (storage !== undefined) {
-                        storage.delete(cmd.entityId);
-                        this.entityMetaSet.remove(cmd.entityId);
-
-                        // remove the entire storage if there are no entities left
-                        if (storage.entityCount === 0) {
-                            this.archetypeMap.delete(
-                                storage.archetype.signature
-                            );
-                        }
-                    }
-                    break;
-
-                default:
+                case "findEntityId":
+                    this.scene.findEntityId(
+                        cmd.archetype,
+                        cmd.chunkId,
+                        cmd.row
+                    );
                     break;
             }
         }
+        this.commands.length = 0;
+    }
+
+    clear() {
         this.commands.length = 0;
     }
 }

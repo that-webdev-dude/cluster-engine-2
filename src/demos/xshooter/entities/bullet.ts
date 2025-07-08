@@ -1,4 +1,4 @@
-import { ArchetypeV2 } from "../../../cluster/ecs/archetypeV2";
+import { Archetype } from "../../../cluster/ecs/archetype";
 import { Component, DESCRIPTORS } from "../components";
 import { Renderer } from "../../../cluster/gl/Renderer";
 import { Vector } from "../../../cluster/tools/Vector";
@@ -8,7 +8,7 @@ const worldH = Renderer.worldHeight();
 const sourceVec = new Vector(worldW / 2, worldH / 2);
 const velocityVec = new Vector();
 
-export const bulletSchema = ArchetypeV2.register(
+export const bulletSchema = Archetype.register(
     DESCRIPTORS.Bullet,
     DESCRIPTORS.PreviousPosition,
     DESCRIPTORS.Position,
@@ -43,4 +43,4 @@ export function getBulletComponents(targetX: number, targetY: number) {
     };
 }
 
-export const bulletArchetype = ArchetypeV2.create("bullet", bulletSchema);
+export const bulletArchetype = Archetype.create("bullet", bulletSchema);

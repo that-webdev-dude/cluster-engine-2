@@ -1,137 +1,106 @@
-import { DEBUG } from "../tools";
+import { ComponentDescriptor, ComponentType } from "../types";
 import { Obj } from "../tools";
-import { SparseSet } from "../tools";
-import type { ComponentType, ComponentDescriptor } from "../types";
 
-/**  cache for already backed archetypes */
-const cache: Map<Signature, Archetype> = new Map();
+export type Signature = number;
 
-const registry: SparseSet<ComponentType, ComponentDescriptor> = new SparseSet();
+/**
+ * Generic archetype metadata type
+ */
+export type Archetype<S extends readonly ComponentDescriptor[]> = {
+    readonly name: string;
+    readonly signature: Signature;
+    readonly types: readonly ComponentType[];
+    readonly descriptors: ReadonlyMap<ComponentType, ComponentDescriptor>;
+    readonly offsets: ReadonlyMap<ComponentType, number>;
+    readonly byteStride: number;
+    readonly elementStride: number;
+    readonly maxEntities?: number;
+    readonly schema: S;
+};
 
-/** utility to compute the signature from a provided list of component types */
-function makeSignature(...comps: ComponentType[]): Signature {
-    const signature = comps.reduce((mask, t) => mask | (1 << t), 0);
-    return signature as Signature;
+function makeSignature(...types: ComponentType[]): Signature {
+    return types.reduce((mask, t) => mask | (1 << t), 0) as Signature;
 }
 
-function register(...desc: ComponentDescriptor[]): ComponentDescriptor[] {
-    desc.forEach((descriptor) => {
-        // check if the descriptor is laready registered
-        for (let [_, registered] of registry) {
-            if (registered !== undefined && registered.name === descriptor.name)
-                throw new Error(
-                    `Archetype.register: the descriptor name ${descriptor.name} is already registered. change name`
-                );
+function register<S extends readonly ComponentDescriptor[]>(...desc: S): S {
+    const seen = new Set<string>();
+    for (const d of desc) {
+        if (seen.has(d.name)) {
+            throw new Error(
+                `Archetype.register: Duplicate descriptor name "${d.name}". Use unique names.`
+            );
         }
-
-        const typeId = descriptor.type;
-
-        registry.insert(typeId, descriptor);
-    });
-
-    if (DEBUG)
-        console.info(`Archetype.register: component descriptors registered`);
-
+        seen.add(d.name);
+    }
     return desc;
 }
 
-/** creates a brand new archetype */
-function create(
+function create<S extends readonly ComponentDescriptor[]>(
     name: string,
-    comps: ComponentType[],
+    schema: S,
     maxEntities?: number
-): Archetype {
-    let types = [...new Set(comps)].sort((a, b) => a - b);
-
-    const signature = makeSignature(...types);
-
-    const existing = cache.get(signature);
-    if (existing) return existing;
+): Archetype<S> {
+    const descriptors = new Map<ComponentType, ComponentDescriptor>();
+    const offsets = new Map<ComponentType, number>();
+    const types = schema.map((d) => d.type).sort((a, b) => a - b);
 
     let byteStride = 0;
     let elementStride = 0;
-    const offsets = new Map<ComponentType, number>();
-    const descriptors = new Map<ComponentType, ComponentDescriptor>();
 
-    for (const type of types) {
-        const descriptor = registry.get(type);
-        if (descriptor === undefined)
-            throw new Error(
-                `Archetype:create: the type ${type} is not registered!`
-            );
-
-        const align =
-            descriptor.alignment ?? descriptor.buffer.BYTES_PER_ELEMENT;
-
-        // Align byteStride to the descriptor's alignment
+    for (const desc of schema) {
+        const align = desc.alignment ?? desc.buffer.BYTES_PER_ELEMENT;
         byteStride = (byteStride + align - 1) & ~(align - 1);
-
-        offsets.set(type, byteStride);
-
-        elementStride += descriptor.count;
-        byteStride += descriptor.count * descriptor.buffer.BYTES_PER_ELEMENT;
-
-        descriptors.set(type, descriptor);
+        offsets.set(desc.type, byteStride);
+        byteStride += desc.count * desc.buffer.BYTES_PER_ELEMENT;
+        elementStride += desc.count;
+        descriptors.set(desc.type, desc);
     }
 
-    const archetype: Archetype = {
+    const archetype: Archetype<S> = {
         name,
-        signature,
+        signature: makeSignature(...types),
         types,
+        descriptors,
         offsets,
         byteStride,
         elementStride,
-        descriptors,
         maxEntities,
+        schema,
     };
 
-    cache.set(signature, archetype);
-
-    Obj.deepFreze(archetype); // make the archetype deep-immutable
+    Obj.deepFreze(archetype); // Optional: make immutable if available
 
     return archetype;
 }
 
-/** returns true if the archetype has _exactly_ these comps (plus EntityId) */
-function matches(arch: Archetype, ...comps: ComponentType[]): boolean {
-    const reqMask = makeSignature(...comps); // archetypes always include EntityId under the hood
-    return arch.signature === reqMask;
+function matches<S extends readonly ComponentDescriptor[]>(
+    arch: Archetype<S>,
+    ...comps: ComponentType[]
+): boolean {
+    return arch.signature === makeSignature(...comps);
 }
 
-/** returns true if _all_ of the requested comps are present */
-function includes(arch: Archetype, ...comps: ComponentType[]): boolean {
-    const reqMask = makeSignature(...comps);
-    return (arch.signature & reqMask) === reqMask;
+function includes<S extends readonly ComponentDescriptor[]>(
+    arch: Archetype<S>,
+    ...comps: ComponentType[]
+): boolean {
+    const req = makeSignature(...comps);
+    return (arch.signature & req) === req;
 }
 
-/* utility to pretty print the provided archetype */
-function format(arch: Archetype): string {
-    return `Archetype.${arch.name}<${arch.types
-        .map((t) => arch.descriptors.get(t)?.name ?? t)
-        .join(",\n")}> stride = ${arch.byteStride} Bytes`;
+function format<S extends readonly ComponentDescriptor[]>(
+    arch: Archetype<S>
+): string {
+    return `Archetype.${arch.name}<${arch.schema
+        .map((d) => d.name)
+        .join(", ")}> stride = ${arch.byteStride} bytes`;
 }
 
-/** metadata descriptor for an archetype */
-export type Archetype = {
-    readonly name: string;
-    readonly signature: Signature;
-    readonly types: readonly ComponentType[];
-    readonly offsets: ReadonlyMap<ComponentType, number>;
-    readonly byteStride: number;
-    readonly elementStride: number;
-    readonly descriptors: ReadonlyMap<ComponentType, ComponentDescriptor>;
-    readonly maxEntities?: number;
-};
-
-export type Signature = number;
-
-/** Namespace Archetype */
 export const Archetype = {
     create,
+    register,
     matches,
     includes,
     format,
-    register,
     makeSignature,
-    registry,
 };

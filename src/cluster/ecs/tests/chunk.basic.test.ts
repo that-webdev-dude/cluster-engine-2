@@ -1,3 +1,4 @@
+// src/cluster/ecs/tests/chunk.v2.basic.test.ts
 import { describe, it, expect, beforeEach } from "vitest";
 import { Chunk } from "../chunk";
 import { Archetype } from "../archetype";
@@ -6,103 +7,134 @@ export enum Component {
     Position,
 }
 
-const DESCRIPTORS = Archetype.register(
-    ...[
-        {
-            type: Component.Position,
-            name: "Position",
-            count: 2,
-            buffer: Float32Array,
-            default: [0, 0],
-        },
-    ]
-);
+const schema = Archetype.register({
+    type: Component.Position,
+    name: "Position",
+    count: 2,
+    buffer: Float32Array,
+    default: [0, 0],
+});
 
-describe("Chunk", () => {
-    // Create an archetype with just the Position component
-    const archetype = Archetype.create("test", [Component.Position]);
-    let chunk: Chunk<typeof DESCRIPTORS>;
+describe("ChunkV2 ▶ basic functionality", () => {
+    let chunk: Chunk<typeof schema>;
+    // const archetype = Archetype.create("test", [Component.Position]);
+    const archetype = Archetype.create("test", schema);
 
     beforeEach(() => {
         chunk = new Chunk(archetype);
     });
 
-    it("initializes with count 0 and correct capacity", () => {
+    it("initializes with count 0, correct capacity, full=false, and generation=0", () => {
         expect(chunk.count).toBe(0);
         expect(chunk.capacity).toBe(
             archetype.maxEntities || Chunk.DEFAULT_CAPACITY
         );
         expect(chunk.full).toBe(false);
+
+        // generation array was zero-initialized
+        expect(chunk.getGeneration(0)).toBe(0);
     });
 
-    it("allocates entities and increments count", () => {
-        const firstIndex = chunk.allocate();
-        expect(firstIndex).toBe(0);
+    it("allocate() returns {row, generation} and bumps count", () => {
+        const first = chunk.allocate();
+        expect(first.row).toBe(0);
+        expect(first.generation).toBe(0);
         expect(chunk.count).toBe(1);
+        expect(chunk.getGeneration(0)).toBe(0);
 
-        const secondIndex = chunk.allocate();
-        expect(secondIndex).toBe(1);
+        const second = chunk.allocate();
+        expect(second.row).toBe(1);
+        expect(second.generation).toBe(0);
         expect(chunk.count).toBe(2);
+        expect(chunk.getGeneration(1)).toBe(0);
     });
 
-    it("initializes components to default values", () => {
-        const posView = chunk.getView<Float32Array>(DESCRIPTORS[0]);
-        // Row 0 default [0,0]
-        expect(posView[0]).toBe(0);
-        expect(posView[1]).toBe(0);
-        // Row 1 default [0,0]
-        expect(posView[2]).toBe(0);
-        expect(posView[3]).toBe(0);
+    it("initializes component data to defaults", () => {
+        const { row } = chunk.allocate();
+        const pos = chunk.getView<Float32Array>(schema[0]);
+        // default [0,0]
+        expect(pos[row * 2 + 0]).toBe(0);
+        expect(pos[row * 2 + 1]).toBe(0);
     });
 
-    it("throws when allocating beyond capacity", () => {
-        const cap = chunk.capacity;
-        // fill up to capacity
-        for (let i = chunk.count; i < cap; i++) {
+    it("throws when allocating past capacity", () => {
+        // fill to capacity
+        for (let i = 0; i < chunk.capacity; i++) {
             chunk.allocate();
         }
-
         expect(chunk.full).toBe(true);
-        expect(() => chunk.allocate()).toThrow(/Chunk is full/);
+        expect(() => chunk.allocate()).toThrow(/full/);
     });
 
-    it("deletes last entity and shrinks count without swapping", () => {
-        // allocate two more to ensure at least 2
-        chunk.allocate();
-        chunk.allocate();
-        const before = chunk.count;
-        // delete last
-        const result = chunk.delete(chunk.count - 1);
-        expect(result).toBeUndefined();
-        expect(chunk.count).toBe(before - 1);
+    it("delete(last) returns undefined movedRow and bumps only that row’s generation", () => {
+        // allocate two rows
+        chunk.allocate(); // row0
+        const { row: lastRow } = chunk.allocate(); // row1
+        const beforeGen = chunk.getGeneration(lastRow);
+
+        const result = chunk.delete(lastRow);
+        expect(result.movedRow).toBeUndefined();
+        expect(result.row).toBe(lastRow);
+        expect(result.generation).toBe(beforeGen);
+
+        expect(chunk.count).toBe(1);
+        // generation at lastRow was incremented
+        expect(chunk.getGeneration(lastRow)).toBe(beforeGen + 1);
     });
 
-    it("deletes non-last entity and swaps with last", () => {
-        // Ensure at least 3
-        while (chunk.count < 3) {
-            chunk.allocate();
-        }
-        const countBefore = chunk.count;
-        const target = 1;
-        // Set a distinct value in last row to detect swap
-        const posView = chunk.getView<Float32Array>(DESCRIPTORS[0]);
-        const lastRow = chunk.count - 1;
-        posView[lastRow * 2] = 42; // x of last row
-        posView[lastRow * 2 + 1] = 99; // y of last row
+    it("delete(non-last) swaps data+generation and bumps freed slot", () => {
+        // allocate 3 rows: 0,1,2
+        const a = chunk.allocate();
+        const b = chunk.allocate();
+        const c = chunk.allocate();
+        const lastRow = c.row;
+        const target = a.row; // 0
 
-        const movedRow = chunk.delete(target);
+        // write a distinct value into lastRow’s data
+        const pos = chunk.getView<Float32Array>(schema[0]);
+        pos[lastRow * 2 + 0] = 42;
+        pos[lastRow * 2 + 1] = 99;
+        const genLast = chunk.getGeneration(lastRow);
+
+        const { row, generation, movedRow } = chunk.delete(target);
+        expect(row).toBe(target);
         expect(movedRow).toBe(lastRow);
-        expect(chunk.count).toBe(countBefore - 1);
+        expect(generation).toBe(genLast);
+        expect(chunk.count).toBe(2);
 
-        // Check that row 'target' now has the former last's values
-        expect(posView[target * 2]).toBe(42);
-        expect(posView[target * 2 + 1]).toBe(99);
+        // data moved into target
+        expect(pos[target * 2 + 0]).toBe(42);
+        expect(pos[target * 2 + 1]).toBe(99);
+        // generation moved into target
+        expect(chunk.getGeneration(target)).toBe(genLast);
+        // freed lastRow got its generation bumped
+        expect(chunk.getGeneration(lastRow)).toBe(genLast + 1);
     });
 
-    it("dispose zeros header and marks destroyed", () => {
-        const c2 = new Chunk(archetype);
-        c2.allocate();
-        c2.dispose();
-        expect(() => c2.count).toThrow(/destroyed/);
+    it("getGeneration(row) throws when out of bounds", () => {
+        expect(() => chunk.getGeneration(-1)).toThrow(/out of bounds/);
+        expect(() => chunk.getGeneration(chunk.capacity)).toThrow(
+            /out of bounds/
+        );
+    });
+
+    it("all public APIs throw after dispose()", () => {
+        chunk.allocate();
+        chunk.dispose();
+
+        const methods: Array<[string, () => any]> = [
+            ["count", () => chunk.count],
+            ["byteCapacity", () => chunk.byteCapacity],
+            ["full", () => chunk.full],
+            ["formattedArchetype", () => chunk.formattedArchetype],
+            ["getGeneration", () => chunk.getGeneration(0)],
+            ["allocate()", () => chunk.allocate()],
+            ["delete(0)", () => chunk.delete(0)],
+            ["getView()", () => chunk.getView(schema[0])],
+        ];
+
+        for (const [name, fn] of methods) {
+            expect(fn).toThrow(/destroyed/);
+        }
     });
 });

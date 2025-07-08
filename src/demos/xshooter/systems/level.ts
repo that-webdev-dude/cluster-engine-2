@@ -1,6 +1,6 @@
-import { UpdateableSystemV2 } from "../../../cluster/ecs/system";
-import { CommandBufferV2 } from "../../../cluster/ecs/cmdV2";
-import { ViewV2 } from "../../../cluster/ecs/sceneV2";
+import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { CommandBuffer } from "../../../cluster/ecs/cmd";
+import { View } from "../../../cluster/ecs/scene";
 import { meteorArchetype, getMeteorComponents } from "../entities/meteor";
 
 const State = {
@@ -9,10 +9,10 @@ const State = {
     entitiesPerSpawn: 1,
 };
 
-export class LevelSystem implements UpdateableSystemV2 {
+export class LevelSystem implements UpdateableSystem {
     private counter = State.spawnInterval;
 
-    update(view: ViewV2, cmd: CommandBufferV2, dt: number) {
+    update(view: View, cmd: CommandBuffer, dt: number) {
         this.counter -= dt;
 
         if (this.counter <= 0) {

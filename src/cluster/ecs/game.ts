@@ -3,7 +3,7 @@ import { Scene } from "./scene";
 
 export class Game {
     private engine: Engine = new Engine(60);
-    private scenes: Array<Scene> = []; // a stack of Scene instances
+    private scenes: Array<Scene> = []; // a stack of SceneV2 instances
 
     setScene(scene: Scene): void {
         scene.initialize();

@@ -43,7 +43,8 @@ export interface ComponentDescriptor {
 export type EntityId = number;
 
 export type EntityMeta = {
-    archetype: Archetype;
+    archetype: Archetype<any>;
     chunkId: number;
     row: number;
+    generation: number;
 };

@@ -1,12 +1,12 @@
-import { UpdateableSystemV2 } from "../../../cluster/ecs/system";
-import { CommandBufferV2 } from "../../../cluster/ecs/cmdV2";
-import { ViewV2 } from "../../../cluster/ecs/sceneV2";
+import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { CommandBuffer } from "../../../cluster/ecs/cmd";
+import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
 import { Mouse } from "../input";
 import { Component } from "../components";
 
-export class MotionSystem implements UpdateableSystemV2 {
-    update(view: ViewV2, cmd: CommandBufferV2, dt: number) {
+export class MotionSystem implements UpdateableSystem {
+    update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith(
             [
                 Component.PreviousPosition,

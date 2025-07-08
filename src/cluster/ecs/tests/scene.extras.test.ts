@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { SceneV2 } from "../sceneV2";
-import { ArchetypeV2 } from "../archetypeV2";
-import { CommandBufferV2 } from "../cmdV2";
+import { Scene } from "../scene";
+import { Archetype } from "../archetype";
+import { CommandBuffer } from "../cmd";
 import type { View } from "../scene";
 import type { EntityId } from "../../types";
 
@@ -10,7 +10,7 @@ enum Component {
     Health,
 }
 
-const [PosDesc, HealthDesc] = ArchetypeV2.register(
+const [PosDesc, HealthDesc] = Archetype.register(
     {
         type: Component.Position,
         name: "Position",
@@ -30,7 +30,7 @@ const [PosDesc, HealthDesc] = ArchetypeV2.register(
 class TestSystem {
     createdId: EntityId | null = null;
 
-    update(view: View, cmd: CommandBufferV2) {
+    update(view: View, cmd: CommandBuffer) {
         // Create entity via command buffer
         cmd.create(archetype, {
             [Component.Position]: [42, 84],
@@ -39,9 +39,9 @@ class TestSystem {
     }
 }
 
-let scene: SceneV2;
-let cmd: CommandBufferV2;
-let schema = ArchetypeV2.register(
+let scene: Scene;
+let cmd: CommandBuffer;
+let schema = Archetype.register(
     {
         type: Component.Position,
         name: "Position",
@@ -57,12 +57,12 @@ let schema = ArchetypeV2.register(
         default: [100],
     }
 );
-let archetype = ArchetypeV2.create("cmdTest", schema);
+let archetype = Archetype.create("cmdTest", schema);
 
 describe("SceneV2 ▶ command buffer integration", () => {
     beforeEach(() => {
-        scene = new SceneV2({ updateableSystems: [], renderableSystems: [] });
-        cmd = new CommandBufferV2(scene);
+        scene = new Scene({ updateableSystems: [], renderableSystems: [] });
+        cmd = new CommandBuffer(scene);
     });
 
     it("defers entity creation until flush is called", () => {

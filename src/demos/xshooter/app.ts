@@ -1,7 +1,7 @@
-import { GameV2 } from "../../cluster/ecs/gameV2";
+import { Game } from "../../cluster/ecs/game";
 import { createGamePlay } from "./scenes/gamePlay";
 
-const game = new GameV2();
+const game = new Game();
 
 game.setScene(createGamePlay());
 

@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { SceneV2 } from "../sceneV2";
-import { ArchetypeV2 } from "../archetypeV2";
+import { Scene } from "../scene";
+import { Archetype } from "../archetype";
 
 enum Component {
     Position,
     Health,
 }
 
-const [PosDesc, HealthDesc] = ArchetypeV2.register(
+const [PosDesc, HealthDesc] = Archetype.register(
     {
         type: Component.Position,
         name: "Position",
@@ -25,9 +25,9 @@ const [PosDesc, HealthDesc] = ArchetypeV2.register(
 );
 
 describe("SceneV2 ▶ basic functionality", () => {
-    let scene: SceneV2;
+    let scene: Scene;
 
-    const schema = ArchetypeV2.register(
+    const schema = Archetype.register(
         {
             type: Component.Position,
             name: "Position",
@@ -43,10 +43,10 @@ describe("SceneV2 ▶ basic functionality", () => {
             default: [100],
         }
     );
-    const archetype = ArchetypeV2.create("test", schema);
+    const archetype = Archetype.create("test", schema);
 
     beforeEach(() => {
-        scene = new SceneV2({ updateableSystems: [], renderableSystems: [] });
+        scene = new Scene({ updateableSystems: [], renderableSystems: [] });
     });
 
     it("createEntity stores metadata and default component values", () => {

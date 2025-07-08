@@ -1,13 +1,13 @@
-import { UpdateableSystemV2 } from "../../../cluster/ecs/system";
-import { CommandBufferV2 } from "../../../cluster/ecs/cmdV2";
-import { ViewV2 } from "../../../cluster/ecs/sceneV2";
+import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { CommandBuffer } from "../../../cluster/ecs/cmd";
+import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
 import { Renderer } from "../../../cluster/gl/Renderer";
 import { bulletArchetype } from "../entities/bullet";
 
-export class BulletSystem implements UpdateableSystemV2 {
-    update(view: ViewV2, cmd: CommandBufferV2, dt: number) {
+export class BulletSystem implements UpdateableSystem {
+    update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith([Component.Bullet], (chunk, chunkId) => {
             const count = chunk.count;
             if (count === 0) return;

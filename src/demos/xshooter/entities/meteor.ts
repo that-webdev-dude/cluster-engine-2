@@ -1,4 +1,4 @@
-import { ArchetypeV2 } from "../../../cluster/ecs/archetypeV2";
+import { Archetype } from "../../../cluster/ecs/archetype";
 import { DESCRIPTORS } from "../components";
 import { Component } from "../components";
 import { Cmath } from "../../../cluster/tools";
@@ -9,7 +9,7 @@ const worldW = Renderer.worldWidth();
 const worldH = Renderer.worldHeight();
 const targetVec = new Vector(worldW / 2, worldH / 2);
 
-export const meteorSchema = ArchetypeV2.register(
+export const meteorSchema = Archetype.register(
     DESCRIPTORS.Meteor,
     DESCRIPTORS.PreviousPosition,
     DESCRIPTORS.Position,
@@ -79,4 +79,4 @@ export function getMeteorComponents() {
     };
 }
 
-export const meteorArchetype = ArchetypeV2.create("meteor", meteorSchema);
+export const meteorArchetype = Archetype.create("meteor", meteorSchema);

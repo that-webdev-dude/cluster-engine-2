@@ -1,6 +1,6 @@
-import { UpdateableSystemV2 } from "../../../cluster/ecs/system";
-import { CommandBufferV2 } from "../../../cluster/ecs/cmdV2";
-import { ViewV2 } from "../../../cluster/ecs/sceneV2";
+import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { CommandBuffer } from "../../../cluster/ecs/cmd";
+import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
 import { Mouse } from "../input";
 import { Component } from "../components";
@@ -12,10 +12,10 @@ const State = {
     bulletsPerShot: 1,
 };
 
-export class PlayerSystem implements UpdateableSystemV2 {
+export class PlayerSystem implements UpdateableSystem {
     private counter = State.shotInterval;
 
-    update(view: ViewV2, cmd: CommandBufferV2, dt: number) {
+    update(view: View, cmd: CommandBuffer, dt: number) {
         this.counter -= dt;
 
         const mx = Mouse.virtualPosition.x;
