@@ -178,5 +178,29 @@ export class RendererSystem implements RenderableSystemV2 {
             );
             this.hexagonPipe.draw(gl, data, count);
         });
+
+        view.forEachChunkWith([Component.Bullet], (chunk) => {
+            const count = chunk.count;
+            if (count === 0) return;
+
+            this.setPositions(chunk, alpha);
+            this.setAngles(chunk, alpha);
+            this.setOffsets(chunk);
+            this.setColors(chunk);
+            this.setSizes(chunk);
+            this.setPivots(chunk);
+
+            // Build the SoA for this batch
+            const data = this.setMeshData();
+
+            // Issue one instanced draw
+            this.hexagonPipe.bind(gl);
+            this.hexagonPipe.setCamera(
+                gl,
+                this.cameraPos[0],
+                this.cameraPos[1]
+            );
+            this.hexagonPipe.draw(gl, data, count);
+        });
     }
 }

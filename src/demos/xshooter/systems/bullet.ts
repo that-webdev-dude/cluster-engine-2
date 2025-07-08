@@ -4,11 +4,11 @@ import { ViewV2 } from "../../../cluster/ecs/sceneV2";
 import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
 import { Renderer } from "../../../cluster/gl/Renderer";
-import { meteorArchetype } from "../entities/meteor";
+import { bulletArchetype } from "../entities/bullet";
 
-export class MeteorSystem implements UpdateableSystemV2 {
+export class BulletSystem implements UpdateableSystemV2 {
     update(view: ViewV2, cmd: CommandBufferV2, dt: number) {
-        view.forEachChunkWith([Component.Meteor], (chunk, chunkId) => {
+        view.forEachChunkWith([Component.Bullet], (chunk, chunkId) => {
             const count = chunk.count;
             if (count === 0) return;
 
@@ -27,7 +27,7 @@ export class MeteorSystem implements UpdateableSystemV2 {
                     py - 8 * hh > Renderer.worldHeight()
                 ) {
                     let r = (cmd as any).scene.findEntityId(
-                        meteorArchetype,
+                        bulletArchetype,
                         chunkId,
                         i
                     );

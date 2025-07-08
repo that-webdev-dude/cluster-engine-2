@@ -5,6 +5,8 @@ import { PlayerSystem } from "../systems/player";
 import { MotionSystem } from "../systems/motion";
 import { MeteorSystem } from "../systems/meteor";
 import { LevelSystem } from "../systems/level";
+import { BulletSystem } from "../systems/bullet";
+import { CollisionSystem } from "../systems/collision";
 
 export function createGamePlay() {
     const scene = new SceneV2({
@@ -13,6 +15,8 @@ export function createGamePlay() {
             new PlayerSystem(),
             new MotionSystem(),
             new MeteorSystem(),
+            new BulletSystem(),
+            new CollisionSystem(),
         ],
         renderableSystems: [new RendererSystem()],
     });

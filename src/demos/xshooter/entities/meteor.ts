@@ -61,7 +61,10 @@ function spawn(size: number): { x: number; y: number } {
 export function getMeteorComponents() {
     let sz = 32;
     let posVec = spawn(sz) as Vector;
-    let velVec = Vector.from(posVec).connect(targetVec).normalize().scale(100);
+    let velVec = Vector.from(posVec)
+        .connect(targetVec)
+        .normalize()
+        .scale(Cmath.rand(10, 40));
 
     return {
         [Component.Meteor]: [1],

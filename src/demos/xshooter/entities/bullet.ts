@@ -1,13 +1,46 @@
 import { ArchetypeV2 } from "../../../cluster/ecs/archetypeV2";
-import { DESCRIPTORS } from "../components";
+import { Component, DESCRIPTORS } from "../components";
+import { Renderer } from "../../../cluster/gl/Renderer";
+import { Vector } from "../../../cluster/tools/Vector";
+
+const worldW = Renderer.worldWidth();
+const worldH = Renderer.worldHeight();
+const sourceVec = new Vector(worldW / 2, worldH / 2);
+const velocityVec = new Vector();
 
 export const bulletSchema = ArchetypeV2.register(
     DESCRIPTORS.Bullet,
+    DESCRIPTORS.PreviousPosition,
     DESCRIPTORS.Position,
+    DESCRIPTORS.Offset,
     DESCRIPTORS.Angle,
     DESCRIPTORS.Pivot,
     DESCRIPTORS.Size,
-    DESCRIPTORS.Color
+    DESCRIPTORS.Color,
+    DESCRIPTORS.Speed,
+    DESCRIPTORS.Velocity
 );
+
+export function getBulletComponents(targetX: number, targetY: number) {
+    velocityVec
+        .set(targetX, targetY)
+        .connect(sourceVec)
+        .reverse()
+        .normalize()
+        .scale(100);
+
+    return {
+        [Component.Bullet]: [1],
+        [Component.PreviousPosition]: [sourceVec.x, sourceVec.y],
+        [Component.Position]: [sourceVec.x, sourceVec.y],
+        [Component.Offset]: [0, 0],
+        [Component.Angle]: [0],
+        [Component.Pivot]: [0, 0],
+        [Component.Size]: [4, 4],
+        [Component.Color]: [255, 255, 255, 255],
+        [Component.Speed]: [100],
+        [Component.Velocity]: [velocityVec.x, velocityVec.y],
+    };
+}
 
 export const bulletArchetype = ArchetypeV2.create("bullet", bulletSchema);

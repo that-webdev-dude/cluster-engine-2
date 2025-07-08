@@ -6,6 +6,7 @@ export enum Component {
     Pivot,
     Size,
     Color,
+    Speed,
     Velocity,
     Health,
     Player,
@@ -64,12 +65,19 @@ const DESCRIPTORS = {
         buffer: Uint8Array,
         default: [255, 255, 255, 255],
     },
+    Speed: {
+        type: Component.Speed,
+        name: "Speed",
+        count: 1,
+        buffer: Float32Array,
+        default: [0],
+    },
     Velocity: {
         type: Component.Velocity,
         name: "Velocity",
         count: 2,
         buffer: Float32Array,
-        default: [20, 21],
+        default: [0, 0],
     },
     Health: {
         type: Component.Health,
