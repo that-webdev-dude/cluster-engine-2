@@ -1,7 +1,6 @@
 import { ComponentValueMap, EntityId } from "../types";
 import { Archetype } from "./archetype";
 import { Scene } from "./scene";
-import { DEBUG } from "../tools";
 
 export type Command =
     | {

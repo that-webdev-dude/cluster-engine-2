@@ -12,7 +12,7 @@ const State = {
     bulletsPerShot: 1,
 };
 
-export class PlayerSystem implements UpdateableSystem {
+export class PlayerSystem extends UpdateableSystem {
     private counter = State.shotInterval;
 
     update(view: View, cmd: CommandBuffer, dt: number) {

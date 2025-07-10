@@ -12,3 +12,4 @@ TODO:
 - if chunk is full upload the whole thing? (no subarrays)
 
 - make consistent error messaging across the codebase
+- add an updateEntity in Scene

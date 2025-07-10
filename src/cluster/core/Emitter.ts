@@ -128,7 +128,7 @@ class QueuedEmitter implements Emitter {
         this.queue.push(event);
     }
 
-    processEvents(): void {
+    flush(): void {
         while (this.queue.length > 0) {
             const event = this.queue.shift();
             if (event) {
@@ -230,8 +230,8 @@ export class EventEmitter implements Emitter {
         }
     }
 
-    processEvents(): void {
-        this.queuedEmitter.processEvents();
+    flush(): void {
+        this.queuedEmitter.flush();
     }
 
     clear(): void {

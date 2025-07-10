@@ -9,7 +9,7 @@ const State = {
     entitiesPerSpawn: 1,
 };
 
-export class LevelSystem implements UpdateableSystem {
+export class LevelSystem extends UpdateableSystem {
     private counter = State.spawnInterval;
 
     update(view: View, cmd: CommandBuffer, dt: number) {

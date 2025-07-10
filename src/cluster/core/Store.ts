@@ -1,4 +1,4 @@
-import { EventEmitter, Event } from "./Emitter";
+import { Emitter, Event } from "./Emitter";
 
 const STATUS = {
     mutation: "mutation",
@@ -14,24 +14,13 @@ type Action = (store: Store, payload?: any) => void;
 
 type State = any;
 
-type StoreOptions = {
-    state?: State;
-    actions?: {
-        [key: string]: Action;
-    };
-    getters?: {
-        [key: string]: (state: State) => any;
-    };
-    mutations?: {
-        [key: string]: Mutation;
-    };
-};
-
 /**
  * The Store class is a centralized state management system.
  * It extends the EventEmitter to provide event-driven state changes.
  */
-export class Store extends EventEmitter {
+export class Store {
+    private emitter = Emitter;
+
     private _status: string = STATUS.resting;
     private _state: State;
     private _getters: Map<string, Getter>;
@@ -43,8 +32,6 @@ export class Store extends EventEmitter {
      * @param options - The options to initialize the store.
      */
     constructor(options: StoreOptions) {
-        super();
-
         const {
             state = {},
             actions = {},
@@ -121,7 +108,39 @@ export class Store extends EventEmitter {
         }
         return getter(this._state);
     }
+
+    /**
+     * emitter
+     */
+    emit<T extends Event>(event: T, critical = false): void {
+        this.emitter.emit(event, critical);
+    }
+
+    on<T extends Event>(
+        eventType: string,
+        listener: (event: T) => void,
+        critical = false
+    ): void {
+        this.emitter.on(eventType, listener, critical);
+    }
+
+    flush(): void {
+        this.emitter.flush();
+    }
 }
+
+export type StoreOptions = {
+    state?: State;
+    actions?: {
+        [key: string]: Action;
+    };
+    getters?: {
+        [key: string]: (state: State) => any;
+    };
+    mutations?: {
+        [key: string]: Mutation;
+    };
+};
 
 export type StoreEvent = Event;
 

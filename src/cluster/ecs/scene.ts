@@ -1,24 +1,16 @@
-import { Archetype, Signature } from "./archetype";
-import { Storage } from "./storage";
 import {
     ComponentDescriptor,
-    ComponentType,
     ComponentValueMap,
+    ComponentType,
+    EntityMeta,
     EntityId,
 } from "../types";
-import { Chunk } from "./chunk";
-import { SparseSet, IDPool } from "../tools";
-import { CommandBuffer } from "./cmd";
 import { UpdateableSystem, RenderableSystem } from "./system";
-
-export type EntityMeta = {
-    archetype: Archetype<any>;
-    chunkId: number;
-    row: number;
-    generation: number;
-};
-
-const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
+import { Archetype, Signature } from "./archetype";
+import { Storage } from "./storage";
+import { Chunk } from "./chunk";
+import { CommandBuffer } from "./cmd";
+import { SparseSet, IDPool, DEBUG } from "../tools";
 
 export class View {
     constructor(private readonly archetypeMap: Map<Signature, Storage<any>>) {}
@@ -39,11 +31,10 @@ export class View {
 export class Scene {
     private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
     private entityPool: IDPool<EntityId> = new IDPool();
-    readonly archetypes: Map<Signature, Storage<any>> = new Map();
 
+    readonly archetypes: Map<Signature, Storage<any>> = new Map();
     readonly cmd: CommandBuffer;
     readonly view: View;
-
     readonly updateableSystems: UpdateableSystem[] = [];
     readonly renderableSystems: RenderableSystem[] = [];
 

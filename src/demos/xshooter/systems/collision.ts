@@ -3,8 +3,9 @@ import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Component } from "../components";
 import { meteorArchetype } from "../entities/meteor";
+import { MeteorDiedEvent } from "../events";
 
-export class CollisionSystem implements UpdateableSystem {
+export class CollisionSystem extends UpdateableSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         // Gather meteor data
         const meteors: {
@@ -59,6 +60,13 @@ export class CollisionSystem implements UpdateableSystem {
 
                             cmd.remove(bulletId);
                             cmd.remove(meteorId);
+
+                            const event: MeteorDiedEvent = {
+                                type: "meteorDied",
+                                data: { entityId: bulletId },
+                            };
+
+                            this.store.emit<MeteorDiedEvent>(event, false);
 
                             break; // move on to next bullet
                         }

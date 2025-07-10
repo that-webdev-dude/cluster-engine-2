@@ -1,9 +1,12 @@
 import { Engine } from "../core/Engine";
+import { Store } from "../core/Store";
 import { Scene } from "./scene";
 
 export class Game {
     private engine: Engine = new Engine(60);
     private scenes: Array<Scene> = []; // a stack of SceneV2 instances
+
+    constructor(readonly store: Store = new Store({})) {}
 
     setScene(scene: Scene): void {
         scene.initialize();
@@ -27,6 +30,7 @@ export class Game {
     }
 
     done() {
+        this.store.flush(); // resolves all the store events
         this.scenes.forEach((scene) => {
             scene.cmd.flush();
         });

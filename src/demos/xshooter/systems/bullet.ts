@@ -6,7 +6,7 @@ import { Component } from "../components";
 import { Renderer } from "../../../cluster/gl/Renderer";
 import { bulletArchetype } from "../entities/bullet";
 
-export class BulletSystem implements UpdateableSystem {
+export class BulletSystem extends UpdateableSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith([Component.Bullet], (chunk, chunkId) => {
             const count = chunk.count;

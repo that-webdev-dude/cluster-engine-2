@@ -6,7 +6,7 @@ import { Component } from "../components";
 import { Renderer } from "../../../cluster/gl/Renderer";
 import { meteorArchetype } from "../entities/meteor";
 
-export class MeteorSystem implements UpdateableSystem {
+export class MeteorSystem extends UpdateableSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith([Component.Meteor], (chunk, chunkId) => {
             const count = chunk.count;
@@ -31,6 +31,7 @@ export class MeteorSystem implements UpdateableSystem {
                         chunkId,
                         i
                     );
+
                     cmd.remove(r[0]);
                 }
             }
