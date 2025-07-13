@@ -2,14 +2,13 @@ TODO:
 
 - ✅ implement an IDPool for creation and deletion of ids (this can be used in the storage)
     → 🟦 maybe this can have the generation encoding?
-- make the Archetype a generic so the Storage works with generics
 - If you plan to reset a scene or level, consider exposing a .reset() method in Storage that calls chunkIdPool.reset() and clears all internal maps. This would make recycling the whole world easier without creating new instances.
 - EntityMetaSet should be instanciated via SparseSet
 - in renderer system refactor common consider- in camera archetype add position and prev position for smooth movement + adjustthe systems
 
-- make a unique mesh pipeline if possible
 - fix the interp angles for smooth rotation
 - if chunk is full upload the whole thing? (no subarrays)
 
 - make consistent error messaging across the codebase
 - add an updateEntity in Scene
+- make the archetypes map in Scene a Graphinstead of a Map for fast search

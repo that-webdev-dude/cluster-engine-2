@@ -22,12 +22,6 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
     private liveRecords: number = 0;
 
-    // TODO
-    /**
-     * You can instantiate a StorageV2<S> with an Archetype whose component list doesn’t actually match S. TypeScript can’t verify that the tuple of descriptors S corresponds exactly to archetype.types.
-     * Option: make Archetype generic, e.g. Archetype<S> so that create and register carry the same S through to StorageV2<S>.
-     * Option: at runtime, in your constructor, assert that archetype.types.length === S.length and that the type identifiers line up, throwing early if they don’t.
-     */
     constructor(readonly archetype: Archetype<S>) {}
 
     get length() {

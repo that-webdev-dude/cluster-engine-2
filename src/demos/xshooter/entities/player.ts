@@ -3,9 +3,10 @@ import { DESCRIPTORS } from "../components";
 import { Component } from "../components";
 import { Renderer } from "../../../cluster/gl/Renderer";
 import { ComponentValueMap } from "../../../cluster/types";
+import { GLOBALS } from "../globals";
 
-const worldW = Renderer.worldWidth();
-const worldH = Renderer.worldHeight();
+const worldW = GLOBALS.worldW;
+const worldH = GLOBALS.worldH;
 
 export const playerSchema = Archetype.register(
     DESCRIPTORS.Player,

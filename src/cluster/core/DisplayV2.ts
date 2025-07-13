@@ -1,9 +1,5 @@
-import { Game } from "../../cluster/ecs/game";
-import { store } from "./stores";
-import { createGamePlay } from "./scenes/gamePlay";
-import { Obj } from "../../cluster/tools";
-import { Cmath } from "../../cluster/tools";
-import { buffer } from "stream/consumers";
+import { Cmath } from "../tools";
+import { Obj } from "../tools";
 
 type RGBA = { r: number; g: number; b: number; a: number };
 
@@ -28,9 +24,14 @@ interface RenderingLayerOptions extends Omit<DisplayOptions, "parent"> {
 }
 
 /**
- * ⚠️ display needs to be a singleton
- * should resize all the rendering layers on resize
- * should destroy all the rendering layers on destroy
+ * Manages the main display canvas for 2D and GPU-accelerated rendering.
+ * Handles canvas creation, resizing, fullscreen toggling, and rendering layers.
+ * Supports high-DPI displays and background color configuration.
+ *
+ * @remarks
+ * - Automatically attaches to a parent DOM element or defaults to `<body>`.
+ * - Maintains a set of rendering layers (CPU/GPU) for compositing.
+ * - Provides methods for clearing, resizing, rendering, and cleanup.
  */
 export class Display {
     private ctx: CanvasRenderingContext2D;
@@ -146,6 +147,59 @@ export class Display {
         return this.optsH;
     }
 
+    public createGPURenderingLayer() {
+        const layer = new GPURenderingLayer({
+            width: this.bufW,
+            height: this.bufH,
+            alpha: true,
+            depth: false,
+            stencil: false,
+            antialias: true,
+            backgroundColor: this.backgroundColor,
+        });
+
+        this.renderingLayers.add(layer);
+
+        return layer;
+    }
+
+    public transferRenderingLayer(layer: RenderingLayer) {
+        const srcCanvas = layer.getCanvas();
+        this.ctx.drawImage(srcCanvas, 0, 0, this.bufW, this.bufH);
+    }
+
+    public clear(): void {
+        this.setBackgroundColor();
+        this.ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
+    }
+
+    public destroy(): void {
+        window.removeEventListener("resize", this.onScreenResizeBound);
+        document.removeEventListener("keydown", this.onFullscreenKeyBound);
+        document.removeEventListener(
+            "fullscreenchange",
+            this.onFullscreenChangeBound
+        );
+        if (this.canvas.parentElement) {
+            this.canvas.parentElement.removeChild(this.canvas);
+        }
+
+        // destroy the rendering layers
+        for (const layer of this.renderingLayers) {
+            if ("destroy" in layer && typeof layer.destroy === "function") {
+                layer.destroy();
+            }
+        }
+        this.renderingLayers.clear();
+    }
+
+    public render() {
+        this.clear();
+        for (const layer of this.renderingLayers) {
+            this.transferRenderingLayer(layer);
+        }
+    }
+
     private resolveParent(
         parent: string | HTMLElement | undefined
     ): HTMLElement {
@@ -231,62 +285,9 @@ export class Display {
     private onFullscreenChange(): void {
         this.onResize();
     }
-
-    public createGPURenderingLayer() {
-        const layer = new GPURenderingLayer({
-            width: this.bufW,
-            height: this.bufH,
-            alpha: true,
-            depth: false,
-            stencil: false,
-            antialias: true,
-            backgroundColor: this.backgroundColor,
-        });
-
-        this.renderingLayers.add(layer);
-
-        return layer;
-    }
-
-    public transferRenderingLayer(layer: RenderingLayer) {
-        const srcCanvas = layer.getCanvas();
-        this.ctx.drawImage(srcCanvas, 0, 0, this.bufW, this.bufH);
-    }
-
-    public clear(): void {
-        this.setBackgroundColor();
-        this.ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
-    }
-
-    public destroy(): void {
-        window.removeEventListener("resize", this.onScreenResizeBound);
-        document.removeEventListener("keydown", this.onFullscreenKeyBound);
-        document.removeEventListener(
-            "fullscreenchange",
-            this.onFullscreenChangeBound
-        );
-        if (this.canvas.parentElement) {
-            this.canvas.parentElement.removeChild(this.canvas);
-        }
-
-        // destroy the rendering layers
-        for (const layer of this.renderingLayers) {
-            if ("destroy" in layer && typeof layer.destroy === "function") {
-                layer.destroy();
-            }
-        }
-        this.renderingLayers.clear();
-    }
-
-    public render() {
-        this.clear();
-        for (const layer of this.renderingLayers) {
-            this.transferRenderingLayer(layer);
-        }
-    }
 }
 
-export class GPURenderingLayer implements RenderingLayer {
+class GPURenderingLayer implements RenderingLayer {
     public readonly type: string = "gpu";
     public readonly gl: WebGL2RenderingContext;
 
@@ -473,7 +474,7 @@ export class GPURenderingLayer implements RenderingLayer {
     }
 }
 
-export class CPURenderingLayer implements RenderingLayer {
+class CPURenderingLayer implements RenderingLayer {
     public readonly type: string = "cpu";
     public readonly ctx: OffscreenCanvasRenderingContext2D;
 
@@ -551,23 +552,4 @@ export class CPURenderingLayer implements RenderingLayer {
         const c = this.backgroundColor;
         this.ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255})`;
     }
-}
-
-export function app() {
-    const d = new Display({
-        width: 800,
-        height: 400,
-        parent: "#app",
-        backgroundColor: {
-            r: 255,
-            g: 0,
-            b: 0,
-            a: 1,
-        },
-    });
-
-    // const game = new Game(store);
-    // game.setScene(createGamePlay());
-    // game.store.on("meteorDied", (e) => console.log("meteor is died"), false);
-    // game.start();
 }

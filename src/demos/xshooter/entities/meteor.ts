@@ -3,10 +3,10 @@ import { DESCRIPTORS } from "../components";
 import { Component } from "../components";
 import { Cmath } from "../../../cluster/tools";
 import { Vector } from "../../../cluster/tools/Vector";
-import { Renderer } from "../../../cluster/gl/Renderer";
+// import { Renderer } from "../../../cluster/gl/Renderer";
+import { GLOBALS } from "../globals";
 
-const worldW = Renderer.worldWidth();
-const worldH = Renderer.worldHeight();
+const { worldW, worldH } = GLOBALS;
 const targetVec = new Vector(worldW / 2, worldH / 2);
 
 export const meteorSchema = Archetype.register(

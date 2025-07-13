@@ -1,10 +1,10 @@
 import { Archetype } from "../../../cluster/ecs/archetype";
 import { Component, DESCRIPTORS } from "../components";
-import { Renderer } from "../../../cluster/gl/Renderer";
+// import { Renderer } from "../../../cluster/gl/Renderer";
 import { Vector } from "../../../cluster/tools/Vector";
+import { GLOBALS } from "../globals";
 
-const worldW = Renderer.worldWidth();
-const worldH = Renderer.worldHeight();
+const { worldW, worldH } = GLOBALS;
 const sourceVec = new Vector(worldW / 2, worldH / 2);
 const velocityVec = new Vector();
 

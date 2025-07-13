@@ -3,8 +3,11 @@ import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
-import { Renderer } from "../../../cluster/gl/Renderer";
+// import { Renderer } from "../../../cluster/gl/Renderer";
 import { bulletArchetype } from "../entities/bullet";
+import { GLOBALS } from "../globals";
+
+const { worldW, worldH } = GLOBALS;
 
 export class BulletSystem extends UpdateableSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
@@ -22,9 +25,9 @@ export class BulletSystem extends UpdateableSystem {
 
                 if (
                     px + 8 * hw < 0 ||
-                    px - 8 * hw > Renderer.worldWidth() ||
+                    px - 8 * hw > worldW ||
                     py + 8 * hh < 0 ||
-                    py - 8 * hh > Renderer.worldHeight()
+                    py - 8 * hh > worldH
                 ) {
                     let r = (cmd as any).scene.findEntityId(
                         bulletArchetype,

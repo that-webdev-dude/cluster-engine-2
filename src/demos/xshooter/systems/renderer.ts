@@ -5,9 +5,23 @@ import { Chunk } from "../../../cluster/ecs/chunk";
 import { Renderer } from "../../../cluster/gl/Renderer";
 import { MeshPipeline, MeshData } from "../../../cluster/gl/pipelines/mesh";
 import { ComponentDescriptor } from "../../../cluster/types";
+import { GLOBALS } from "../globals";
+
+const { worldW, worldH, appId } = GLOBALS;
 
 export class RendererSystem implements RenderableSystem {
-    private renderer = Renderer.getInstance();
+    // private renderer = Renderer.getInstance();
+    private renderer = Renderer.createInstance({
+        width: worldW,
+        height: worldH,
+        parent: appId,
+        backgroundColor: {
+            r: 255,
+            g: 0,
+            b: 0,
+            a: 1,
+        },
+    });
 
     private trianglePipe = MeshPipeline.create(this.renderer, 3);
     private hexagonPipe = MeshPipeline.create(this.renderer, 6);

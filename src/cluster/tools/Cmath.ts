@@ -172,6 +172,18 @@ export class Cmath {
     }
 
     /**
+     * Converts a number in the range [0,1] to [0,255], or clamps and floors if already in [0,255].
+     * @param {number} x Input number
+     * @returns {number} Integer in [0,255]
+     */
+    static to255(x: number): number {
+        if (x <= 1) {
+            return Math.floor(Cmath.clamp(x, 0, 1) * 255);
+        }
+        return Math.floor(Cmath.clamp(x, 0, 255));
+    }
+
+    /**
      * normalize - normalize the x parameter
      * between the min, max values
      * @param {number} x
