@@ -1,46 +1,77 @@
+import { Cmath } from "../tools";
 import { Obj } from "../tools";
 
-export type RGBA = { r: number; g: number; b: number; a: number };
+type RGBA = { r: number; g: number; b: number; a: number };
 
-export interface DisplayOptions {
+interface DisplayOptions {
     width?: number;
     height?: number;
     parent?: string | HTMLElement;
-    backgroundColor?: RGBA;
+    backgroundColor: RGBA;
 }
 
-export interface RendererOptions extends DisplayOptions {
+interface RenderingLayer {
+    resize(width: number, height: number): void;
+    clear(): void;
+    getCanvas(): OffscreenCanvas | HTMLCanvasElement;
+}
+
+interface RenderingLayerOptions extends Omit<DisplayOptions, "parent"> {
     antialias?: boolean;
     alpha?: boolean;
     depth?: boolean;
     stencil?: boolean;
 }
 
-export abstract class Display {
-    protected canvas: HTMLCanvasElement;
-    protected bufW: number;
-    protected bufH: number;
-    protected cssW: number;
-    protected cssH: number;
-    protected aspectRatio: number;
-    protected backgroundColor: RGBA;
-    protected opts: Required<DisplayOptions>;
+/**
+ * Manages the main display canvas for 2D and GPU-accelerated rendering.
+ * Handles canvas creation, resizing, fullscreen toggling, and rendering layers.
+ * Supports high-DPI displays and background color configuration.
+ *
+ * @remarks
+ * - Automatically attaches to a parent DOM element or defaults to `<body>`.
+ * - Maintains a set of rendering layers (CPU/GPU) for compositing.
+ * - Provides methods for clearing, resizing, rendering, and cleanup.
+ */
+export class Display {
+    private ctx: CanvasRenderingContext2D;
+    private canvas: HTMLCanvasElement;
+    private optsW: number;
+    private optsH: number;
+    private bufW: number;
+    private bufH: number;
+    private cssW: number;
+    private cssH: number;
+    private aspectRatio: number;
+    private backgroundColor: RGBA;
+    private renderingLayers: Set<RenderingLayer> = new Set();
 
-    private handleResizeBound = Obj.debounce(this.handleResize.bind(this), 100);
-    private handleFullscreenKeyBound = this.handleFullscreenKey.bind(this);
-    private handleFullscreenChangeBound =
-        this.handleFullscreenChange.bind(this);
+    private static instance: Display;
 
-    protected constructor(opts: Required<DisplayOptions>) {
+    // listeners
+    private onFullscreenChangeBound = this.onFullscreenChange.bind(this);
+
+    private onFullscreenKeyBound = this.onFullscreenKey.bind(this);
+
+    private onScreenResizeBound = Obj.debounce(this.onResize.bind(this), 100);
+
+    private constructor(opts: Required<DisplayOptions>) {
         if (opts.width <= 0 || opts.height <= 0) {
             throw new Error(
-                "[Display]: width and height must be positive numbers."
+                "[Display.constructor]: width and height must be positive numbers."
             );
         }
 
-        this.opts = opts;
+        const { r, g, b, a } = opts.backgroundColor;
+        this.backgroundColor = {
+            r: Cmath.to255(r),
+            g: Cmath.to255(g),
+            b: Cmath.to255(b),
+            a: Cmath.to255(a),
+        };
         this.aspectRatio = opts.width / opts.height;
-        this.backgroundColor = opts.backgroundColor;
+        this.optsW = opts.width;
+        this.optsH = opts.height;
 
         const DPR = window.devicePixelRatio || 1;
         this.bufW = Math.floor(opts.width * DPR);
@@ -58,42 +89,159 @@ export abstract class Display {
         const parent = this.resolveParent(opts.parent);
         parent.appendChild(this.canvas);
 
-        // this.initialize();
-        setTimeout(() => this.initialize(), 0);
+        const ctx = this.canvas.getContext("2d", { alpha: true });
+        if (!ctx) {
+            throw new Error(
+                "[Display.constructor]: 2D context not supported by this browser."
+            );
+        }
+
+        ctx.scale(DPR, DPR); // scale for high-DPI displays
+        this.ctx = ctx;
+
+        this.initialize();
+
+        Display.instance = this;
     }
 
     get canvasElement(): HTMLCanvasElement {
         return this.canvas;
     }
+
+    /**
+     * Internal buffer width for rendering - Actual pixel resolution of the canvas
+     */
     get width(): number {
         return this.bufW;
     }
+
+    /**
+     * Internal buffer height for rendering - Actual pixel resolution of the canvas
+     */
     get height(): number {
         return this.bufH;
     }
+
+    /**
+     * How wide the canvas looks in the DOM
+     */
     get cssWidth(): number {
         return this.cssW;
     }
+
+    /**
+     * How tall the canvas looks in the DOM
+     */
     get cssHeight(): number {
         return this.cssH;
     }
+
+    /**
+     * local width - Game’s coordinate system / virtual resolution
+     */
     get worldWidth(): number {
-        return this.opts.width;
+        return this.optsW;
     }
+
+    /**
+     * local height - Game’s coordinate system / virtual resolution
+     */
     get worldHeight(): number {
-        return this.opts.height;
+        return this.optsH;
     }
 
-    public setClearColor(color: RGBA) {
-        this.backgroundColor = color;
-        this.applyClearColor(); // to be implemented by subclass
+    /**
+     * Returns the shared Renderer instance, creating it if needed.
+     */
+    public static getInstance(options?: DisplayOptions): Display {
+        if (!this.instance) {
+            const defaults: Required<DisplayOptions> = {
+                width: 640,
+                height: 384,
+                parent: "#app",
+                backgroundColor: { r: 0, g: 0, b: 0, a: 1 },
+            };
+            const opts = { ...defaults, ...options };
+            this.instance = new Display(opts);
+        }
+
+        return this.instance;
     }
 
-    /** Override this in subclass */
-    protected abstract applyClearColor(): void;
+    public createGPURenderingLayer() {
+        const layer = new GPURenderingLayer({
+            width: this.bufW,
+            height: this.bufH,
+            alpha: true,
+            depth: false,
+            stencil: false,
+            antialias: true,
+            backgroundColor: this.backgroundColor,
+        });
 
-    /** Override this in subclass if needed */
-    protected onResize(): void {}
+        this.renderingLayers.add(layer);
+
+        return layer;
+    }
+
+    public createCPURenderingLayer(): CPURenderingLayer {
+        const layer = new CPURenderingLayer({
+            width: this.bufW,
+            height: this.bufH,
+            alpha: true,
+            depth: false,
+            stencil: false,
+            antialias: false,
+            backgroundColor: this.backgroundColor,
+        });
+        this.renderingLayers.add(layer);
+        return layer;
+    }
+
+    public transferRenderingLayer(layer: RenderingLayer) {
+        const srcCanvas = layer.getCanvas();
+        this.ctx.drawImage(srcCanvas, 0, 0, this.bufW, this.bufH);
+    }
+
+    public createRenderingLayer(type: "gpu" | "cpu"): RenderingLayer {
+        if (type === "gpu") {
+            return this.createGPURenderingLayer();
+        }
+        return this.createCPURenderingLayer();
+    }
+
+    public clear(): void {
+        // this.setBackgroundColor();
+        this.ctx.clearRect(0, 0, this.cssWidth, this.cssHeight);
+    }
+
+    public destroy(): void {
+        window.removeEventListener("resize", this.onScreenResizeBound);
+        document.removeEventListener("keydown", this.onFullscreenKeyBound);
+        document.removeEventListener(
+            "fullscreenchange",
+            this.onFullscreenChangeBound
+        );
+        if (this.canvas.parentElement) {
+            this.canvas.parentElement.removeChild(this.canvas);
+        }
+
+        // destroy the rendering layers
+        for (const layer of this.renderingLayers) {
+            if ("destroy" in layer && typeof layer.destroy === "function") {
+                layer.destroy();
+            }
+        }
+        this.renderingLayers.clear();
+    }
+
+    public render() {
+        this.clear();
+        for (const layer of this.renderingLayers) {
+            this.transferRenderingLayer(layer);
+            layer.clear();
+        }
+    }
 
     private resolveParent(
         parent: string | HTMLElement | undefined
@@ -102,7 +250,7 @@ export abstract class Display {
             const el = document.querySelector(parent) as HTMLElement | null;
             if (!el) {
                 console.warn(
-                    `[Display]: Parent selector "${parent}" not found — defaulting to <body>.`
+                    `[Display.resolveParent]: Parent selector "${parent}" not found — defaulting to <body>.`
                 );
                 return document.body;
             }
@@ -111,29 +259,34 @@ export abstract class Display {
             return parent;
         } else {
             console.warn(
-                "[Display]: Parent element invalid — defaulting to <body>."
+                "[Display.resolveParent]: Parent element invalid — defaulting to <body>."
             );
             return document.body;
         }
     }
 
-    private initialize(): void {
-        window.addEventListener("resize", this.handleResizeBound);
-        document.addEventListener("keydown", this.handleFullscreenKeyBound);
-        document.addEventListener(
-            "fullscreenchange",
-            this.handleFullscreenChangeBound
-        );
-        this.handleResize();
+    private setBackgroundColor(): void {
+        const c = this.backgroundColor;
+        this.ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255})`;
     }
 
-    protected handleResize(): void {
+    private initialize(): void {
+        window.addEventListener("resize", this.onScreenResizeBound);
+        document.addEventListener("keydown", this.onFullscreenKeyBound);
+        document.addEventListener(
+            "fullscreenchange",
+            this.onFullscreenChangeBound
+        );
+        this.onResize();
+    }
+
+    private onResize(): void {
         const rect = this.canvas.parentElement?.getBoundingClientRect();
         if (!rect) return;
-        let w = Math.min(rect.width, this.opts.width);
+        let w = Math.min(rect.width, this.optsW);
         let h = w / this.aspectRatio;
-        if (h > Math.min(rect.height, this.opts.height)) {
-            h = Math.min(rect.height, this.opts.height);
+        if (h > Math.min(rect.height, this.optsH)) {
+            h = Math.min(rect.height, this.optsH);
             w = h * this.aspectRatio;
         }
 
@@ -148,10 +301,15 @@ export abstract class Display {
         this.canvas.style.width = `${w}px`;
         this.canvas.style.height = `${h}px`;
 
-        this.onResize();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+        this.ctx.scale(DPR, DPR);
+        for (const layer of this.renderingLayers) {
+            layer.resize(this.bufW, this.bufH);
+        }
+        this.clear();
     }
 
-    private handleFullscreenKey(e: KeyboardEvent): void {
+    private onFullscreenKey(e: KeyboardEvent): void {
         if (e.code === "KeyF") {
             if (!document.fullscreenElement) {
                 this.canvas
@@ -167,49 +325,42 @@ export abstract class Display {
         }
     }
 
-    private handleFullscreenChange(): void {
-        this.handleResize();
-    }
-
-    public destroy(): void {
-        window.removeEventListener("resize", this.handleResizeBound);
-        document.removeEventListener("keydown", this.handleFullscreenKeyBound);
-        document.removeEventListener(
-            "fullscreenchange",
-            this.handleFullscreenChangeBound
-        );
-        if (this.canvas.parentElement) {
-            this.canvas.parentElement.removeChild(this.canvas);
-        }
+    private onFullscreenChange(): void {
+        this.onResize();
     }
 }
 
-/**
- * GLRenderer
- */
-export class GLRenderer extends Display {
-    // private static instances = new Map<string, GLRenderer>();
-
+export class GPURenderingLayer implements RenderingLayer {
+    public readonly type: string = "gpu";
     public readonly gl: WebGL2RenderingContext;
 
-    private depthTestEnabled = false;
-    private stencilTestEnabled = false;
+    private canvas: OffscreenCanvas | HTMLCanvasElement;
+    private optsW: number;
+    private optsH: number;
+    private aspectRatio: number;
+    private backgroundColor: RGBA;
+
+    private stencilTestEnabled: boolean;
+    private depthTestEnabled: boolean;
     private clearDepth: boolean;
     private clearStencil: boolean;
     private contextRestoredCallbacks: Array<() => void> = [];
 
+    // listeners
     private handleContextLostBound = this.handleContextLost.bind(this);
+
     private handleContextRestoredBound = this.handleContextRestored.bind(this);
 
-    public constructor(opts: Required<RendererOptions>) {
-        super({
-            width: opts.width,
-            height: opts.height,
-            parent: opts.parent,
-            backgroundColor: opts.backgroundColor,
-        });
+    constructor(opts: Required<RenderingLayerOptions>) {
+        this.optsW = opts.width;
+        this.optsH = opts.height;
 
-        const ctx = this.canvas.getContext("webgl2", {
+        const canvas =
+            typeof OffscreenCanvas !== "undefined"
+                ? new OffscreenCanvas(opts.width, opts.height)
+                : document.createElement("canvas");
+
+        const ctx = canvas.getContext("webgl2", {
             antialias: opts.antialias,
             alpha: opts.alpha,
             depth: opts.depth,
@@ -222,13 +373,59 @@ export class GLRenderer extends Display {
             );
         }
 
+        this.canvas = canvas;
         this.gl = ctx;
+
+        const { r, g, b, a } = opts.backgroundColor;
+        this.backgroundColor = {
+            r: Cmath.to255(r),
+            g: Cmath.to255(g),
+            b: Cmath.to255(b),
+            a: Cmath.to255(a),
+        };
+
+        this.aspectRatio = opts.width / opts.height;
+        this.optsW = opts.width;
+        this.optsH = opts.height;
+
         this.gl.disable(this.gl.DEPTH_TEST);
         this.gl.disable(this.gl.STENCIL_TEST);
 
         this.clearDepth = opts.depth;
         this.clearStencil = opts.stencil;
+        this.depthTestEnabled = false;
+        this.stencilTestEnabled = false;
 
+        this.initialize();
+
+        this.setBackgroundColor();
+    }
+
+    get width(): number {
+        return this.canvas.width;
+    }
+
+    get height(): number {
+        return this.canvas.height;
+    }
+
+    get worldWidth() {
+        return this.optsW;
+    }
+
+    get worldHeight() {
+        return this.optsH;
+    }
+
+    public getCanvas(): OffscreenCanvas | HTMLCanvasElement {
+        return this.canvas;
+    }
+
+    public getContext() {
+        return this.gl;
+    }
+
+    private initialize() {
         this.canvas.addEventListener(
             "webglcontextlost",
             this.handleContextLostBound
@@ -237,75 +434,15 @@ export class GLRenderer extends Display {
             "webglcontextrestored",
             this.handleContextRestoredBound
         );
-
-        this.applyClearColor();
     }
 
-    // public static getInstance(
-    //     options: RendererOptions = {},
-    //     key = "default"
-    // ): GLRenderer {
-    //     if (!this.instances.has(key)) {
-    //         const defaults: Required<RendererOptions> = {
-    //             width: 640,
-    //             height: 384,
-    //             parent: "#app",
-    //             backgroundColor: { r: 0, g: 0, b: 0, a: 1 },
-    //             antialias: true,
-    //             alpha: false,
-    //             depth: true,
-    //             stencil: true,
-    //         };
-    //         const opts = { ...defaults, ...options };
-    //         const instance = new GLRenderer(opts);
-    //         this.instances.set(key, instance);
-    //     }
-    //     return this.instances.get(key)!;
-    // }
+    public resize(bufW: number, bufH: number) {
+        if (!this.gl) return;
+        this.canvas.width = bufW;
+        this.canvas.height = bufH;
 
-    public static createInstance(options: RendererOptions): GLRenderer {
-        const defaults: Required<RendererOptions> = {
-            width: 640,
-            height: 384,
-            parent: "#app",
-            backgroundColor: { r: 0, g: 0, b: 0, a: 1 },
-            antialias: true,
-            alpha: false,
-            depth: true,
-            stencil: true,
-        };
-        const opts = { ...defaults, ...options };
-        return new GLRenderer(opts);
-    }
-
-    public static canvasElement() {
-        return GLRenderer.canvasElement;
-        // return GLRenderer.getInstance().canvasElement;
-    }
-
-    public static worldWidth() {
-        return this.worldWidth;
-        // return GLRenderer.getInstance().worldWidth;
-    }
-
-    public static worldHeight() {
-        return this.worldHeight;
-        // return GLRenderer.getInstance().worldHeight;
-    }
-
-    public static cssWidth() {
-        return this.cssWidth;
-        // return GLRenderer.getInstance().cssWidth;
-    }
-
-    public static cssHeight() {
-        return this.cssHeight;
-        // return GLRenderer.getInstance().cssHeight;
-    }
-
-    protected applyClearColor(): void {
-        const c = this.backgroundColor;
-        this.gl.clearColor(c.r, c.g, c.b, c.a);
+        this.gl.viewport(0, 0, bufW, bufH);
+        this.clear();
     }
 
     public clear(): void {
@@ -313,6 +450,17 @@ export class GLRenderer extends Display {
         if (this.clearDepth) mask |= this.gl.DEPTH_BUFFER_BIT;
         if (this.clearStencil) mask |= this.gl.STENCIL_BUFFER_BIT;
         this.gl.clear(mask);
+    }
+
+    public destroy(): void {
+        this.canvas.removeEventListener(
+            "webglcontextlost",
+            this.handleContextLostBound
+        );
+        this.canvas.removeEventListener(
+            "webglcontextrestored",
+            this.handleContextRestoredBound
+        );
     }
 
     public setDepthTest(enabled: boolean): void {
@@ -354,14 +502,9 @@ export class GLRenderer extends Display {
         if (i !== -1) this.contextRestoredCallbacks.splice(i, 1);
     }
 
-    public override destroy(): void {
-        super.destroy();
-        // for (const [key, instance] of GLRenderer.instances) {
-        //     if (instance === this) {
-        //         GLRenderer.instances.delete(key);
-        //         break;
-        //     }
-        // }
+    private setBackgroundColor(): void {
+        const c = this.backgroundColor;
+        this.gl.clearColor(c.r / 255, c.g / 255, c.b / 255, c.a / 255);
     }
 
     private handleContextLost(e: Event): void {
@@ -375,94 +518,107 @@ export class GLRenderer extends Display {
         );
         this.contextRestoredCallbacks.forEach((cb) => cb());
     }
-
-    protected override onResize(): void {
-        if (!this.gl) return;
-        this.gl.viewport(0, 0, this.bufW, this.bufH);
-        this.clear();
-    }
 }
 
-/**
- * UIRenderer
- */
-export class UIRenderer extends Display {
-    private static instances = new Map<string, UIRenderer>();
+export class CPURenderingLayer implements RenderingLayer {
+    public readonly type: string = "cpu";
+    public readonly ctx:
+        | OffscreenCanvasRenderingContext2D
+        | CanvasRenderingContext2D;
 
-    private readonly ctx: CanvasRenderingContext2D;
+    private canvas: OffscreenCanvas | HTMLCanvasElement;
+    private optsW: number;
+    private optsH: number;
+    private backgroundColor: RGBA;
 
-    private constructor(opts: Required<DisplayOptions>) {
-        super(opts);
+    constructor(opts: Required<RenderingLayerOptions>) {
+        this.optsW = opts.width;
+        this.optsH = opts.height;
 
-        const ctx = this.canvas.getContext("2d");
-        if (!ctx) {
-            throw new Error(
-                "[UIRenderer]: 2D context not supported by this browser."
-            );
+        // create either an OffscreenCanvas or regular <canvas>
+        this.canvas =
+            typeof OffscreenCanvas !== "undefined"
+                ? new OffscreenCanvas(opts.width, opts.height)
+                : document.createElement("canvas");
+
+        let ctx2d:
+            | CanvasRenderingContext2D
+            | OffscreenCanvasRenderingContext2D
+            | null = null;
+
+        if (this.canvas instanceof HTMLCanvasElement) {
+            // HTMLCanvasElement.getContext("2d") returns CanvasRenderingContext2D
+            ctx2d = this.canvas.getContext("2d", { alpha: true });
+        } else {
+            // OffscreenCanvas.getContext("2d") returns OffscreenCanvasRenderingContext2D
+            ctx2d = (this.canvas as OffscreenCanvas).getContext("2d", {
+                alpha: true,
+            });
         }
 
-        const DPR = window.devicePixelRatio || 1;
-        ctx.scale(DPR, DPR); // scale for high-DPI displays
-        this.ctx = ctx;
-
-        this.applyClearColor();
-    }
-
-    public static getInstance(
-        options: DisplayOptions = {},
-        key = "default"
-    ): UIRenderer {
-        if (!this.instances.has(key)) {
-            const defaults: Required<DisplayOptions> = {
-                width: 640,
-                height: 384,
-                parent: "#app",
-                backgroundColor: { r: 0, g: 0, b: 0, a: 0 },
-            };
-            const opts = { ...defaults, ...options };
-            const instance = new UIRenderer(opts);
-            this.instances.set(key, instance);
+        if (!ctx2d) {
+            throw new Error("[CPURenderingLayer]: 2D context not supported.");
         }
-        return this.instances.get(key)!;
-    }
 
-    public static createInstance(options: DisplayOptions): UIRenderer {
-        const defaults: Required<DisplayOptions> = {
-            width: 640,
-            height: 384,
-            parent: "#app",
-            backgroundColor: { r: 0, g: 0, b: 0, a: 0 },
+        // now TS knows ctx2d is exactly the 2D-drawing interface
+        this.ctx = ctx2d;
+
+        const { r, g, b, a } = opts.backgroundColor;
+        this.backgroundColor = {
+            r: Cmath.to255(r),
+            g: Cmath.to255(g),
+            b: Cmath.to255(b),
+            a: Cmath.to255(a),
         };
-        const opts = { ...defaults, ...options };
-        return new UIRenderer(opts);
+
+        this.setBackgroundColor();
     }
 
-    protected applyClearColor(): void {
-        const c = this.backgroundColor;
-        this.ctx.fillStyle = `rgba(${c.r * 255}, ${c.g * 255}, ${c.b * 255}, ${
-            c.a
-        })`;
+    public get width(): number {
+        return this.canvas.width;
+    }
+
+    public get height(): number {
+        return this.canvas.height;
+    }
+
+    public get worldWidth(): number {
+        return this.optsW;
+    }
+
+    public get worldHeight(): number {
+        return this.optsH;
+    }
+
+    public getCanvas(): OffscreenCanvas | HTMLCanvasElement {
+        return this.canvas;
+    }
+
+    public getContext():
+        | OffscreenCanvasRenderingContext2D
+        | CanvasRenderingContext2D {
+        return this.ctx;
+    }
+
+    public resize(width: number, height: number): void {
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.setBackgroundColor();
+        this.clear();
     }
 
     public clear(): void {
-        this.applyClearColor();
-        this.ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
+        // this.setBackgroundColor();
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
-    protected override onResize(): void {
-        const DPR = window.devicePixelRatio || 1;
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
-        this.ctx.scale(DPR, DPR);
-        this.clear();
+    public destroy(): void {
+        // Nothing to clean up (for now)
     }
 
-    public override destroy(): void {
-        super.destroy();
-        for (const [key, instance] of UIRenderer.instances) {
-            if (instance === this) {
-                UIRenderer.instances.delete(key);
-                break;
-            }
-        }
+    private setBackgroundColor(): void {
+        const c = this.backgroundColor;
+        this.ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255})`;
     }
 }

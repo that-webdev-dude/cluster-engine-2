@@ -77,8 +77,6 @@ class KeyboardInput {
     }
 }
 
-export const Keyboard = KeyboardInput.getInstance();
-
 class MouseInput {
     private static instance: MouseInput;
     private _element: HTMLElement;
@@ -199,4 +197,8 @@ class MouseInput {
     }
 }
 
+export const Keyboard = KeyboardInput.getInstance();
+
 export const Mouse = MouseInput.getInstance();
+
+export const Input = { Keyboard, Mouse };

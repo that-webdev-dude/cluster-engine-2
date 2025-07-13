@@ -3,7 +3,6 @@ import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
-// import { Renderer } from "../../../cluster/gl/Renderer";
 import { bulletArchetype } from "../entities/bullet";
 import { GLOBALS } from "../globals";
 

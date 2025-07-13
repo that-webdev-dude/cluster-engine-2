@@ -9,7 +9,7 @@ import { CommandBuffer } from "./cmd";
  * which is called with the elapsed time since the last update.
  */
 export abstract class UpdateableSystem {
-    constructor(protected store: Store = new Store({})) {}
+    constructor(protected store: Store) {}
 
     abstract update(view: View, cmd: CommandBuffer, dt: number): void;
 }

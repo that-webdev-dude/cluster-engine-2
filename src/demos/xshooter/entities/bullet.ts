@@ -1,6 +1,5 @@
 import { Archetype } from "../../../cluster/ecs/archetype";
 import { Component, DESCRIPTORS } from "../components";
-// import { Renderer } from "../../../cluster/gl/Renderer";
 import { Vector } from "../../../cluster/tools/Vector";
 import { GLOBALS } from "../globals";
 

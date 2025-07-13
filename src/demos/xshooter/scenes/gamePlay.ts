@@ -1,5 +1,6 @@
 import { Scene } from "../../../cluster/ecs/scene";
 import { playerArchetype, getPlayerComponents } from "../entities/player";
+import { GUISystem } from "../systems/GUI";
 import { RendererSystem } from "../systems/renderer";
 import { PlayerSystem } from "../systems/player";
 import { MotionSystem } from "../systems/motion";
@@ -12,14 +13,14 @@ import { store } from "../stores";
 export function createGamePlay() {
     const scene = new Scene({
         updateableSystems: [
-            new LevelSystem(),
-            new PlayerSystem(),
-            new MotionSystem(),
-            new MeteorSystem(),
-            new BulletSystem(),
+            new LevelSystem(store),
+            new PlayerSystem(store),
+            new MotionSystem(store),
+            new MeteorSystem(store),
+            new BulletSystem(store),
             new CollisionSystem(store),
         ],
-        renderableSystems: [new RendererSystem()],
+        renderableSystems: [new RendererSystem(), new GUISystem()],
     });
 
     scene.createEntity(playerArchetype, getPlayerComponents());

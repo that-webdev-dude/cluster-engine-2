@@ -1,7 +1,6 @@
 import { Archetype } from "../../../cluster/ecs/archetype";
 import { DESCRIPTORS } from "../components";
 import { Component } from "../components";
-import { Renderer } from "../../../cluster/gl/Renderer";
 import { ComponentValueMap } from "../../../cluster/types";
 import { GLOBALS } from "../globals";
 

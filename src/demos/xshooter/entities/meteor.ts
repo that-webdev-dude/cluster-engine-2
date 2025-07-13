@@ -3,7 +3,6 @@ import { DESCRIPTORS } from "../components";
 import { Component } from "../components";
 import { Cmath } from "../../../cluster/tools";
 import { Vector } from "../../../cluster/tools/Vector";
-// import { Renderer } from "../../../cluster/gl/Renderer";
 import { GLOBALS } from "../globals";
 
 const { worldW, worldH } = GLOBALS;

@@ -12,3 +12,5 @@ TODO:
 - make consistent error messaging across the codebase
 - add an updateEntity in Scene
 - make the archetypes map in Scene a Graphinstead of a Map for fast search
+
+- no need anymore the Renderer file in gl

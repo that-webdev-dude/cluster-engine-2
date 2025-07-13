@@ -1,29 +1,6 @@
 import { Renderer } from "./Renderer";
 
 /**
- * A GPU-managed resource that can be initialized (or re-initialized)
- * when the WebGL context is first created or after it is restored.
- */
-// interface GLResource {
-//     /** Compile shaders, allocate buffers/textures, etc. */
-//     initialize(gl: WebGL2RenderingContext): void;
-// }
-
-/**
- * Explicit contract between Pipeline and GLResource.
- */
-// interface PipelineResource extends GLResource {
-//     /** Bind global pipeline state (shaders, blend modes, uniforms, etc.) */
-//     bind(gl: WebGL2RenderingContext): void;
-
-//     /** Upload per-instance SoA buffers and issue the draw call. */
-//     draw(gl: WebGL2RenderingContext, data: any, count: number): void;
-
-//     /** Unregister context restore callback and free GPU resources. */
-//     destroy(): void;
-// }
-
-/**
  * Describes a vertex attribute specification for a WebGL pipeline.
  *
  * @property location - The attribute location in the shader program.

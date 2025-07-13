@@ -5,10 +5,6 @@ import { Cmath } from "../../../cluster/tools";
 import { Mouse } from "../input";
 import { Component } from "../components";
 import { bulletArchetype, getBulletComponents } from "../entities/bullet";
-import { GLOBALS } from "../globals";
-import { GLRenderer } from "../../../cluster/core/Display";
-
-const { worldW, worldH } = GLOBALS;
 
 const State = {
     level: 1,
@@ -18,12 +14,6 @@ const State = {
 
 export class PlayerSystem extends UpdateableSystem {
     private counter = State.shotInterval;
-
-    // constructor() {
-    //     // const mouse = Mouse.geiInstance(GLRenderer.canvasElement())
-    //     // Mouse.element = GLRenderer.canvasElement();
-    //     // Mouse.setVirtualSize(worldW, worldH);
-    // }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
         this.counter -= dt;
