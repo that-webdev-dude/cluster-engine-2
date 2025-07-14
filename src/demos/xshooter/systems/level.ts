@@ -5,7 +5,7 @@ import { meteorArchetype, getMeteorComponents } from "../entities/meteor";
 
 const State = {
     level: 1,
-    spawnInterval: 2,
+    spawnInterval: 1,
     entitiesPerSpawn: 1,
 };
 

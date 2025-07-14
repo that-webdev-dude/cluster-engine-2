@@ -26,7 +26,7 @@ export function getBulletComponents(targetX: number, targetY: number) {
         .connect(sourceVec)
         .reverse()
         .normalize()
-        .scale(100);
+        .scale(300);
 
     return {
         [Component.Bullet]: [1],
@@ -37,7 +37,7 @@ export function getBulletComponents(targetX: number, targetY: number) {
         [Component.Pivot]: [0, 0],
         [Component.Size]: [4, 4],
         [Component.Color]: [255, 255, 255, 255],
-        [Component.Speed]: [100],
+        [Component.Speed]: [300],
         [Component.Velocity]: [velocityVec.x, velocityVec.y],
     };
 }

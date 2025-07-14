@@ -63,7 +63,7 @@ export function getMeteorComponents() {
     let velVec = Vector.from(posVec)
         .connect(targetVec)
         .normalize()
-        .scale(Cmath.rand(10, 40));
+        .scale(Cmath.rand(80, 160));
 
     return {
         [Component.Meteor]: [1],

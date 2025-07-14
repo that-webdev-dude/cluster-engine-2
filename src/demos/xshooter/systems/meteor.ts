@@ -5,10 +5,25 @@ import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
 import { meteorArchetype } from "../entities/meteor";
 import { GLOBALS } from "../globals";
+import { Store } from "../../../cluster/core/Store";
+import { Event } from "../../../cluster/core/Emitter";
+import { ScoreEvent } from "../events";
 
 const { worldW, worldH } = GLOBALS;
 
 export class MeteorSystem extends UpdateableSystem {
+    constructor(store: Store) {
+        super(store);
+        this.store.on(
+            "meteorHit",
+            (event: Event) => {
+                this.store.dispatch("incrementScores", 1);
+                this.store.emit({ type: "scoreEvent" }, false);
+            },
+            false
+        );
+    }
+
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith([Component.Meteor], (chunk, chunkId) => {
             const count = chunk.count;

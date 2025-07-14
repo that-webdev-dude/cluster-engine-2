@@ -53,7 +53,6 @@ export class Game {
         this.scenes.forEach((scene) => {
             scene.cmd.flush();
         });
-        // console.log("is running ...");
     }
 
     start() {

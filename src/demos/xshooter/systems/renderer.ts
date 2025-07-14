@@ -6,7 +6,7 @@ import { MeshPipeline, MeshData } from "../../../cluster/gl/pipelines/mesh";
 import { ComponentDescriptor } from "../../../cluster/types";
 import { Display } from "../../../cluster/core/Display";
 
-export class RendererSystem implements RenderableSystem {
+export class RendererSystem extends RenderableSystem {
     private renderer = Display.getInstance().createGPURenderingLayer();
 
     private trianglePipe = MeshPipeline.create(this.renderer, 3);

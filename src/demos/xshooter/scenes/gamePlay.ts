@@ -20,7 +20,7 @@ export function createGamePlay() {
             new BulletSystem(store),
             new CollisionSystem(store),
         ],
-        renderableSystems: [new RendererSystem(), new GUISystem()],
+        renderableSystems: [new RendererSystem(store), new GUISystem(store)],
     });
 
     scene.createEntity(playerArchetype, getPlayerComponents());

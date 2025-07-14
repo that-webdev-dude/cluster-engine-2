@@ -16,20 +16,20 @@ export class PlayerSystem extends UpdateableSystem {
     private counter = State.shotInterval;
 
     update(view: View, cmd: CommandBuffer, dt: number) {
-        this.counter -= dt;
-
-        const mx = Mouse.virtualPosition.x;
-        const my = Mouse.virtualPosition.y;
-
-        if (this.counter <= 0) {
-            const bulletComponents = getBulletComponents(mx, my);
-
-            cmd.create(bulletArchetype, bulletComponents);
-
-            this.counter = State.shotInterval;
-        }
-
         view.forEachChunkWith([Component.Player], (chunk) => {
+            this.counter -= dt;
+
+            const mx = Mouse.virtualPosition.x;
+            const my = Mouse.virtualPosition.y;
+
+            if (this.counter <= 0) {
+                const bulletComponents = getBulletComponents(mx, my);
+
+                cmd.create(bulletArchetype, bulletComponents);
+
+                this.counter = State.shotInterval;
+            }
+
             // only one player is expected
             if (chunk.count > 1) {
                 console.warn(

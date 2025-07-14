@@ -21,5 +21,7 @@ export abstract class UpdateableSystem {
  * which is called with an interpolation alpha value.
  */
 export abstract class RenderableSystem {
+    constructor(protected store: Store) {}
+
     abstract render(view: View, alpha: number): void;
 }

@@ -19,7 +19,7 @@ const mutations = {
         state.level = payload;
     },
     setScores(state: any, payload: number) {
-        state.score = payload;
+        state.scores = payload;
     },
 };
 
