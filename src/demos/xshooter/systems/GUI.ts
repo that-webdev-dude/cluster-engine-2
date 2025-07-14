@@ -11,8 +11,8 @@ export class GUISystem implements RenderableSystem {
 
         // 2) Draw your HUD text
         const ctx = this.layer.getContext();
-        ctx.font = "20px sans-serif";
-        ctx.fillStyle = "green";
+        ctx.font = '20px "Press Start 2P"';
+        ctx.fillStyle = "white";
         ctx.textBaseline = "top";
         ctx.fillText("Scores: 0", 10, 10);
 
