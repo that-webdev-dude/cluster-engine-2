@@ -8,11 +8,15 @@ export interface BulletDiedEvent extends StoreEvent {
     };
 }
 
-export interface MeteorDiedEvent extends StoreEvent {
-    type: "meteorDied";
+export interface MeteorHitEvent extends StoreEvent {
+    type: "meteorHit";
     data: {
         entityId: EntityId;
     };
+}
+
+export interface ScoreEvent extends StoreEvent {
+    type: "scoreEvent";
 }
 
 export interface PlayerDiedEvent extends StoreEvent {
