@@ -19,6 +19,5 @@ export function app() {
 
     const game = new Game(store, display);
     game.setScene(createGamePlay());
-    game.store.on("meteorDied", (e) => console.log("meteor is died"), false);
     game.start();
 }

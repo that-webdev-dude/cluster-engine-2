@@ -4,7 +4,6 @@ TODO:
     → 🟦 maybe this can have the generation encoding?
 - If you plan to reset a scene or level, consider exposing a .reset() method in Storage that calls chunkIdPool.reset() and clears all internal maps. This would make recycling the whole world easier without creating new instances.
 - EntityMetaSet should be instanciated via SparseSet
-- in renderer system refactor common consider- in camera archetype add position and prev position for smooth movement + adjustthe systems
 
 - fix the interp angles for smooth rotation
 - if chunk is full upload the whole thing? (no subarrays)
@@ -14,3 +13,19 @@ TODO:
 - make the archetypes map in Scene a Graphinstead of a Map for fast search
 
 - no need anymore the Renderer file in gl
+- in GUI if store hasn't changed, there's no need to render
+
+TODO next
+scene transition
+level hook in GUI
+timer hook in GUI
+camera shake
+dialog system
+sound system
+star & star system
+meteor hit effect
+meteor health system & GUI
+pickups
+weapon
+explosion
+special weapon

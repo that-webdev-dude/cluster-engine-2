@@ -64,13 +64,13 @@ export class Scene {
         if (!storage) {
             storage = new Storage(archetype);
             this.archetypes.set(archetype.signature, storage);
-            if (DEBUG) {
-                console.log(
-                    `[SceneV2.createEntity] created storage for ${Archetype.format(
-                        archetype
-                    )}`
-                );
-            }
+            // if (DEBUG) {
+            //     console.log(
+            //         `[SceneV2.createEntity] created storage for ${Archetype.format(
+            //             archetype
+            //         )}`
+            //     );
+            // }
         }
 
         const entityId = this.entityPool.acquire();
