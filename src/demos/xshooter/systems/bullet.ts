@@ -1,4 +1,4 @@
-import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { StorageUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
@@ -8,7 +8,7 @@ import { GLOBALS } from "../globals";
 
 const { worldW, worldH } = GLOBALS;
 
-export class BulletSystem extends UpdateableSystem {
+export class BulletSystem extends StorageUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith([Component.Bullet], (chunk, chunkId) => {
             const count = chunk.count;

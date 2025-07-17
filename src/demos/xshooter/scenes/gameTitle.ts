@@ -4,8 +4,9 @@ import { GUISystem } from "../systems/GUI";
 
 export function createGameTitle() {
     const scene = new Scene({
-        updateableSystems: [],
-        renderableSystems: [new GUISystem(store)],
+        storageUpdateSystems: [],
+        storageRenderSystems: [],
+        guiRenderSystems: [new GUISystem()],
     });
 
     return scene;

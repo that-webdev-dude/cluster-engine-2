@@ -5,7 +5,12 @@ import {
     EntityMeta,
     EntityId,
 } from "../types";
-import { UpdateableSystem, RenderableSystem } from "./system";
+import {
+    StorageUpdateSystem,
+    StorageRenderSystem,
+    GUIUpdateSystem,
+    GUIRenderSystem,
+} from "./system";
 import { Archetype, Signature } from "./archetype";
 import { Storage } from "./storage";
 import { Chunk } from "./chunk";
@@ -37,15 +42,18 @@ export class Scene {
     readonly gui = new Container<GUIElement>();
     readonly cmd: CommandBuffer;
     readonly view: View;
-    readonly updateableSystems: UpdateableSystem[] = [];
-    readonly renderableSystems: RenderableSystem[] = [];
+    readonly storageUpdateSystems: StorageUpdateSystem[] = [];
+    readonly storageRenderSystems: StorageRenderSystem[] = [];
+    readonly guiRenderSystems: GUIRenderSystem[] = [];
 
     constructor(options: {
-        updateableSystems: UpdateableSystem[];
-        renderableSystems: RenderableSystem[];
+        storageUpdateSystems: StorageUpdateSystem[];
+        storageRenderSystems: StorageRenderSystem[];
+        guiRenderSystems: GUIRenderSystem[];
     }) {
-        this.updateableSystems = options.updateableSystems;
-        this.renderableSystems = options.renderableSystems;
+        this.storageUpdateSystems = options.storageUpdateSystems;
+        this.storageRenderSystems = options.storageRenderSystems;
+        this.guiRenderSystems = options.guiRenderSystems;
 
         this.view = new View(this.archetypes);
         this.cmd = new CommandBuffer(this);

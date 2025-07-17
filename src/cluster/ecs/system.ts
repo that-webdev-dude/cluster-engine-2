@@ -5,11 +5,8 @@ import { GUIContainer } from "../gui";
 
 /**
  * Abstract base class for systems that can be updated each frame.
- *
- * Classes extending `UpdateableSystem` must implement the `update` method,
- * which is called with the elapsed time since the last update.
  */
-export abstract class UpdateableSystem {
+export abstract class StorageUpdateSystem {
     constructor(protected store: Store) {}
     abstract update(
         view: View,
@@ -20,20 +17,16 @@ export abstract class UpdateableSystem {
 }
 
 /**
- * Abstract base class for systems that can be rendered each frame.
- *
- * Classes extending `RenderableSystem` must implement the `render` method,
- * which is called with an interpolation alpha value.
+ * Abstract base class for systems that can render Chunks of data each frame.
  */
-export abstract class RenderableSystem {
-    constructor(protected store: Store) {}
+export abstract class StorageRenderSystem {
     abstract render(view: View, alpha: number): void;
 }
 
 /**
  * Abstract class for systems that can update the game UI
  */
-export abstract class UIUpdateSystem {
+export abstract class GUIUpdateSystem {
     constructor(protected store: Store) {}
     abstract update(gui: GUIContainer, dt: number, t: number): void;
 }
@@ -41,6 +34,6 @@ export abstract class UIUpdateSystem {
 /**
  * Abstract class for systems that can render the game UI
  */
-export abstract class UIRenderSystem {
+export abstract class GUIRenderSystem {
     abstract render(gui: GUIContainer): void;
 }

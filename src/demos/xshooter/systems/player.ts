@@ -1,4 +1,4 @@
-import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { StorageUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
@@ -12,7 +12,7 @@ const State = {
     bulletsPerShot: 1,
 };
 
-export class PlayerSystem extends UpdateableSystem {
+export class PlayerSystem extends StorageUpdateSystem {
     private counter = State.shotInterval;
 
     update(view: View, cmd: CommandBuffer, dt: number) {

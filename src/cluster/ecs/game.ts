@@ -34,7 +34,7 @@ export class Game {
     update(dt: number, t: number) {
         this.scenes.forEach((scene) => {
             // update all the systems first
-            scene.updateableSystems.forEach((system) =>
+            scene.storageUpdateSystems.forEach((system) =>
                 system.update(scene.view, scene.cmd, dt, t)
             );
             // update the GUI
@@ -46,9 +46,14 @@ export class Game {
 
     render(alpha: number) {
         this.scenes.forEach((scene) => {
-            scene.renderableSystems.forEach((system) =>
-                system.render(scene.view, alpha)
-            );
+            // render the storage data
+            scene.storageRenderSystems.forEach((system) => {
+                system.render(scene.view, alpha);
+            });
+            // render the GUI
+            scene.guiRenderSystems.forEach((system) => {
+                system.render(scene.gui);
+            });
         });
         this.display.render();
     }

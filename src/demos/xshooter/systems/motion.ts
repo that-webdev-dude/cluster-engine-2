@@ -1,9 +1,9 @@
-import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { StorageUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Component } from "../components";
 
-export class MotionSystem extends UpdateableSystem {
+export class MotionSystem extends StorageUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith(
             [

@@ -1,4 +1,4 @@
-import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { StorageUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
@@ -11,7 +11,7 @@ import { ScoreEvent } from "../events";
 
 const { worldW, worldH } = GLOBALS;
 
-export class MeteorSystem extends UpdateableSystem {
+export class MeteorSystem extends StorageUpdateSystem {
     constructor(store: Store) {
         super(store);
         this.store.on(

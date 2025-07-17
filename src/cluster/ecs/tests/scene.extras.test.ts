@@ -61,7 +61,11 @@ let archetype = Archetype.create("cmdTest", schema);
 
 describe("SceneV2 ▶ command buffer integration", () => {
     beforeEach(() => {
-        scene = new Scene({ updateableSystems: [], renderableSystems: [] });
+        scene = new Scene({
+            storageUpdateSystems: [],
+            storageRenderSystems: [],
+            guiRenderSystems: [],
+        });
         cmd = new CommandBuffer(scene);
     });
 

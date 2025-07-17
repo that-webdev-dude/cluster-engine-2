@@ -1,12 +1,12 @@
 import { Component } from "../components";
-import { RenderableSystem } from "../../../cluster/ecs/system";
+import { StorageRenderSystem } from "../../../cluster/ecs/system";
 import { View } from "../../../cluster/ecs/scene";
 import { Chunk } from "../../../cluster/ecs/chunk";
 import { MeshPipeline, MeshData } from "../../../cluster/gl/pipelines/mesh";
 import { ComponentDescriptor } from "../../../cluster/types";
 import { Display } from "../../../cluster/core/Display";
 
-export class RendererSystem extends RenderableSystem {
+export class RendererSystem extends StorageRenderSystem {
     private renderer = Display.getInstance().createGPURenderingLayer();
 
     private trianglePipe = MeshPipeline.create(this.renderer, 3);

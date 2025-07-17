@@ -1,11 +1,11 @@
-import { UpdateableSystem } from "../../../cluster/ecs/system";
+import { StorageUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Component } from "../components";
 import { meteorArchetype } from "../entities/meteor";
 import { MeteorHitEvent } from "../events";
 
-export class CollisionSystem extends UpdateableSystem {
+export class CollisionSystem extends StorageUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         // Gather meteor data
         const meteors: {

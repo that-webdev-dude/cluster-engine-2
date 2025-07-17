@@ -46,7 +46,11 @@ describe("SceneV2 ▶ basic functionality", () => {
     const archetype = Archetype.create("test", schema);
 
     beforeEach(() => {
-        scene = new Scene({ updateableSystems: [], renderableSystems: [] });
+        scene = new Scene({
+            storageUpdateSystems: [],
+            storageRenderSystems: [],
+            guiRenderSystems: [],
+        });
     });
 
     it("createEntity stores metadata and default component values", () => {

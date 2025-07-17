@@ -13,7 +13,7 @@ import { store } from "../stores";
 
 export function createGamePlay() {
     const scene = new Scene({
-        updateableSystems: [
+        storageUpdateSystems: [
             new LevelSystem(store),
             new PlayerSystem(store),
             new MotionSystem(store),
@@ -21,7 +21,8 @@ export function createGamePlay() {
             new BulletSystem(store),
             new CollisionSystem(store),
         ],
-        renderableSystems: [new RendererSystem(store), new GUISystem(store)],
+        storageRenderSystems: [new RendererSystem()],
+        guiRenderSystems: [new GUISystem()],
     });
 
     scene.createEntity(playerArchetype, getPlayerComponents());
