@@ -38,9 +38,9 @@ export class Game {
                 system.update(scene.view, scene.cmd, dt, t)
             );
             // update the GUI
-            if (scene.gui.length > 0) {
-                scene.gui.update(dt, t);
-            }
+            scene.guiUpdateSystems.forEach((system) => {
+                system.update(scene.gui, dt, t);
+            });
         });
     }
 

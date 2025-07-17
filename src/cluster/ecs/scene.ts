@@ -44,15 +44,18 @@ export class Scene {
     readonly view: View;
     readonly storageUpdateSystems: StorageUpdateSystem[] = [];
     readonly storageRenderSystems: StorageRenderSystem[] = [];
+    readonly guiUpdateSystems: GUIUpdateSystem[] = [];
     readonly guiRenderSystems: GUIRenderSystem[] = [];
 
     constructor(options: {
         storageUpdateSystems: StorageUpdateSystem[];
         storageRenderSystems: StorageRenderSystem[];
+        guiUpdateSystems: GUIUpdateSystem[];
         guiRenderSystems: GUIRenderSystem[];
     }) {
         this.storageUpdateSystems = options.storageUpdateSystems;
         this.storageRenderSystems = options.storageRenderSystems;
+        this.guiUpdateSystems = options.guiUpdateSystems;
         this.guiRenderSystems = options.guiRenderSystems;
 
         this.view = new View(this.archetypes);
