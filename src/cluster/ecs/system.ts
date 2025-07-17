@@ -1,6 +1,7 @@
 import { Store } from "../core/Store";
 import { View } from "./scene";
 import { CommandBuffer } from "./cmd";
+import { GUIContainer } from "../gui";
 
 /**
  * Abstract base class for systems that can be updated each frame.
@@ -10,8 +11,12 @@ import { CommandBuffer } from "./cmd";
  */
 export abstract class UpdateableSystem {
     constructor(protected store: Store) {}
-
-    abstract update(view: View, cmd: CommandBuffer, dt: number): void;
+    abstract update(
+        view: View,
+        cmd: CommandBuffer,
+        dt: number,
+        t: number
+    ): void;
 }
 
 /**
@@ -22,6 +27,20 @@ export abstract class UpdateableSystem {
  */
 export abstract class RenderableSystem {
     constructor(protected store: Store) {}
-
     abstract render(view: View, alpha: number): void;
+}
+
+/**
+ * Abstract class for systems that can update the game UI
+ */
+export abstract class UIUpdateSystem {
+    constructor(protected store: Store) {}
+    abstract update(gui: GUIContainer, dt: number, t: number): void;
+}
+
+/**
+ * Abstract class for systems that can render the game UI
+ */
+export abstract class UIRenderSystem {
+    abstract render(gui: GUIContainer): void;
 }

@@ -31,11 +31,16 @@ export class Game {
         this.scenes.push(scene);
     }
 
-    update(dt: number) {
+    update(dt: number, t: number) {
         this.scenes.forEach((scene) => {
+            // update all the systems first
             scene.updateableSystems.forEach((system) =>
-                system.update(scene.view, scene.cmd, dt)
+                system.update(scene.view, scene.cmd, dt, t)
             );
+            // update the GUI
+            if (scene.gui.length > 0) {
+                scene.gui.update(dt, t);
+            }
         });
     }
 

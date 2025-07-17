@@ -11,7 +11,7 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
  * IUpdateable interface defines an object that can be updated.
  */
 interface IUpdateable {
-    update: (delta: number) => void;
+    update: (delta: number, t: number) => void;
 }
 
 /**
@@ -180,7 +180,7 @@ export class Engine {
 
         while (this.accumulator >= this.timestep) {
             this.updateables.forEach((updateable) =>
-                updateable.update(this.timestep)
+                updateable.update(this.timestep, this.elapsedTime)
             );
             this.accumulator -= this.timestep;
         }

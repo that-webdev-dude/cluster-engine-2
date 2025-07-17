@@ -1,6 +1,7 @@
 import { Game } from "../../cluster/ecs/game";
 import { Display } from "../../cluster/core/Display";
 import { createGamePlay } from "./scenes/gamePlay";
+import { createGameTitle } from "./scenes/gameTitle";
 import { GLOBALS } from "./globals";
 import { store } from "./stores";
 
@@ -19,5 +20,6 @@ export function app() {
 
     const game = new Game(store, display);
     game.setScene(createGamePlay());
+    // game.setScene(createGameTitle());
     game.start();
 }

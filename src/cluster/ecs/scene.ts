@@ -10,7 +10,8 @@ import { Archetype, Signature } from "./archetype";
 import { Storage } from "./storage";
 import { Chunk } from "./chunk";
 import { CommandBuffer } from "./cmd";
-import { SparseSet, IDPool, DEBUG } from "../tools";
+import { SparseSet, IDPool, Container, DEBUG } from "../tools";
+import { GUIElement } from "../gui";
 
 export class View {
     constructor(private readonly archetypeMap: Map<Signature, Storage<any>>) {}
@@ -33,6 +34,7 @@ export class Scene {
     private entityPool: IDPool<EntityId> = new IDPool();
 
     readonly archetypes: Map<Signature, Storage<any>> = new Map();
+    readonly gui = new Container<GUIElement>();
     readonly cmd: CommandBuffer;
     readonly view: View;
     readonly updateableSystems: UpdateableSystem[] = [];

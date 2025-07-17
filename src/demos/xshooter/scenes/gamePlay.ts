@@ -8,6 +8,7 @@ import { MeteorSystem } from "../systems/meteor";
 import { LevelSystem } from "../systems/level";
 import { BulletSystem } from "../systems/bullet";
 import { CollisionSystem } from "../systems/collision";
+import { GUIEntity } from "../gui";
 import { store } from "../stores";
 
 export function createGamePlay() {
@@ -24,6 +25,9 @@ export function createGamePlay() {
     });
 
     scene.createEntity(playerArchetype, getPlayerComponents());
+
+    scene.gui.add(GUIEntity.text(store));
+    scene.gui.add(GUIEntity.background());
 
     return scene;
 }
