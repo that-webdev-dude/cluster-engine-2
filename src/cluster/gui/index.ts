@@ -1,15 +1,34 @@
 import { Container } from "../tools/Container";
 
-export type GUIElement = {
-    [key: string]: any; // Allows extra properties of any type
-    type: string;
+// type GUILayout {
+
+// }
+
+// type GUYStyle {
+
+// }
+
+type GUIText = {
+    type: "GUIText";
+    position: { x: number; y: number };
+    font: string;
+    fill: string;
+    baseline: CanvasTextBaseline;
+    text: () => string;
     dead: boolean;
-    position: {
-        x: number;
-        y: number;
-    };
     visible: boolean;
-    update?(dt: number, t?: number): Function;
 };
+
+type GUIBackground = {
+    type: "GUIBackground";
+    position: { x: number; y: number };
+    width: number;
+    height: number;
+    fill: string;
+    dead: boolean;
+    visible: boolean;
+};
+
+export type GUIElement = GUIText | GUIBackground;
 
 export type GUIContainer = Container<GUIElement>;

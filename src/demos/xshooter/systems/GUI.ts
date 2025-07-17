@@ -29,8 +29,14 @@ export class GUISystem extends GUIRenderSystem {
                         ctx.fillRect(position.x, position.y, width, height);
                         break;
                     }
-                    default:
-                        break;
+                    default: {
+                        const _exhaustiveCheck: never = guiElement;
+                        throw new Error(
+                            `Unknown GUIElement type: ${
+                                (guiElement as any).type
+                            }`
+                        );
+                    }
                 }
             } else if (typeof guiElement.forEach === "function") {
                 // It's a Container<GUIComponent>

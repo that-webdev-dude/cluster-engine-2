@@ -1,8 +1,4 @@
-interface Updateable {
-    update?(dt: number, t: number): void;
-}
-
-export class Container<T extends Updateable> implements Updateable {
+export class Container<T> {
     public children: (T | Container<T>)[];
     public position: { x: number; y: number };
     constructor(position?: { x: number; y: number }) {
@@ -40,21 +36,6 @@ export class Container<T extends Updateable> implements Updateable {
             if (child instanceof Container) {
                 (child as Container<T>).forEach(fn);
             }
-        });
-    }
-
-    update(dt: number, t: number) {
-        this.children = this.children.filter((child) => {
-            if (child instanceof Container) {
-                child.update(dt, t);
-                return true;
-            } else if (typeof (child as T).update === "function") {
-                if (child !== undefined && child.update !== undefined) {
-                    child.update(dt, t);
-                    return !(child as any).dead;
-                }
-            }
-            return true;
         });
     }
 }
