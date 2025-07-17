@@ -4,27 +4,27 @@ import { Container } from "../tools/Container";
 
 // }
 
-// type GUYStyle {
+type GUIStyle = {
+    fill: string;
+};
 
-// }
-
-type GUIText = {
+type GUIText = GUIStyle & {
     type: "GUIText";
     position: { x: number; y: number };
     font: string;
-    fill: string;
+    // fill: string;
     baseline: CanvasTextBaseline;
     text: () => string;
     dead: boolean;
     visible: boolean;
 };
 
-type GUIBackground = {
+type GUIBackground = GUIStyle & {
     type: "GUIBackground";
     position: { x: number; y: number };
     width: number;
     height: number;
-    fill: string;
+    // fill: string;
     dead: boolean;
     visible: boolean;
 };
