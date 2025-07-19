@@ -25,3 +25,14 @@ export interface PlayerDiedEvent extends StoreEvent {
         entityId: EntityId;
     };
 }
+
+// game events
+export interface GamePlayEvent extends StoreEvent {
+    type: "gamePlay";
+}
+export interface GameTitleEvent extends StoreEvent {
+    type: "gameTitle";
+}
+export interface GameOverEvent extends StoreEvent {
+    type: "gameOver";
+}
