@@ -18,8 +18,24 @@ export function app() {
         },
     });
 
+    // scene switch event
+    store.on(
+        "gamePlay",
+        (e) => {
+            game.setScene(createGamePlay());
+        },
+        false
+    );
+
+    store.on(
+        "gameTitle",
+        (e) => {
+            game.setScene(createGameTitle());
+        },
+        false
+    );
+
     const game = new Game(store, display);
-    game.setScene(createGamePlay());
-    // game.setScene(createGameTitle());
+    game.setScene(createGameTitle());
     game.start();
 }

@@ -22,12 +22,13 @@ export function createGamePlay() {
             new CollisionSystem(store),
         ],
         storageRenderSystems: [new RendererSystem()],
+        guiUpdateSystems: [],
         guiRenderSystems: [new GUISystem()],
     });
 
     scene.createEntity(playerArchetype, getPlayerComponents());
 
-    scene.gui.add(GUIEntity.text(store));
+    scene.gui.add(GUIEntity.staticText());
     scene.gui.add(GUIEntity.background());
 
     return scene;

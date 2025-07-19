@@ -99,6 +99,8 @@ export class CollisionSystem extends StorageUpdateSystem {
                                 pi
                             )[0];
                             cmd.remove(playerId); // or trigger game over logic
+
+                            this.store.emit({ type: "gameTitle" }, false);
                             return;
                         }
                     }

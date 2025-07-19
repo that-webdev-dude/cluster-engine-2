@@ -187,13 +187,20 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
         if (this.destroyed) return;
 
         this.destroyed = true;
-        this.header!.setUint32(0, 0, true);
+
+        // Reset entity count
+        if (this.header) {
+            this.header.setUint32(0, 0, true);
+        }
+
+        // Help GC
         this.buffer = null;
         this.header = null;
+        this.generations = new Uint32Array(0); // optionally null instead if you want to force error on use
 
-        Object.freeze(this.views);
-
-        if (DEBUG) console.log("[Chunk.dispose]: chunk has been disposed");
+        if (DEBUG) {
+            console.log(`[Chunk.dispose]: chunk disposed`);
+        }
     }
 
     /* _______________ internals _______________ */

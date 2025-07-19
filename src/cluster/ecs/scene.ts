@@ -66,6 +66,30 @@ export class Scene {
         this.cmd.flush();
     }
 
+    destroy(): void {
+        // Clear all storages
+        for (const storage of this.archetypes.values()) {
+            storage.clear(); // assume clear() releases all chunks and entities
+        }
+        this.archetypes.clear();
+
+        // Clear entity metadata and pool
+        this.entityMeta.clear();
+        this.entityPool.reset(); // assume reset() makes all IDs available again
+
+        // Clear GUI tree
+        this.gui.clear();
+
+        // Clear the cmd
+        this.cmd.clear();
+
+        // Clear all systems (optional if scene won't be reused)
+        this.storageUpdateSystems.length = 0;
+        this.storageRenderSystems.length = 0;
+        this.guiUpdateSystems.length = 0;
+        this.guiRenderSystems.length = 0;
+    }
+
     createEntity<S extends readonly ComponentDescriptor[]>(
         archetype: Archetype<S>,
         comps: ComponentValueMap

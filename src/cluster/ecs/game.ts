@@ -13,7 +13,7 @@ const displayDefaults = {
 
 export class Game {
     private engine: Engine = new Engine(60);
-    private scenes: Array<Scene> = []; // a stack of SceneV2 instances
+    private scenes: Array<Scene> = []; // a stack of Scene instances
 
     constructor(
         readonly store: Store = new Store({}),
@@ -27,6 +27,11 @@ export class Game {
     }
 
     setScene(scene: Scene): void {
+        const currentScene = this.scenes.pop();
+        if (currentScene !== undefined) {
+            currentScene.destroy();
+        }
+        // this.display.destroyRenderingLayers();
         scene.initialize();
         this.scenes.push(scene);
     }

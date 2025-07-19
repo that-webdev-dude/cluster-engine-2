@@ -64,6 +64,7 @@ describe("SceneV2 ▶ command buffer integration", () => {
         scene = new Scene({
             storageUpdateSystems: [],
             storageRenderSystems: [],
+            guiUpdateSystems: [],
             guiRenderSystems: [],
         });
         cmd = new CommandBuffer(scene);

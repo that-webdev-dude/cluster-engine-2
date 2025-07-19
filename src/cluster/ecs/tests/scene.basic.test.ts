@@ -49,6 +49,7 @@ describe("SceneV2 ▶ basic functionality", () => {
         scene = new Scene({
             storageUpdateSystems: [],
             storageRenderSystems: [],
+            guiUpdateSystems: [],
             guiRenderSystems: [],
         });
     });

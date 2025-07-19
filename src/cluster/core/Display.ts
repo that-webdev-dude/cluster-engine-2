@@ -99,6 +99,8 @@ export class Display {
         ctx.scale(DPR, DPR); // scale for high-DPI displays
         this.ctx = ctx;
 
+        this.ctx.imageSmoothingEnabled = false;
+
         this.initialize();
 
         Display.instance = this;
@@ -168,7 +170,7 @@ export class Display {
         return this.instance;
     }
 
-    public createGPURenderingLayer() {
+    public createGPURenderingLayer(hidden: boolean = false) {
         const layer = new GPURenderingLayer({
             width: this.bufW,
             height: this.bufH,
@@ -179,12 +181,11 @@ export class Display {
             backgroundColor: this.backgroundColor,
         });
 
-        this.renderingLayers.add(layer);
-
+        if (!hidden) this.renderingLayers.add(layer);
         return layer;
     }
 
-    public createCPURenderingLayer(): CPURenderingLayer {
+    public createCPURenderingLayer(hidden: boolean = false): CPURenderingLayer {
         const layer = new CPURenderingLayer({
             width: this.bufW,
             height: this.bufH,
@@ -194,7 +195,8 @@ export class Display {
             antialias: false,
             backgroundColor: this.backgroundColor,
         });
-        this.renderingLayers.add(layer);
+
+        if (!hidden) this.renderingLayers.add(layer);
         return layer;
     }
 
@@ -203,11 +205,14 @@ export class Display {
         this.ctx.drawImage(srcCanvas, 0, 0, this.bufW, this.bufH);
     }
 
-    public createRenderingLayer(type: "gpu" | "cpu"): RenderingLayer {
+    public createRenderingLayer(
+        type: "gpu" | "cpu",
+        hidden: boolean = false
+    ): RenderingLayer {
         if (type === "gpu") {
-            return this.createGPURenderingLayer();
+            return this.createGPURenderingLayer(hidden);
         }
-        return this.createCPURenderingLayer();
+        return this.createCPURenderingLayer(hidden);
     }
 
     public clear(): void {
@@ -227,6 +232,10 @@ export class Display {
         }
 
         // destroy the rendering layers
+        this.destroyRenderingLayers();
+    }
+
+    public destroyRenderingLayers() {
         for (const layer of this.renderingLayers) {
             if ("destroy" in layer && typeof layer.destroy === "function") {
                 layer.destroy();
@@ -303,9 +312,11 @@ export class Display {
 
         this.ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
         this.ctx.scale(DPR, DPR);
-        for (const layer of this.renderingLayers) {
-            layer.resize(this.bufW, this.bufH);
-        }
+
+        // don't actually need to resize the layers! this would be a fixed res display
+        // for (const layer of this.renderingLayers) {
+        //     // layer.resize(this.bufW, this.bufH);
+        // }
         this.clear();
     }
 
@@ -374,7 +385,7 @@ export class GPURenderingLayer implements RenderingLayer {
         }
 
         this.canvas = canvas;
-        this.gl = ctx;
+        this.gl = ctx as WebGL2RenderingContext;
 
         const { r, g, b, a } = opts.backgroundColor;
         this.backgroundColor = {
@@ -563,6 +574,18 @@ export class CPURenderingLayer implements RenderingLayer {
         // now TS knows ctx2d is exactly the 2D-drawing interface
         this.ctx = ctx2d;
 
+        const DPR = window.devicePixelRatio || 1;
+        this.canvas.width = opts.width * DPR;
+        this.canvas.height = opts.height * DPR;
+
+        if (this.canvas instanceof HTMLCanvasElement) {
+            this.canvas.style.width = `${opts.width}px`;
+            this.canvas.style.height = `${opts.height}px`;
+        }
+
+        this.ctx.scale(DPR, DPR);
+        this.ctx.imageSmoothingEnabled = false;
+
         const { r, g, b, a } = opts.backgroundColor;
         this.backgroundColor = {
             r: Cmath.to255(r),
@@ -601,11 +624,23 @@ export class CPURenderingLayer implements RenderingLayer {
     }
 
     public resize(width: number, height: number): void {
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
-        this.setBackgroundColor();
-        this.clear();
+        const DPR = window.devicePixelRatio || 1;
+
+        this.canvas.width = width * DPR;
+        this.canvas.height = height * DPR;
+
+        if (this.canvas instanceof HTMLCanvasElement) {
+            this.canvas.style.width = `${width}px`;
+            this.canvas.style.height = `${height}px`;
+        }
+
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+
+        // 🧠 Add scaling to fit fixed world space into new canvas size
+        const scaleX = (width * DPR) / this.optsW;
+        const scaleY = (height * DPR) / this.optsH;
+
+        this.ctx.scale(scaleX, scaleY);
     }
 
     public clear(): void {

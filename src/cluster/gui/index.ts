@@ -1,34 +1,41 @@
 import { Container } from "../tools/Container";
 
-// type GUILayout {
-
-// }
-
-type GUIStyle = {
-    fill: string;
-};
-
-type GUIText = GUIStyle & {
-    type: "GUIText";
+// Base properties common to all GUI elements
+interface GUIBase {
     position: { x: number; y: number };
-    font: string;
-    // fill: string;
-    baseline: CanvasTextBaseline;
-    text: () => string;
+    fill: string;
     dead: boolean;
     visible: boolean;
-};
+}
 
-type GUIBackground = GUIStyle & {
+// Optional for text alignment and style
+interface GUITextBase extends GUIBase {
+    font: string;
+    align: CanvasTextAlign;
+    baseline: CanvasTextBaseline;
+}
+
+// GUIText: visible static string
+interface GUIText extends GUITextBase {
+    type: "GUIText";
+    text: string;
+}
+
+// GUIStoredText: dynamic text (function returning string)
+interface GUIStoredText extends GUITextBase {
+    type: "GUIStoredText";
+    text: () => string;
+}
+
+// GUIBackground: background box
+interface GUIBackground extends GUIBase {
     type: "GUIBackground";
-    position: { x: number; y: number };
     width: number;
     height: number;
-    // fill: string;
-    dead: boolean;
-    visible: boolean;
-};
+}
 
-export type GUIElement = GUIText | GUIBackground;
+// Union type of all GUI elements
+export type GUIElement = GUIText | GUIStoredText | GUIBackground;
 
+// Container of GUI elements
 export type GUIContainer = Container<GUIElement>;

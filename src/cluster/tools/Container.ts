@@ -1,6 +1,7 @@
 export class Container<T> {
     public children: (T | Container<T>)[];
     public position: { x: number; y: number };
+
     constructor(position?: { x: number; y: number }) {
         this.position = position || {
             x: 0,
@@ -11,11 +12,6 @@ export class Container<T> {
 
     get length(): number {
         return this.children.length;
-    }
-
-    /** methods */
-    map(f = () => {}) {
-        return this.children.map(f);
     }
 
     add(child: T | Container<T>) {
@@ -30,6 +26,15 @@ export class Container<T> {
         return child;
     }
 
+    clear(): void {
+        for (const child of this.children) {
+            if (child instanceof Container) {
+                child.clear();
+            }
+        }
+        this.children.length = 0;
+    }
+
     forEach(fn: (child: T | Container<T>) => void) {
         this.children.forEach((child) => {
             fn(child);
@@ -37,5 +42,9 @@ export class Container<T> {
                 (child as Container<T>).forEach(fn);
             }
         });
+    }
+
+    map(f = () => {}) {
+        return this.children.map(f);
     }
 }

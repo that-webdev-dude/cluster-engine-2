@@ -161,6 +161,17 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
         return { chunkId, ...meta };
     }
 
+    clear(): void {
+        for (const [chunkId, chunk] of this.chunks.entries()) {
+            chunk.dispose(); // free any associated memory/resources
+            this.chunkIdPool.release(chunkId); // make the ID reusable
+        }
+
+        this.chunks.clear(); // remove all chunk entries
+        this.partialChunkIds.clear(); // reset partial tracking
+        this.liveRecords = 0; // reset record count
+    }
+
     private findAvailableChunk(): number | undefined {
         return this.partialChunkIds.values().next().value as number | undefined;
     }
@@ -189,14 +200,3 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
         this.chunks.delete(chunkId);
     }
 }
-
-/**
- * the worlds deletes the entity 5 living in chunk 1, row 20
- * when deleted we get back
- *  chunkid 1,
- *  row 20
- *  movedRow: 33 → this is now occupying the chunkid 1 - row 20
- *
- * this means that whichever entity id has metadata chunkid 1 - row 33,
- * now needs to update the metadata to chunkid 1 - row 20
- */
