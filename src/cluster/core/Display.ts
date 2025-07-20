@@ -319,7 +319,7 @@ export class Display {
 
         // don't actually need to resize the layers! this would be a fixed res display
         // for (const layer of this.renderingLayers) {
-        //     // layer.resize(this.bufW, this.bufH);
+        //     layer.resize(this.bufW, this.bufH);
         // }
         this.clear();
     }
