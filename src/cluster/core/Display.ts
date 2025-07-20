@@ -67,7 +67,7 @@ export class Display {
             r: Cmath.to255(r),
             g: Cmath.to255(g),
             b: Cmath.to255(b),
-            a: Cmath.to255(a),
+            a: Cmath.clamp(a, 0, 1),
         };
         this.aspectRatio = opts.width / opts.height;
         this.optsW = opts.width;
@@ -216,8 +216,9 @@ export class Display {
     }
 
     public clear(): void {
-        // this.setBackgroundColor();
         this.ctx.clearRect(0, 0, this.cssWidth, this.cssHeight);
+        this.setBackgroundColor();
+        this.ctx.fillRect(0, 0, this.cssWidth, this.cssHeight); // fill with background
     }
 
     public destroy(): void {
@@ -274,9 +275,12 @@ export class Display {
         }
     }
 
-    private setBackgroundColor(): void {
-        const c = this.backgroundColor;
-        this.ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${c.a / 255})`;
+    public setBackgroundColor(rgba?: RGBA): void {
+        const c = rgba || this.backgroundColor;
+        this.ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, ${c.a})`;
+        if (rgba) {
+            this.backgroundColor = rgba;
+        }
     }
 
     private initialize(): void {

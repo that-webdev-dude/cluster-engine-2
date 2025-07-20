@@ -1,86 +1,56 @@
+import { store } from "../stores";
+import {
+    GUIContainer,
+    createGUIText,
+    withPosition,
+    withText,
+    withAlign,
+    composeGUI,
+    withTag,
+} from "../../../cluster/gui/GUIbuilders";
 import { GLOBALS } from "../globals";
-import { GUIElement } from "../../../cluster/gui";
-import { Store } from "../../../cluster/core/Store";
 
-type Vec2 = { x: number; y: number };
+export function createGamePlayGUI(): GUIContainer {
+    // game scores
+    const GUIScoresContainer = new GUIContainer();
+    const GUIScoresText = composeGUI(
+        createGUIText("SCORES", '16px "Press Start 2P"', "white"),
+        withPosition(24, 24),
+        withAlign("left")
+    );
+    const GUIScoresValue = composeGUI(
+        createGUIText("0", '16px "Press Start 2P"', "white"),
+        withPosition(132, 24),
+        withAlign("left"),
+        withText(() => store.get("scores") || "0")
+    );
+    GUIScoresContainer.add(GUIScoresText);
+    GUIScoresContainer.add(GUIScoresValue);
 
-interface GUITextOptions {
-    position?: Vec2;
-    fill?: string;
-    text?: string;
-    size?: number;
+    // game timer
+    const GUITimerText = composeGUI(
+        createGUIText("SCORES", '16px "Press Start 2P"', "white"),
+        withPosition(GLOBALS.worldW / 2, 24),
+        withText("0.0"),
+        withTag("GUITimer")
+    );
+
+    const GUIGameContainer = new GUIContainer();
+    GUIGameContainer.add(GUIScoresContainer);
+    GUIGameContainer.add(GUITimerText);
+
+    return GUIGameContainer;
 }
 
-interface GUIStoredTextOptions {
-    position?: Vec2;
-    fill?: string;
-    storedKey?: string;
-}
+export function createGameTitleGUI(): GUIContainer {
+    const GUITitleText = composeGUI(
+        createGUIText("scores", '16px "Press Start 2P"', "white"),
+        withPosition(GLOBALS.worldW / 2, GLOBALS.worldH / 2),
+        withText("xshooter")
+    );
 
-export class GUIEntity {
-    private static textDefaults: Required<GUITextOptions> = {
-        position: { x: 0, y: 0 },
-        fill: "white",
-        text: "text",
-        size: 16,
-    };
+    const GUITitleContainer = new GUIContainer();
+    GUITitleContainer.add(GUITitleText);
 
-    private static storedTextDefaults: Required<GUIStoredTextOptions> = {
-        position: { x: 0, y: 0 },
-        fill: "white",
-        storedKey: "",
-    };
-
-    static staticText(options?: GUITextOptions): GUIElement {
-        const { position, fill, text, size } = {
-            ...GUIEntity.textDefaults,
-            ...options,
-        };
-
-        return {
-            type: "GUIText",
-            dead: false,
-            visible: true,
-            position,
-            font: `${size}px "Press Start 2P"`,
-            fill,
-            baseline: "top",
-            align: "center",
-            text,
-        };
-    }
-
-    static storedText(
-        store: Store,
-        options?: GUIStoredTextOptions
-    ): GUIElement {
-        const { position, fill, storedKey } = {
-            ...GUIEntity.storedTextDefaults,
-            ...options,
-        };
-
-        return {
-            type: "GUIStoredText",
-            dead: false,
-            visible: true,
-            position,
-            font: '14px "Press Start 2P"',
-            align: "center",
-            fill,
-            baseline: "top",
-            text: () => (store && storedKey ? store.get(storedKey) : ""),
-        };
-    }
-
-    static background(fill = "transparent"): GUIElement {
-        return {
-            type: "GUIBackground",
-            dead: false,
-            visible: true,
-            position: { x: 0, y: 0 },
-            width: GLOBALS.worldW,
-            height: GLOBALS.worldH,
-            fill,
-        };
-    }
+    return GUITitleContainer;
 }

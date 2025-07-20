@@ -12,6 +12,10 @@ const actions = {
     incrementScores(store: Store, payload: number) {
         store.commit("setScores", state.scores + payload);
     },
+    resetGame(store: Store) {
+        store.commit("setLevel", 0);
+        store.commit("setScores", 0);
+    },
 };
 
 const mutations = {

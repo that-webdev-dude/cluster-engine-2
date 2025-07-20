@@ -1,17 +1,16 @@
 export class Container<T> {
     public children: (T | Container<T>)[];
-    public position: { x: number; y: number };
 
-    constructor(position?: { x: number; y: number }) {
-        this.position = position || {
-            x: 0,
-            y: 0,
-        };
+    constructor() {
         this.children = [];
     }
 
     get length(): number {
         return this.children.length;
+    }
+
+    get empty(): boolean {
+        return this.children.length > 0 ? false : true;
     }
 
     add(child: T | Container<T>) {
@@ -37,9 +36,10 @@ export class Container<T> {
 
     forEach(fn: (child: T | Container<T>) => void) {
         this.children.forEach((child) => {
-            fn(child);
             if (child instanceof Container) {
                 (child as Container<T>).forEach(fn);
+            } else {
+                fn(child);
             }
         });
     }

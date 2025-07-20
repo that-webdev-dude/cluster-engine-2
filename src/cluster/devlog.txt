@@ -16,7 +16,6 @@ TODO:
 - in GUI if store hasn't changed, there's no need to render
 
 TODO next
-scene transition
 level hook in GUI
 timer hook in GUI
 camera shake

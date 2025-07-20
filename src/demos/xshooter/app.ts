@@ -22,6 +22,7 @@ export function app() {
     store.on(
         "gamePlay",
         (e) => {
+            store.dispatch("resetGame");
             game.setScene(createGamePlay());
         },
         false
@@ -36,6 +37,6 @@ export function app() {
     );
 
     const game = new Game(store, display);
-    game.setScene(createGameTitle());
+    game.setScene(createGamePlay());
     game.start();
 }

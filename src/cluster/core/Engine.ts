@@ -49,6 +49,7 @@ export class Engine {
     // Debug utilities
     private frameCount: number = 0;
     private elapsedTime: number = 0;
+    private totalTime: number = 0;
     private fps: number = 0;
     private fpsUpdateInterval: number = 0.5; // seconds
     private fpsAccumulator: number = 0;
@@ -175,12 +176,13 @@ export class Engine {
 
         this.accumulator += frameTime;
         this.elapsedTime += frameTime;
+        this.totalTime += frameTime;
         this.fpsAccumulator += frameTime;
         this.frameCount++;
 
         while (this.accumulator >= this.timestep) {
             this.updateables.forEach((updateable) =>
-                updateable.update(this.timestep, this.elapsedTime)
+                updateable.update(this.timestep, this.totalTime)
             );
             this.accumulator -= this.timestep;
         }

@@ -1,6 +1,6 @@
 import { Scene } from "../../../cluster/ecs/scene";
 import { playerArchetype, getPlayerComponents } from "../entities/player";
-import { GUISystem } from "../systems/GUI";
+import { GUISystem } from "../systems/GUIRenderer";
 import { RendererSystem } from "../systems/renderer";
 import { PlayerSystem } from "../systems/player";
 import { MotionSystem } from "../systems/motion";
@@ -8,8 +8,9 @@ import { MeteorSystem } from "../systems/meteor";
 import { LevelSystem } from "../systems/level";
 import { BulletSystem } from "../systems/bullet";
 import { CollisionSystem } from "../systems/collision";
-import { GUIEntity } from "../gui";
+import { GUITimerSystem } from "../systems/GUITimer";
 import { store } from "../stores";
+import { createGamePlayGUI } from "../gui";
 
 export function createGamePlay() {
     const scene = new Scene({
@@ -22,14 +23,13 @@ export function createGamePlay() {
             new CollisionSystem(store),
         ],
         storageRenderSystems: [new RendererSystem()],
-        guiUpdateSystems: [],
+        guiUpdateSystems: [new GUITimerSystem(store)],
         guiRenderSystems: [new GUISystem()],
     });
 
     scene.createEntity(playerArchetype, getPlayerComponents());
 
-    scene.gui.add(GUIEntity.staticText());
-    scene.gui.add(GUIEntity.background());
+    scene.gui = createGamePlayGUI();
 
     return scene;
 }

@@ -15,8 +15,9 @@ import { Archetype, Signature } from "./archetype";
 import { Storage } from "./storage";
 import { Chunk } from "./chunk";
 import { CommandBuffer } from "./cmd";
-import { SparseSet, IDPool, Container, DEBUG } from "../tools";
-import { GUIElement } from "../gui";
+import { SparseSet, IDPool, DEBUG } from "../tools";
+// import { GUIElement } from "../gui";
+import { GUIContainer } from "../gui/GUIbuilders";
 
 export class View {
     constructor(private readonly archetypeMap: Map<Signature, Storage<any>>) {}
@@ -39,7 +40,7 @@ export class Scene {
     private entityPool: IDPool<EntityId> = new IDPool();
 
     readonly archetypes: Map<Signature, Storage<any>> = new Map();
-    readonly gui = new Container<GUIElement>();
+    public gui = new GUIContainer();
     readonly cmd: CommandBuffer;
     readonly view: View;
     readonly storageUpdateSystems: StorageUpdateSystem[] = [];
@@ -101,13 +102,6 @@ export class Scene {
         if (!storage) {
             storage = new Storage(archetype);
             this.archetypes.set(archetype.signature, storage);
-            // if (DEBUG) {
-            //     console.log(
-            //         `[SceneV2.createEntity] created storage for ${Archetype.format(
-            //             archetype
-            //         )}`
-            //     );
-            // }
         }
 
         const entityId = this.entityPool.acquire();

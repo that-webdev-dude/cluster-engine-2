@@ -1,7 +1,7 @@
 import { Store } from "../core/Store";
 import { View } from "./scene";
 import { CommandBuffer } from "./cmd";
-import { GUIContainer } from "../gui";
+import { GUIContainer } from "../gui/GUIbuilders";
 
 /**
  * Abstract base class for systems that can be updated each frame.
@@ -27,7 +27,7 @@ export abstract class StorageRenderSystem {
  * Abstract class for systems that can update the game UI
  */
 export abstract class GUIUpdateSystem {
-    constructor(protected store: Store) {}
+    constructor(protected store?: Store) {}
     abstract update(gui: GUIContainer, dt: number, t: number): void;
 }
 
