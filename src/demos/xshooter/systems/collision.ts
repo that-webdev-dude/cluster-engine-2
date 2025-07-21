@@ -90,7 +90,7 @@ export class CollisionSystem extends StorageUpdateSystem {
                             Math.abs(px - meteor.x) <= phw + meteor.hw &&
                             Math.abs(py - meteor.y) <= phh + meteor.hh
                         ) {
-                            console.warn("Player hit by meteor!");
+                            // console.warn("Player hit by meteor!");
 
                             // Could trigger death, scene transition, explosion, etc.
                             const playerId = (cmd as any).scene.findEntityId(
@@ -98,9 +98,16 @@ export class CollisionSystem extends StorageUpdateSystem {
                                 playerChunkId,
                                 pi
                             )[0];
-                            cmd.remove(playerId); // or trigger game over logic
 
-                            this.store.emit({ type: "gameTitle" }, false);
+                            // this.store.emit({ type: "gameTitle" }, false);
+                            const meteorId = (cmd as any).scene.findEntityId(
+                                meteorArchetype,
+                                meteor.chunkId,
+                                meteor.index
+                            )[0];
+                            cmd.remove(meteorId); // or trigger game over logic
+
+                            this.store.emit({ type: "playerHit" });
                             return;
                         }
                     }

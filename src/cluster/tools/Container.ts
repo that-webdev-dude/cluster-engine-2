@@ -17,12 +17,25 @@ export class Container<T> {
         this.children.push(child);
         return child;
     }
+    remove(child: T | Container<T>): boolean {
+        let removed = false;
 
-    remove(child: T | Container<T>) {
-        this.children = this.children.filter(
-            (currentChild) => currentChild !== child
-        );
-        return child;
+        this.children = this.children.filter((currentChild) => {
+            if (currentChild === child) {
+                removed = true;
+                return false;
+            }
+
+            if (currentChild instanceof Container) {
+                if (currentChild.remove(child)) {
+                    removed = true;
+                }
+            }
+
+            return true;
+        });
+
+        return removed;
     }
 
     clear(): void {

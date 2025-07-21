@@ -9,6 +9,7 @@ export enum Component {
     Speed,
     Velocity,
     Health,
+    Lives,
     Player,
     Bullet,
     Meteor,
@@ -84,7 +85,14 @@ const DESCRIPTORS = {
         name: "Health",
         count: 1,
         buffer: Uint32Array,
-        default: [0], // in radians
+        default: [0], // is a number
+    },
+    Lives: {
+        type: Component.Lives,
+        name: "Lives",
+        count: 1,
+        buffer: Uint32Array,
+        default: [0], // is a number
     },
     // tags
     Player: {

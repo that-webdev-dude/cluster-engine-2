@@ -9,6 +9,7 @@ import { LevelSystem } from "../systems/level";
 import { BulletSystem } from "../systems/bullet";
 import { CollisionSystem } from "../systems/collision";
 import { GUITimerSystem } from "../systems/GUITimer";
+import { GUILivesSysten } from "../systems/GUILives";
 import { store } from "../stores";
 import { createGamePlayGUI } from "../gui";
 
@@ -23,7 +24,10 @@ export function createGamePlay() {
             new CollisionSystem(store),
         ],
         storageRenderSystems: [new RendererSystem()],
-        guiUpdateSystems: [new GUITimerSystem(store)],
+        guiUpdateSystems: [
+            new GUITimerSystem(store),
+            new GUILivesSysten(store),
+        ],
         guiRenderSystems: [new GUISystem()],
     });
 

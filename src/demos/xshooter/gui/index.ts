@@ -1,4 +1,3 @@
-import { store } from "../stores";
 import {
     GUIContainer,
     createGUIText,
@@ -8,9 +7,11 @@ import {
     composeGUI,
     withTag,
     withAngle,
+    withIndex,
 } from "../../../cluster/gui/GUIbuilders";
-import { GLOBALS } from "../globals";
 import { Cmath } from "../../../cluster/tools";
+import { GLOBALS } from "../globals";
+import { store } from "../stores";
 
 export function createGamePlayGUI(): GUIContainer {
     // game scores
@@ -53,9 +54,33 @@ export function createGamePlayGUI(): GUIContainer {
         withTag("GUITimer")
     );
 
+    // game lives
+    const GUILivesContainer = new GUIContainer({
+        tag: "GUILivesContainer",
+        position: {
+            x: GLOBALS.worldW - 24,
+            y: GLOBALS.worldH - 24,
+        },
+    });
+    const storedLives = store.get("lives") || 3;
+    for (let i = 0; i < storedLives; i++) {
+        const GUILife = composeGUI(
+            createGUIText("❤️", '16px "Press Start 2P"', "white"),
+            withPosition(-i * 24, -2),
+            withAlign("center"),
+            withAngle(Cmath.deg2rad(0)),
+            withText("❤️"),
+            withTag("GUILife"),
+            withIndex(i + 1)
+        );
+        GUILivesContainer.add(GUILife);
+    }
+
+    // dump in the game container
     const GUIGameContainer = new GUIContainer();
     GUIGameContainer.add(GUIScoresContainer);
     GUIGameContainer.add(GUILevelContainer);
+    GUIGameContainer.add(GUILivesContainer);
     GUIGameContainer.add(GUITimerText);
 
     return GUIGameContainer;

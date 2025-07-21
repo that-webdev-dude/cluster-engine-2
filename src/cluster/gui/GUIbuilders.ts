@@ -3,6 +3,7 @@ import { Container } from "../tools";
 type Vec2 = { x: number; y: number };
 
 interface GUIBase {
+    index: number;
     tag: string;
     dead: boolean;
     visible: boolean;
@@ -36,6 +37,10 @@ export interface GUIRectElement extends GUIBase {
 export type GUIElement = GUITextElement | GUIRectElement;
 
 export type GUIBuilder = (el: Partial<GUIElement>) => Partial<GUIElement>;
+
+export const withIndex = (index: number): GUIBuilder => {
+    return (el) => ({ ...el, index });
+};
 
 export const withTag = (tag: string): GUIBuilder => {
     return (el) => ({ ...el, tag });
@@ -129,6 +134,7 @@ export const createGUIRect = (
 
 export function composeGUI<T extends GUIElement>(...builders: GUIBuilder[]): T {
     const base: GUIBase = {
+        index: 0,
         tag: "",
         dead: false,
         visible: true,
@@ -152,24 +158,21 @@ export function composeGUI<T extends GUIElement>(...builders: GUIBuilder[]): T {
  * GUIContainer is a specialized Container for GUI elements.
  * It extends the generic Container class to hold GUIElement types.
  */
-// export class GUIContainer extends Container<GUIElement> {
-//     elementType: string = "GUIContainer";
-//     tag: string = "";
-//     dead: boolean = false;
-//     visible: boolean = true;
-//     position: Vec2 = { x: 0, y: 0 };
-//     offset: Vec2 = { x: 0, y: 0 };
-//     scale: Vec2 = { x: 0, y: 0 };
-//     pivot: Vec2 = { x: 0, y: 0 };
-//     angle: number = 0;
-//     alpha: number = 1;
-
-//     constructor() {
-//         super();
-//     }
-// }
+export interface GUIContainerOptions {
+    index?: number;
+    tag?: string;
+    dead?: boolean;
+    visible?: boolean;
+    position?: Vec2;
+    offset?: Vec2;
+    scale?: Vec2;
+    pivot?: Vec2;
+    angle?: number;
+    alpha?: number;
+}
 export class GUIContainer extends Container<GUIElement> implements GUIBase {
     elementType = "GUIContainer";
+    index = 0;
     tag = "";
     dead = false;
     visible = true;
@@ -179,4 +182,18 @@ export class GUIContainer extends Container<GUIElement> implements GUIBase {
     pivot = { x: 0, y: 0 };
     angle = 0;
     alpha = 1;
+
+    constructor(options: GUIContainerOptions = {}) {
+        super();
+        this.index = options.index || 0;
+        this.tag = options.tag || "";
+        this.dead = options.dead || false;
+        this.visible = options.visible || true;
+        this.position = options.position || { x: 0, y: 0 };
+        this.offset = options.offset || { x: 0, y: 0 };
+        this.scale = options.scale || { x: 1, y: 1 };
+        this.pivot = options.pivot || { x: 0, y: 0 };
+        this.angle = options.angle || 0;
+        this.alpha = options.alpha || 1;
+    }
 }

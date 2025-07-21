@@ -15,10 +15,6 @@ export interface MeteorHitEvent extends StoreEvent {
     };
 }
 
-export interface ScoreEvent extends StoreEvent {
-    type: "scoreEvent";
-}
-
 export interface PlayerDiedEvent extends StoreEvent {
     type: "playerDied";
     data: {
@@ -26,13 +22,23 @@ export interface PlayerDiedEvent extends StoreEvent {
     };
 }
 
+export interface PlayerHitEvent extends StoreEvent {
+    type: "playerHit";
+}
+
+export interface ScoreEvent extends StoreEvent {
+    type: "scoreEvent";
+}
+
 // game events
 export interface GamePlayEvent extends StoreEvent {
     type: "gamePlay";
 }
+
 export interface GameTitleEvent extends StoreEvent {
     type: "gameTitle";
 }
+
 export interface GameOverEvent extends StoreEvent {
     type: "gameOver";
 }
