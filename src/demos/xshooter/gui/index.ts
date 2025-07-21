@@ -8,6 +8,7 @@ import {
     withTag,
     withAngle,
     withIndex,
+    withFill,
 } from "../../../cluster/gui/GUIbuilders";
 import { Cmath } from "../../../cluster/tools";
 import { GLOBALS } from "../globals";
@@ -65,11 +66,12 @@ export function createGamePlayGUI(): GUIContainer {
     const storedLives = store.get("lives") || 3;
     for (let i = 0; i < storedLives; i++) {
         const GUILife = composeGUI(
-            createGUIText("❤️", '16px "Press Start 2P"', "white"),
+            createGUIText("\u2665", '16px "Press Start 2P"', "white"),
             withPosition(-i * 24, -2),
             withAlign("center"),
             withAngle(Cmath.deg2rad(0)),
-            withText("❤️"),
+            withText("\u2665"),
+            withFill("red"),
             withTag("GUILife"),
             withIndex(i + 1)
         );

@@ -5,10 +5,26 @@ import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
 import { bulletArchetype } from "../entities/bullet";
 import { GLOBALS } from "../globals";
+import { Store } from "../../../cluster";
+import { BulletHitEvent } from "../events";
 
 const { worldW, worldH } = GLOBALS;
 
 export class BulletSystem extends StorageUpdateSystem {
+    constructor(readonly store: Store) {
+        super(store);
+
+        // subscribe to bulletHitEvent
+        store.on<BulletHitEvent>(
+            "bulletHit",
+            (e) => {
+                const { cmd, bulletMeta } = e.data;
+                cmd.remove(bulletMeta);
+            },
+            false
+        );
+    }
+
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith([Component.Bullet], (chunk, chunkId) => {
             const count = chunk.count;
@@ -28,12 +44,14 @@ export class BulletSystem extends StorageUpdateSystem {
                     py + 8 * hh < 0 ||
                     py - 8 * hh > worldH
                 ) {
-                    let r = (cmd as any).scene.findEntityId(
-                        bulletArchetype,
+                    const generation = chunk.getGeneration(i);
+
+                    cmd.remove({
+                        archetype: bulletArchetype,
                         chunkId,
-                        i
-                    );
-                    cmd.remove(r[0]);
+                        row: i,
+                        generation,
+                    });
                 }
             }
         });

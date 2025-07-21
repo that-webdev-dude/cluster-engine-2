@@ -139,7 +139,9 @@ export class Chunk<S extends readonly ComponentDescriptor[]> {
 
         const lastRow = this.count - 1;
         if (row < 0 || row >= this.count) {
-            throw new Error(`Row ${row} out of bounds, nothing to delete`);
+            throw new Error(
+                `Row ${row} out of bounds, nothing to delete; chunk count: ${this.count}, chunk arche: ${this.archetype.name}`
+            );
         }
 
         // now if the row to delete is the last row, just shrink then count and return undefined

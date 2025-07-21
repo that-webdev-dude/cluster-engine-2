@@ -3,22 +3,31 @@ import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
-import { meteorArchetype } from "../entities/meteor";
 import { GLOBALS } from "../globals";
 import { Store } from "../../../cluster/core/Store";
-import { Event } from "../../../cluster/core/Emitter";
-import { ScoreEvent } from "../events";
+import { MeteorHitEvent, MeteorDiedEvent } from "../events";
+import { meteorArchetype } from "../entities/meteor";
 
 const { worldW, worldH } = GLOBALS;
 
 export class MeteorSystem extends StorageUpdateSystem {
-    constructor(store: Store) {
+    constructor(readonly store: Store) {
         super(store);
-        this.store.on(
+
+        store.on<MeteorHitEvent>(
             "meteorHit",
-            (event: Event) => {
-                this.store.dispatch("incrementScores", 1);
-                this.store.emit({ type: "scoreEvent" }, false);
+            (e) => {
+                const { cmd, meteorMeta } = e.data;
+                cmd.remove(meteorMeta);
+
+                const meteorDiedEvent: MeteorDiedEvent = {
+                    type: "meteorDied",
+                    data: {
+                        cmd,
+                        meteorMeta,
+                    },
+                };
+                store.emit(meteorDiedEvent, false); // emit the meteor died event
             },
             false
         );
@@ -43,13 +52,14 @@ export class MeteorSystem extends StorageUpdateSystem {
                     py + 8 * hh < 0 ||
                     py - 8 * hh > worldH
                 ) {
-                    let r = (cmd as any).scene.findEntityId(
-                        meteorArchetype,
-                        chunkId,
-                        i
-                    );
+                    const generation = chunk.getGeneration(i);
 
-                    cmd.remove(r[0]);
+                    cmd.remove({
+                        archetype: meteorArchetype,
+                        chunkId,
+                        row: i,
+                        generation,
+                    });
                 }
             }
         });

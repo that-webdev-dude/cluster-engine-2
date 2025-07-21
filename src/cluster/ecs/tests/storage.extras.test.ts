@@ -71,7 +71,7 @@ describe("StorageV2 ▶ edge and complex cases", () => {
     it("reuses chunks if not full", () => {
         const allocA = storage.allocate();
         const allocB = storage.allocate();
-        storage.delete(allocA.chunkId, allocA.row);
+        storage.delete(allocA.chunkId, allocA.row, allocA.generation);
         const allocC = storage.allocate();
         expect(allocC.chunkId).toBe(allocA.chunkId); // Reused
     });
@@ -79,7 +79,7 @@ describe("StorageV2 ▶ edge and complex cases", () => {
     it("removes chunk when last entity deleted", () => {
         const alloc = storage.allocate();
         expect(storage.getChunk(alloc.chunkId)).toBeDefined();
-        storage.delete(alloc.chunkId, alloc.row);
+        storage.delete(alloc.chunkId, alloc.row, alloc.generation);
         expect(storage.getChunk(alloc.chunkId)).toBeUndefined();
     });
 

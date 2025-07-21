@@ -47,6 +47,7 @@ export class Game {
                 system.update(scene.gui, dt, t);
             });
         });
+        Input.Mouse.update();
     }
 
     render(alpha: number) {

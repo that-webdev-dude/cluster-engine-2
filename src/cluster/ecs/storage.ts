@@ -134,13 +134,16 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
 
     delete(
         chunkId: number,
-        row: number
-    ): {
-        chunkId: number;
-        row: number;
-        generation: number;
-        movedRow: number | undefined;
-    } {
+        row: number,
+        generation: number
+    ):
+        | {
+              chunkId: number;
+              row: number;
+              generation: number;
+              movedRow: number | undefined;
+          }
+        | undefined {
         const chunk = this.getChunk(chunkId);
         if (!chunk) {
             throw new Error(
@@ -148,9 +151,14 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             );
         }
 
+        if (chunk.getGeneration(row) !== generation) return undefined;
+
         const meta = chunk.delete(row);
 
         this.liveRecords--;
+
+        if (chunk.count < 0)
+            console.warn(`Storage.delete: the chunk has a count < 0 !!!!`);
 
         if (chunk.count === 0) {
             this.destroyChunkInstance(chunkId);

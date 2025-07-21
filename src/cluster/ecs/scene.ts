@@ -16,7 +16,6 @@ import { Storage } from "./storage";
 import { Chunk } from "./chunk";
 import { CommandBuffer } from "./cmd";
 import { SparseSet, IDPool, DEBUG } from "../tools";
-// import { GUIElement } from "../gui";
 import { GUIContainer } from "../gui/GUIbuilders";
 
 export class View {
@@ -35,10 +34,157 @@ export class View {
     }
 }
 
-export class Scene {
-    private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
-    private entityPool: IDPool<EntityId> = new IDPool();
+// export class SceneBackup {
+//     private entityMeta: SparseSet<EntityId, EntityMeta> = new SparseSet();
+//     private entityPool: IDPool<EntityId> = new IDPool();
 
+//     readonly archetypes: Map<Signature, Storage<any>> = new Map();
+//     public gui = new GUIContainer();
+//     readonly cmd: CommandBuffer;
+//     readonly view: View;
+//     readonly storageUpdateSystems: StorageUpdateSystem[] = [];
+//     readonly storageRenderSystems: StorageRenderSystem[] = [];
+//     readonly guiUpdateSystems: GUIUpdateSystem[] = [];
+//     readonly guiRenderSystems: GUIRenderSystem[] = [];
+
+//     constructor(options: {
+//         storageUpdateSystems: StorageUpdateSystem[];
+//         storageRenderSystems: StorageRenderSystem[];
+//         guiUpdateSystems: GUIUpdateSystem[];
+//         guiRenderSystems: GUIRenderSystem[];
+//     }) {
+//         this.storageUpdateSystems = options.storageUpdateSystems;
+//         this.storageRenderSystems = options.storageRenderSystems;
+//         this.guiUpdateSystems = options.guiUpdateSystems;
+//         this.guiRenderSystems = options.guiRenderSystems;
+
+//         this.view = new View(this.archetypes);
+//         this.cmd = new CommandBuffer(this);
+//     }
+
+//     initialize(): void {
+//         this.cmd.flush();
+//     }
+
+//     destroy(): void {
+//         // Clear all storages
+//         for (const storage of this.archetypes.values()) {
+//             storage.clear(); // assume clear() releases all chunks and entities
+//         }
+//         this.archetypes.clear();
+
+//         // Clear entity metadata and pool
+//         this.entityMeta.clear();
+//         this.entityPool.reset(); // assume reset() makes all IDs available again
+
+//         // Clear GUI tree
+//         this.gui.clear();
+
+//         // Clear the cmd
+//         this.cmd.clear();
+
+//         // Clear all systems (optional if scene won't be reused)
+//         this.storageUpdateSystems.length = 0;
+//         this.storageRenderSystems.length = 0;
+//         this.guiUpdateSystems.length = 0;
+//         this.guiRenderSystems.length = 0;
+//     }
+
+//     createEntity<S extends readonly ComponentDescriptor[]>(
+//         archetype: Archetype<S>,
+//         comps: ComponentValueMap
+//     ): EntityId {
+//         let storage = this.archetypes.get(archetype.signature) as
+//             | Storage<S>
+//             | undefined;
+
+//         if (!storage) {
+//             storage = new Storage(archetype);
+//             this.archetypes.set(archetype.signature, storage);
+//         }
+
+//         const entityId = this.entityPool.acquire();
+//         const { chunkId, row, generation } = storage.allocate(comps);
+
+//         this.entityMeta.insert(entityId, {
+//             archetype,
+//             chunkId,
+//             row,
+//             generation,
+//         });
+
+//         return entityId;
+//     }
+
+//     findEntityId<S extends readonly ComponentDescriptor[]>(
+//         archetype: Archetype<S>,
+//         ChunkId: number,
+//         row: number
+//     ) {
+//         return this.entityMeta.find((v) => {
+//             return (
+//                 v.archetype === archetype &&
+//                 v.chunkId === ChunkId &&
+//                 v.row === row
+//             );
+//         });
+//     }
+
+//     removeEntity(entityId: EntityId): boolean {
+//         const meta = this.entityMeta.get(entityId);
+//         if (!meta) {
+//             if (DEBUG)
+//                 console.warn(
+//                     `SceneV2.removeEntity: no such entity ${entityId}`
+//                 );
+//             return false;
+//         }
+
+//         const { archetype, chunkId, row, generation } = meta;
+//         const storage = this.archetypes.get(archetype.signature);
+//         if (!storage) {
+//             if (DEBUG)
+//                 console.warn(
+//                     `SceneV2.removeEntity: missing storage for ${Archetype.format(
+//                         archetype
+//                     )}`
+//                 );
+//             return false;
+//         }
+
+//         const { generation: movedGen, movedRow } = storage.delete(chunkId, row);
+//         this.entityMeta.remove(entityId);
+//         this.entityPool.release(entityId);
+
+//         if (movedRow !== undefined) {
+//             const found = this.entityMeta.find(
+//                 (otherMeta, otherId) =>
+//                     otherMeta.archetype === archetype &&
+//                     otherMeta.chunkId === chunkId &&
+//                     otherMeta.row === movedRow
+//             );
+//             if (found) {
+//                 const [otherId, otherMeta] = found;
+//                 if (otherMeta.generation !== movedGen) {
+//                     console.warn(
+//                         `SceneV2.removeEntity: stale entity metadata for entity ${otherId} — expected gen ${movedGen}, found ${otherMeta.generation}`
+//                     );
+//                 } else {
+//                     otherMeta.row = row;
+//                     otherMeta.generation = movedGen;
+//                 }
+//             }
+//         }
+
+//         if (storage.isEmpty) {
+//             this.archetypes.delete(archetype.signature);
+//         }
+
+//         return true;
+//     }
+// }
+
+export class Scene {
     readonly archetypes: Map<Signature, Storage<any>> = new Map();
     public gui = new GUIContainer();
     readonly cmd: CommandBuffer;
@@ -74,10 +220,6 @@ export class Scene {
         }
         this.archetypes.clear();
 
-        // Clear entity metadata and pool
-        this.entityMeta.clear();
-        this.entityPool.reset(); // assume reset() makes all IDs available again
-
         // Clear GUI tree
         this.gui.clear();
 
@@ -94,7 +236,7 @@ export class Scene {
     createEntity<S extends readonly ComponentDescriptor[]>(
         archetype: Archetype<S>,
         comps: ComponentValueMap
-    ): EntityId {
+    ): EntityMeta {
         let storage = this.archetypes.get(archetype.signature) as
             | Storage<S>
             | undefined;
@@ -104,82 +246,30 @@ export class Scene {
             this.archetypes.set(archetype.signature, storage);
         }
 
-        const entityId = this.entityPool.acquire();
         const { chunkId, row, generation } = storage.allocate(comps);
 
-        this.entityMeta.insert(entityId, {
+        return {
+            generation,
             archetype,
             chunkId,
             row,
-            generation,
-        });
-
-        return entityId;
+        };
     }
 
-    findEntityId<S extends readonly ComponentDescriptor[]>(
-        archetype: Archetype<S>,
-        ChunkId: number,
-        row: number
-    ) {
-        return this.entityMeta.find((v) => {
-            return (
-                v.archetype === archetype &&
-                v.chunkId === ChunkId &&
-                v.row === row
-            );
-        });
-    }
-
-    removeEntity(entityId: EntityId): boolean {
-        const meta = this.entityMeta.get(entityId);
-        if (!meta) {
-            if (DEBUG)
-                console.warn(
-                    `SceneV2.removeEntity: no such entity ${entityId}`
-                );
-            return false;
-        }
-
+    removeEntity(meta: EntityMeta): boolean {
         const { archetype, chunkId, row, generation } = meta;
         const storage = this.archetypes.get(archetype.signature);
         if (!storage) {
             if (DEBUG)
                 console.warn(
-                    `SceneV2.removeEntity: missing storage for ${Archetype.format(
+                    `Scene.removeEntity: missing storage for ${Archetype.format(
                         archetype
                     )}`
                 );
             return false;
         }
 
-        const { generation: movedGen, movedRow } = storage.delete(chunkId, row);
-        this.entityMeta.remove(entityId);
-        this.entityPool.release(entityId);
-
-        if (movedRow !== undefined) {
-            const found = this.entityMeta.find(
-                (otherMeta, otherId) =>
-                    otherMeta.archetype === archetype &&
-                    otherMeta.chunkId === chunkId &&
-                    otherMeta.row === movedRow
-            );
-            if (found) {
-                const [otherId, otherMeta] = found;
-                if (otherMeta.generation !== movedGen) {
-                    console.warn(
-                        `SceneV2.removeEntity: stale entity metadata for entity ${otherId} — expected gen ${movedGen}, found ${otherMeta.generation}`
-                    );
-                } else {
-                    otherMeta.row = row;
-                    otherMeta.generation = movedGen;
-                }
-            }
-        }
-
-        if (storage.isEmpty) {
-            this.archetypes.delete(archetype.signature);
-        }
+        storage.delete(chunkId, row, generation);
 
         return true;
     }

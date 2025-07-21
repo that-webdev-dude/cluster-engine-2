@@ -28,7 +28,5 @@ export class MotionSystem extends StorageUpdateSystem {
                 }
             }
         );
-
-        // Mouse.update();
     }
 }

@@ -5,15 +5,31 @@ import { Cmath } from "../../../cluster/tools";
 import { Mouse } from "../input";
 import { Component } from "../components";
 import { bulletArchetype, getBulletComponents } from "../entities/bullet";
+import { Store } from "../../../cluster";
+import { PlayerHitEvent, GameTitleEvent } from "../events";
 
 const State = {
-    level: 1,
     shotInterval: 0.5,
-    bulletsPerShot: 1,
 };
 
 export class PlayerSystem extends StorageUpdateSystem {
     private counter = State.shotInterval;
+
+    constructor(readonly store: Store) {
+        super(store);
+
+        store.on<PlayerHitEvent>("playerHit", (e) => {
+            store.dispatch("decrementLives", 1);
+
+            const lives = store.get("lives");
+            if (lives <= 0) {
+                const gameTitleEvent: GameTitleEvent = {
+                    type: "gameTitle",
+                };
+                store.emit(gameTitleEvent, false);
+            }
+        });
+    }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith([Component.Player], (chunk) => {
@@ -44,7 +60,5 @@ export class PlayerSystem extends StorageUpdateSystem {
                 chunk.views.Angle[i] = Cmath.angle(px, py, mx, my) + Math.PI;
             }
         });
-
-        Mouse.update();
     }
 }

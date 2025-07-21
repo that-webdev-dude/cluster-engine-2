@@ -1,36 +1,75 @@
+import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { StoreEvent } from "../../../cluster/core/Store";
 import { EntityId } from "../../../cluster/types";
+import { EntityMeta } from "../../../cluster/types";
+
+/**
+ * bullet events
+ */
+export interface BulletHitEvent extends StoreEvent {
+    type: "bulletHit";
+    data: {
+        cmd: CommandBuffer;
+        bulletMeta: EntityMeta;
+        otherMeta: EntityMeta;
+    };
+}
 
 export interface BulletDiedEvent extends StoreEvent {
     type: "bulletDied";
     data: {
-        entityId: EntityId;
+        cmd: CommandBuffer;
+        bulletMeta: EntityMeta;
     };
 }
 
+/**
+ * meteor events
+ */
 export interface MeteorHitEvent extends StoreEvent {
     type: "meteorHit";
     data: {
-        entityId: EntityId;
+        cmd: CommandBuffer;
+        meteorMeta: EntityMeta;
+        otherMeta: EntityMeta;
+    };
+}
+
+export interface MeteorDiedEvent extends StoreEvent {
+    type: "meteorDied";
+    data: {
+        cmd: CommandBuffer;
+        meteorMeta: EntityMeta;
+    };
+}
+
+/**
+ * player events
+ */
+export interface PlayerHitEvent extends StoreEvent {
+    type: "playerHit";
+    data: {
+        cmd: CommandBuffer;
+        playerMeta: EntityMeta;
+        otherMeta: EntityMeta;
     };
 }
 
 export interface PlayerDiedEvent extends StoreEvent {
     type: "playerDied";
     data: {
-        entityId: EntityId;
+        cmd: CommandBuffer;
+        playerMeta: EntityMeta;
     };
 }
 
-export interface PlayerHitEvent extends StoreEvent {
-    type: "playerHit";
-}
-
+/**
+ * game events
+ */
 export interface ScoreEvent extends StoreEvent {
     type: "scoreEvent";
 }
 
-// game events
 export interface GamePlayEvent extends StoreEvent {
     type: "gamePlay";
 }

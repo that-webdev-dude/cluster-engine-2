@@ -3,12 +3,14 @@ import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Component } from "../components";
 import { meteorArchetype } from "../entities/meteor";
-import { MeteorHitEvent } from "../events";
+import { BulletHitEvent, MeteorHitEvent, PlayerHitEvent } from "../events";
+import { EntityMeta } from "../../../cluster/types";
 
 export class CollisionSystem extends StorageUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         // Gather meteor data
         const meteors: {
+            generation: number;
             chunkId: number;
             index: number;
             x: number;
@@ -26,7 +28,17 @@ export class CollisionSystem extends StorageUpdateSystem {
                     const hw = chunk.views.Size[i * 2] / 2;
                     const hh = chunk.views.Size[i * 2 + 1] / 2;
 
-                    meteors.push({ chunkId, index: i, x, y, hw, hh });
+                    const generation = chunk.getGeneration(i);
+
+                    meteors.push({
+                        generation,
+                        chunkId,
+                        index: i,
+                        x,
+                        y,
+                        hw,
+                        hh,
+                    });
                 }
             }
         );
@@ -46,27 +58,40 @@ export class CollisionSystem extends StorageUpdateSystem {
                             Math.abs(bx - meteor.x) <= bhw + meteor.hw &&
                             Math.abs(by - meteor.y) <= bhh + meteor.hh
                         ) {
-                            // Collision detected: remove bullet and meteor
-                            const bulletId = (cmd as any).scene.findEntityId(
-                                chunk.archetype,
-                                chunkId,
-                                i
-                            )[0];
-                            const meteorId = (cmd as any).scene.findEntityId(
-                                meteorArchetype,
-                                meteor.chunkId,
-                                meteor.index
-                            )[0];
-
-                            cmd.remove(bulletId);
-                            cmd.remove(meteorId);
-
-                            const event: MeteorHitEvent = {
-                                type: "meteorHit",
-                                data: { entityId: bulletId },
+                            const bulletMeta: EntityMeta = {
+                                generation: chunk.getGeneration(i),
+                                archetype: chunk.archetype,
+                                chunkId: chunkId,
+                                row: i,
                             };
 
-                            this.store.emit<MeteorHitEvent>(event, false);
+                            const meteorMeta: EntityMeta = {
+                                generation: meteor.generation,
+                                archetype: meteorArchetype,
+                                chunkId: meteor.chunkId,
+                                row: meteor.index,
+                            };
+
+                            const bulletHitEvent: BulletHitEvent = {
+                                type: "bulletHit",
+                                data: {
+                                    cmd,
+                                    bulletMeta,
+                                    otherMeta: meteorMeta,
+                                },
+                            };
+
+                            const meteorHitEvent: MeteorHitEvent = {
+                                type: "meteorHit",
+                                data: {
+                                    cmd,
+                                    meteorMeta,
+                                    otherMeta: bulletMeta,
+                                },
+                            };
+
+                            this.store.emit(bulletHitEvent, false);
+                            this.store.emit(meteorHitEvent, false);
 
                             break; // move on to next bullet
                         }
@@ -91,24 +116,55 @@ export class CollisionSystem extends StorageUpdateSystem {
                             Math.abs(py - meteor.y) <= phh + meteor.hh
                         ) {
                             // console.warn("Player hit by meteor!");
-
                             // Could trigger death, scene transition, explosion, etc.
-                            const playerId = (cmd as any).scene.findEntityId(
-                                playerChunk.archetype,
-                                playerChunkId,
-                                pi
-                            )[0];
+                            // const playerId = (cmd as any).scene.findEntityId(
+                            //     playerChunk.archetype,
+                            //     playerChunkId,
+                            //     pi
+                            // )[0];
+                            // // this.store.emit({ type: "gameTitle" }, false);
+                            // const meteorId = (cmd as any).scene.findEntityId(
+                            //     meteorArchetype,
+                            //     meteor.chunkId,
+                            //     meteor.index
+                            // )[0];
+                            // cmd.remove(meteorId); // or trigger game over logic
+                            // this.store.emit({ type: "playerHit" });
+                            // return;
+                            const playerMeta: EntityMeta = {
+                                generation: playerChunk.getGeneration(pi),
+                                archetype: playerChunk.archetype,
+                                chunkId: playerChunkId,
+                                row: pi,
+                            };
 
-                            // this.store.emit({ type: "gameTitle" }, false);
-                            const meteorId = (cmd as any).scene.findEntityId(
-                                meteorArchetype,
-                                meteor.chunkId,
-                                meteor.index
-                            )[0];
-                            cmd.remove(meteorId); // or trigger game over logic
+                            const meteorMeta: EntityMeta = {
+                                generation: meteor.generation,
+                                archetype: meteorArchetype,
+                                chunkId: meteor.chunkId,
+                                row: meteor.index,
+                            };
 
-                            this.store.emit({ type: "playerHit" });
-                            return;
+                            const playerHitEvent: PlayerHitEvent = {
+                                type: "playerHit",
+                                data: {
+                                    cmd,
+                                    playerMeta,
+                                    otherMeta: meteorMeta,
+                                },
+                            };
+
+                            const meteorHitEvent: MeteorHitEvent = {
+                                type: "meteorHit",
+                                data: {
+                                    cmd,
+                                    meteorMeta,
+                                    otherMeta: playerMeta,
+                                },
+                            };
+
+                            this.store.emit(playerHitEvent, false);
+                            this.store.emit(meteorHitEvent, false);
                         }
                     }
                 }

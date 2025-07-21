@@ -53,12 +53,13 @@ describe("StorageV2 ▶ basic operations", () => {
     });
 
     it("deletes a row correctly", () => {
-        const { chunkId, row } = storage.allocate();
-        const result = storage.delete(chunkId, row);
-        expect(result.chunkId).toBe(chunkId);
-        expect(result.row).toBe(row);
-        expect(result.generation).toBe(0); // fixed expectation
-        expect(result.movedRow).toBeUndefined();
+        const { chunkId, row, generation } = storage.allocate();
+        const result = storage.delete(chunkId, row, generation);
+        expect(result).toBeDefined();
+        expect(result!.chunkId).toBe(chunkId);
+        expect(result!.row).toBe(row);
+        expect(result!.generation).toBe(0); // fixed expectation
+        expect(result!.movedRow).toBeUndefined();
         expect(storage.length).toBe(0);
         expect(storage.isEmpty).toBe(true);
     });
