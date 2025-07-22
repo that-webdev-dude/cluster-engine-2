@@ -117,16 +117,11 @@ export class RendererSystem extends StorageRenderSystem {
             const cur = chunk.views.Position;
             const prev = chunk.views.PreviousPosition!;
 
-            // if (chunk.count > 1) {
-            //     if (DEBUG)
-            //         console.warn(
-            //             `[RendererSystem.camera]: the camera chunk has more than one camera!`
-            //         );
-            // }
+            const interpolatedX = prev[0] + (cur[0] - prev[0]) * alpha;
+            const interpolatedY = prev[1] + (cur[1] - prev[1]) * alpha;
 
-            // only one camera entity expected
-            this.cameraPos[0] = prev[0] + (cur[0] - prev[0]) * alpha;
-            this.cameraPos[1] = prev[1] + (cur[1] - prev[1]) * alpha;
+            this.cameraPos[0] = interpolatedX + 0;
+            this.cameraPos[1] = interpolatedY + 0;
         });
 
         // render the player

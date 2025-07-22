@@ -1,5 +1,6 @@
 import { Scene } from "../../../cluster/ecs/scene";
 import { playerArchetype, getPlayerComponents } from "../entities/player";
+import { cameraArchetype, getCameraComponents } from "../entities/camera";
 import { GUISystem } from "../systems/GUIRenderer";
 import { RendererSystem } from "../systems/renderer";
 import { PlayerSystem } from "../systems/player";
@@ -12,6 +13,7 @@ import { GUITimerSystem } from "../systems/GUITimer";
 import { GUILivesSysten } from "../systems/GUILives";
 import { store } from "../stores";
 import { createGamePlayGUI } from "../gui";
+import { CameraSystem } from "../systems/camera";
 
 export function createGamePlay() {
     const scene = new Scene({
@@ -22,6 +24,7 @@ export function createGamePlay() {
             new MeteorSystem(store),
             new BulletSystem(store),
             new CollisionSystem(store),
+            new CameraSystem(store),
         ],
         storageRenderSystems: [new RendererSystem()],
         guiUpdateSystems: [
@@ -31,6 +34,7 @@ export function createGamePlay() {
         guiRenderSystems: [new GUISystem()],
     });
 
+    scene.createEntity(cameraArchetype, getCameraComponents());
     scene.createEntity(playerArchetype, getPlayerComponents());
 
     scene.gui = createGamePlayGUI();

@@ -119,9 +119,9 @@ const DESCRIPTORS = {
     Camera: {
         type: Component.Camera,
         name: "Camera",
-        count: 1,
+        count: 3,
         buffer: Uint8Array,
-        default: [1], // means "is Camera"
+        default: [1, 0, 0], // enabled? - shakeOffsetX - shakeOffsetY
     },
 };
 

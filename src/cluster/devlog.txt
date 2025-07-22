@@ -14,7 +14,9 @@ TODO features:
 - write unit tests for everything
 
 TODO next:
-- camera shake
+- camera remove offsets from component
+- camera adjust component by getting the system props
+- fix the GUI on scene reset
 - dialog system
 - sound system
 - star & star system

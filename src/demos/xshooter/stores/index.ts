@@ -4,7 +4,7 @@ import { Cmath } from "../../../cluster/tools";
 const state = {
     level: 0,
     scores: 0,
-    lives: 3,
+    lives: 5,
 };
 
 const actions = {
@@ -23,6 +23,7 @@ const actions = {
     resetGame(store: Store) {
         store.commit("setLevel", 0);
         store.commit("setScores", 0);
+        store.commit("setLives", 5);
     },
 };
 
@@ -34,7 +35,7 @@ const mutations = {
         state.scores = payload;
     },
     setLives(state: any, payload: number) {
-        state.lives = Cmath.clamp(payload, 0, 3);
+        state.lives = Cmath.clamp(payload, 0, 5);
     },
 };
 
