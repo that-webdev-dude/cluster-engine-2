@@ -3,7 +3,8 @@ import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { meteorArchetype, getMeteorComponents } from "../entities/meteor";
 import { Store } from "../../../cluster";
-import { GameTitleEvent, MeteorDiedEvent, PlayerHitEvent } from "../events";
+import { Input } from "../../../cluster";
+import { MeteorDiedEvent, GamePauseEvent } from "../events";
 
 const State = {
     spawnInterval: 1,
@@ -23,13 +24,6 @@ export class LevelSystem extends StorageUpdateSystem {
             },
             false
         );
-
-        // store.on("playerHit", (e) => {
-        //     store.dispatch("decrementLives", 1);
-        //     if (store.get("lives") === 0) {
-        //         store.emit({ type: "gameTitle" });
-        //     }
-        // });
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
@@ -41,6 +35,14 @@ export class LevelSystem extends StorageUpdateSystem {
             cmd.create(meteorArchetype, meteorComponents);
 
             this.counter = State.spawnInterval;
+        }
+
+        if (Input.Keyboard.key("KeyP")) {
+            const gamePauseEvent: GamePauseEvent = {
+                type: "gamePause",
+            };
+
+            this.store.emit<GamePauseEvent>(gamePauseEvent, false);
         }
     }
 }

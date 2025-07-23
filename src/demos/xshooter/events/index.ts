@@ -81,3 +81,11 @@ export interface GameTitleEvent extends StoreEvent {
 export interface GameOverEvent extends StoreEvent {
     type: "gameOver";
 }
+
+export interface GamePauseEvent extends StoreEvent {
+    type: "gamePause";
+}
+
+export interface GameResumeEvent extends StoreEvent {
+    type: "gameResume";
+}

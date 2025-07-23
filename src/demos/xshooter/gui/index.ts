@@ -9,6 +9,9 @@ import {
     withAngle,
     withIndex,
     withFill,
+    createGUIRect,
+    withVisibility,
+    withAlpha,
 } from "../../../cluster/gui/GUIbuilders";
 import { Cmath } from "../../../cluster/tools";
 import { GLOBALS } from "../globals";
@@ -89,6 +92,8 @@ export function createGamePlayGUI(): GUIContainer {
 }
 
 export function createGameTitleGUI(): GUIContainer {
+    const GUITitleContainer = new GUIContainer();
+
     const GUITitleText = composeGUI(
         createGUIText("scores", '16px "Press Start 2P"', "white"),
         withPosition(GLOBALS.worldW / 2, GLOBALS.worldH / 2),
@@ -96,8 +101,30 @@ export function createGameTitleGUI(): GUIContainer {
         withAngle(Cmath.deg2rad(0))
     );
 
-    const GUITitleContainer = new GUIContainer();
     GUITitleContainer.add(GUITitleText);
 
     return GUITitleContainer;
+}
+
+export function createPauseDialogGUI(): GUIContainer {
+    const GUIDialogContainer = new GUIContainer({
+        background: "red",
+    });
+
+    const GUIPauseFrame = composeGUI(
+        createGUIRect(GLOBALS.worldW, GLOBALS.worldH, "red"),
+        withPosition(0, 0),
+        withAlpha(0.5)
+    );
+
+    const GUIPauseText = composeGUI(
+        createGUIText("scores", '16px "Press Start 2P"', "white"),
+        withPosition(GLOBALS.worldW / 2, GLOBALS.worldH / 2),
+        withText("PAUSED")
+    );
+
+    GUIDialogContainer.add(GUIPauseFrame);
+    GUIDialogContainer.add(GUIPauseText);
+
+    return GUIDialogContainer;
 }

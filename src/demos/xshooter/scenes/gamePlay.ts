@@ -12,8 +12,26 @@ import { CollisionSystem } from "../systems/collision";
 import { GUITimerSystem } from "../systems/GUITimer";
 import { GUILivesSysten } from "../systems/GUILives";
 import { store } from "../stores";
-import { createGamePlayGUI } from "../gui";
+import { createGamePlayGUI, createPauseDialogGUI } from "../gui";
 import { CameraSystem } from "../systems/camera";
+import { GamePauseEvent, GameResumeEvent } from "../events";
+import { PauseSystem } from "../systems/pause";
+
+function createPauseDialog() {
+    const dialog = new Scene({
+        storageUpdateSystems: [new PauseSystem(store)],
+        storageRenderSystems: [],
+        guiUpdateSystems: [
+            new GUITimerSystem(store),
+            new GUILivesSysten(store),
+        ],
+        guiRenderSystems: [new GUISystem()],
+    });
+
+    dialog.gui = createPauseDialogGUI();
+
+    return dialog;
+}
 
 export function createGamePlay() {
     const scene = new Scene({
@@ -38,6 +56,25 @@ export function createGamePlay() {
     scene.createEntity(playerArchetype, getPlayerComponents());
 
     scene.gui = createGamePlayGUI();
+
+    store.on<GamePauseEvent>(
+        "gamePause",
+        () => {
+            scene.dialog = createPauseDialog();
+        },
+        false
+    );
+
+    store.on<GameResumeEvent>(
+        "gameResume",
+        () => {
+            if (scene.dialog) {
+                scene.dialog.destroy();
+                scene.dialog = undefined;
+            }
+        },
+        false
+    );
 
     return scene;
 }

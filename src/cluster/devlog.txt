@@ -16,9 +16,9 @@ TODO features:
 TODO next:
 - camera remove offsets from component
 - camera adjust component by getting the system props
-- fix the GUI on scene reset
-- dialog system
 - sound system
+- better archetype grouping?
+- place events where they belong?
 - star & star system
 - meteor hit effect
 - meteor health system & GUI

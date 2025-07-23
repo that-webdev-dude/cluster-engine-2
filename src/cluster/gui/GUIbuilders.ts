@@ -13,6 +13,7 @@ interface GUIBase {
     pivot: Vec2;
     angle: number;
     alpha: number;
+    background: string;
 }
 
 type DynamicValue<T> = T | ((...args: any[]) => T);
@@ -102,6 +103,10 @@ export const withHeight = (height: number): GUIBuilder => {
     return (el) => ({ ...el, height });
 };
 
+export const withAlpha = (alpha: number): GUIBuilder => {
+    return (el) => ({ ...el, alpha });
+};
+
 export const createGUIText = (
     text: string,
     font: string,
@@ -144,6 +149,7 @@ export function composeGUI<T extends GUIElement>(...builders: GUIBuilder[]): T {
         pivot: { x: 0, y: 0 },
         angle: 0,
         alpha: 1,
+        background: "transparent",
     };
 
     const result = builders.reduce<Partial<GUIBase>>(
@@ -169,6 +175,7 @@ export interface GUIContainerOptions {
     pivot?: Vec2;
     angle?: number;
     alpha?: number;
+    background?: string;
 }
 export class GUIContainer extends Container<GUIElement> implements GUIBase {
     elementType = "GUIContainer";
@@ -182,6 +189,7 @@ export class GUIContainer extends Container<GUIElement> implements GUIBase {
     pivot = { x: 0, y: 0 };
     angle = 0;
     alpha = 1;
+    background = "transparent";
 
     constructor(options: GUIContainerOptions = {}) {
         super();
@@ -195,5 +203,6 @@ export class GUIContainer extends Container<GUIElement> implements GUIBase {
         this.pivot = options.pivot || { x: 0, y: 0 };
         this.angle = options.angle || 0;
         this.alpha = options.alpha || 1;
+        this.background = options.background || "transparent";
     }
 }

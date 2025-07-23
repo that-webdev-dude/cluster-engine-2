@@ -23,8 +23,8 @@ export class CameraSystem extends StorageUpdateSystem {
             if (this.shakeTime <= 0) {
                 this.shakeTime = this.shakeDuration;
                 this.shakeElapsed = 0;
-                this.shakeSeedX = Math.random() * 1000;
-                this.shakeSeedY = Math.random() * 1000;
+                // this.shakeSeedX = Math.random() * 1000;
+                // this.shakeSeedY = Math.random() * 1000;
                 this.basePosition[0] = 0;
                 this.basePosition[1] = 0;
             }
@@ -65,15 +65,17 @@ export class CameraSystem extends StorageUpdateSystem {
             (chunk) => {
                 const pos = chunk.views.Position;
                 const prev = chunk.views.PreviousPosition;
+                const speed = chunk.views.Speed;
 
                 prev[0] = pos[0];
+
                 prev[1] = pos[1];
 
                 // camera pan
                 const kx = Keyboard.x();
                 const ky = Keyboard.y();
-                this.basePosition[0] -= kx * 200 * dt;
-                this.basePosition[1] -= ky * 200 * dt;
+                this.basePosition[0] -= kx * speed * dt;
+                this.basePosition[1] -= ky * speed * dt;
 
                 pos[0] = this.basePosition[0];
                 pos[1] = this.basePosition[1];

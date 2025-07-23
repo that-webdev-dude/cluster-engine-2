@@ -14,6 +14,7 @@ const displayDefaults = {
 export class Game {
     private engine: Engine = new Engine(60);
     private scenes: Array<Scene> = []; // a stack of Scene instances
+    private debugUpdates: number = 2; // updates just two frames
 
     constructor(
         readonly store: Store = new Store({}),
@@ -38,23 +39,49 @@ export class Game {
 
     update(dt: number, t: number) {
         this.scenes.forEach((scene) => {
-            // update all the systems first
-            scene.storageUpdateSystems.forEach((system) =>
-                system.update(scene.view, scene.cmd, dt, t)
-            );
-            // update the GUI
-            scene.guiUpdateSystems.forEach((system) => {
-                system.update(scene.gui, dt, t);
-            });
+            if (scene.dialog !== undefined) {
+                scene.dialog.storageUpdateSystems.forEach((system) => {
+                    system.update(scene.dialog!.view, scene.dialog!.cmd, dt, t);
+                });
+                scene.dialog.guiUpdateSystems.forEach((system) => {
+                    system.update(scene.dialog!.gui, dt, t);
+                });
+            } else {
+                // update all the systems first
+                scene.storageUpdateSystems.forEach((system) =>
+                    system.update(scene.view, scene.cmd, dt, t)
+                );
+                // update the GUI
+                scene.guiUpdateSystems.forEach((system) => {
+                    system.update(scene.gui, dt, t);
+                });
+            }
         });
         Input.Mouse.update();
     }
 
     render(alpha: number) {
         this.scenes.forEach((scene) => {
+            if (scene.dialog !== undefined) {
+                console.log(
+                    "🚀 ~ Game ~ this.scenes.forEach ~ scene.dialog:",
+                    scene.dialog
+                );
+                // render the storage data
+                scene.dialog.storageRenderSystems.forEach((system) => {
+                    system.render(scene.dialog!.view, alpha);
+                });
+                // render the GUI
+                scene.dialog.guiRenderSystems.forEach((system) => {
+                    system.render(scene.dialog!.gui);
+                });
+            }
             // render the storage data
             scene.storageRenderSystems.forEach((system) => {
-                system.render(scene.view, alpha);
+                system.render(
+                    scene.view,
+                    scene.dialog !== undefined ? 1 : alpha
+                );
             });
             // render the GUI
             scene.guiRenderSystems.forEach((system) => {
@@ -69,6 +96,10 @@ export class Game {
         this.scenes.forEach((scene) => {
             scene.cmd.flush();
         });
+        // this.debugUpdates++;
+        // if (this.debugUpdates > 8) {
+        //     this.stop();
+        // }
     }
 
     start() {
