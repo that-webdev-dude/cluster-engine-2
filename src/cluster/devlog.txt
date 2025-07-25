@@ -16,7 +16,6 @@ TODO features:
 TODO next:
 - camera remove offsets from component
 - camera adjust component by getting the system props
-- sound system
 - better archetype grouping?
 - place events where they belong?
 - star & star system

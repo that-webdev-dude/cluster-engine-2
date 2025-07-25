@@ -4,6 +4,8 @@ import { createGamePlay } from "./scenes/gamePlay";
 import { createGameTitle } from "./scenes/gameTitle";
 import { GLOBALS } from "./globals";
 import { store } from "./stores";
+import { Assets } from "../../cluster";
+import { gameplaySound } from "./sounds";
 
 export function app() {
     const display = Display.getInstance({
@@ -37,6 +39,6 @@ export function app() {
     );
 
     const game = new Game(store, display);
-    game.setScene(createGamePlay());
+    game.setScene(createGameTitle());
     game.start();
 }

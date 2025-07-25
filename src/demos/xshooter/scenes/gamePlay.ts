@@ -14,8 +14,9 @@ import { GUILivesSysten } from "../systems/GUILives";
 import { store } from "../stores";
 import { createGamePlayGUI, createPauseDialogGUI } from "../gui";
 import { CameraSystem } from "../systems/camera";
-import { GamePauseEvent, GameResumeEvent } from "../events";
+import { GamePauseEvent, GamePlayEvent, GameResumeEvent } from "../events";
 import { PauseSystem } from "../systems/pause";
+import { gameplaySound } from "../sounds";
 
 function createPauseDialog() {
     const dialog = new Scene({
@@ -57,9 +58,19 @@ export function createGamePlay() {
 
     scene.gui = createGamePlayGUI();
 
+    // store.on<GamePlayEvent>(
+    //     "gamePlay",
+    //     () => {
+    //         gameplaySound.play(); // play the soundtrack
+    //     },
+    //     false
+    // );
+    gameplaySound.play(); // play the soundtrack
+
     store.on<GamePauseEvent>(
         "gamePause",
         () => {
+            gameplaySound.pause(); // pause the soundtrack
             scene.dialog = createPauseDialog();
         },
         false
@@ -68,6 +79,7 @@ export function createGamePlay() {
     store.on<GameResumeEvent>(
         "gameResume",
         () => {
+            gameplaySound.resume(); // resume the soundtrack
             if (scene.dialog) {
                 scene.dialog.destroy();
                 scene.dialog = undefined;

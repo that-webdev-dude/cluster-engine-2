@@ -10,7 +10,6 @@ import {
     withIndex,
     withFill,
     createGUIRect,
-    withVisibility,
     withAlpha,
 } from "../../../cluster/gui/GUIbuilders";
 import { Cmath } from "../../../cluster/tools";
@@ -95,13 +94,21 @@ export function createGameTitleGUI(): GUIContainer {
     const GUITitleContainer = new GUIContainer();
 
     const GUITitleText = composeGUI(
-        createGUIText("scores", '16px "Press Start 2P"', "white"),
-        withPosition(GLOBALS.worldW / 2, GLOBALS.worldH / 2),
+        createGUIText("scores", '32px "Press Start 2P"', "white"),
+        withPosition(GLOBALS.worldW / 2, GLOBALS.worldH / 2 - 24),
         withText("xshooter"),
         withAngle(Cmath.deg2rad(0))
     );
 
+    const GUIActionText = composeGUI(
+        createGUIText("scores", '14px "Press Start 2P"', "white"),
+        withPosition(GLOBALS.worldW / 2, GLOBALS.worldH / 2 + 24),
+        withText("press ENTER"),
+        withAngle(Cmath.deg2rad(0))
+    );
+
     GUITitleContainer.add(GUITitleText);
+    GUITitleContainer.add(GUIActionText);
 
     return GUITitleContainer;
 }

@@ -1,3 +1,4 @@
+import { Assets } from "../core/Assets";
 import { Display } from "../core/Display";
 import { Engine } from "../core/Engine";
 import { Store } from "../core/Store";
@@ -106,7 +107,9 @@ export class Game {
         this.engine.addUpdateable(this);
         this.engine.addRenderable(this);
         this.engine.addCallback(this);
-        this.engine.start();
+        Assets.onReady(() => {
+            this.engine.start();
+        });
     }
 
     stop() {
