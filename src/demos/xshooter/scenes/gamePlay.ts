@@ -58,13 +58,6 @@ export function createGamePlay() {
 
     scene.gui = createGamePlayGUI();
 
-    // store.on<GamePlayEvent>(
-    //     "gamePlay",
-    //     () => {
-    //         gameplaySound.play(); // play the soundtrack
-    //     },
-    //     false
-    // );
     gameplaySound.play(); // play the soundtrack
 
     store.on<GamePauseEvent>(

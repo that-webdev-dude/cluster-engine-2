@@ -28,6 +28,25 @@ export class Game {
         );
     }
 
+    private runUpdateSystems(scene: Scene, dt: number, t: number) {
+        scene.storageUpdateSystems.forEach((system) => {
+            system.update(scene!.view, scene!.cmd, dt, t);
+        });
+        scene.guiUpdateSystems.forEach((system) => {
+            system.update(scene!.gui, dt, t);
+        });
+    }
+
+    private runRenderSystems(scene: Scene, alpha: number) {
+        scene.storageRenderSystems.forEach((system) => {
+            system.render(scene!.view, scene.dialog !== undefined ? 1 : alpha);
+        });
+        // render the GUI
+        scene.guiRenderSystems.forEach((system) => {
+            system.render(scene!.gui);
+        });
+    }
+
     setScene(scene: Scene): void {
         const currentScene = this.scenes.pop();
         if (currentScene !== undefined) {
@@ -41,21 +60,9 @@ export class Game {
     update(dt: number, t: number) {
         this.scenes.forEach((scene) => {
             if (scene.dialog !== undefined) {
-                scene.dialog.storageUpdateSystems.forEach((system) => {
-                    system.update(scene.dialog!.view, scene.dialog!.cmd, dt, t);
-                });
-                scene.dialog.guiUpdateSystems.forEach((system) => {
-                    system.update(scene.dialog!.gui, dt, t);
-                });
+                this.runUpdateSystems(scene.dialog, dt, t);
             } else {
-                // update all the systems first
-                scene.storageUpdateSystems.forEach((system) =>
-                    system.update(scene.view, scene.cmd, dt, t)
-                );
-                // update the GUI
-                scene.guiUpdateSystems.forEach((system) => {
-                    system.update(scene.gui, dt, t);
-                });
+                this.runUpdateSystems(scene, dt, t);
             }
         });
         Input.Mouse.update();
@@ -64,30 +71,9 @@ export class Game {
     render(alpha: number) {
         this.scenes.forEach((scene) => {
             if (scene.dialog !== undefined) {
-                console.log(
-                    "🚀 ~ Game ~ this.scenes.forEach ~ scene.dialog:",
-                    scene.dialog
-                );
-                // render the storage data
-                scene.dialog.storageRenderSystems.forEach((system) => {
-                    system.render(scene.dialog!.view, alpha);
-                });
-                // render the GUI
-                scene.dialog.guiRenderSystems.forEach((system) => {
-                    system.render(scene.dialog!.gui);
-                });
+                this.runRenderSystems(scene.dialog, alpha);
             }
-            // render the storage data
-            scene.storageRenderSystems.forEach((system) => {
-                system.render(
-                    scene.view,
-                    scene.dialog !== undefined ? 1 : alpha
-                );
-            });
-            // render the GUI
-            scene.guiRenderSystems.forEach((system) => {
-                system.render(scene.gui);
-            });
+            this.runRenderSystems(scene, alpha);
         });
         this.display.render();
     }

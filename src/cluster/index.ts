@@ -9,3 +9,4 @@ export { Audio } from "./core/Sound";
 
 // ecs
 export { Archetype } from "./ecs/archetype";
+export { Chunk } from "./ecs/chunk";
