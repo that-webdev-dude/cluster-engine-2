@@ -1,5 +1,6 @@
 import { InstancedPipeline } from "../Pipeline";
 import { Renderer } from "../Renderer";
+import { GLTools } from "../tools";
 import vsSource from "../shaders/circleVs.glsl";
 import fsSource from "../shaders/circleFs.glsl";
 
@@ -51,6 +52,10 @@ export class CirclePipeline extends InstancedPipeline<CircleData> {
 
         this.mesh = mesh;
     }
+
+    // public override destroy(): void {
+    // ... override if using other resources
+    // }
 
     public static create(renderer: Renderer) {
         const pipe = new CirclePipeline(renderer);
@@ -134,16 +139,16 @@ export class CirclePipeline extends InstancedPipeline<CircleData> {
     public bind(gl: WebGL2RenderingContext): void {
         super.bind(gl);
 
-        // compute your ortho projection:
         const w = this.renderer.worldWidth;
         const h = this.renderer.worldHeight;
-        // prettier-ignore
-        const proj = new Float32Array([
-            2/w,    0,      0,      0,
-            0,     -2/h,    0,      0,
-            0,      0,      1,      0,
-           -1,      1,      0,      1,
-        ]);
+        // // prettier-ignore
+        // const proj = new Float32Array([
+        //     2/w,    0,      0,      0,
+        //     0,     -2/h,    0,      0,
+        //     0,      0,      1,      0,
+        //    -1,      1,      0,      1,
+        // ]);
+        const proj = GLTools.createOrthoMatrix(w, h);
         gl.uniformMatrix4fv(this.uProjLoc, false, proj);
     }
 

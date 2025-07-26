@@ -210,4 +210,15 @@ export class InstancedPipeline<
         // Unbind
         gl.bindVertexArray(null);
     }
+
+    public override destroy(): void {
+        const gl = this.gl;
+        super.destroy();
+
+        gl.deleteVertexArray(this.vao);
+        for (const buf of Object.values(this.buffers)) {
+            gl.deleteBuffer(buf);
+        }
+        gl.deleteProgram(this.program);
+    }
 }

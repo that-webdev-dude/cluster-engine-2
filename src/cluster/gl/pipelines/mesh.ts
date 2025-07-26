@@ -1,5 +1,6 @@
 import { InstancedPipeline } from "../Pipeline";
 import { Renderer } from "../Renderer";
+import { GLTools } from "../tools";
 import vsSource from "../shaders/meshVs.glsl";
 import fsSource from "../shaders/meshFs.glsl";
 
@@ -102,6 +103,10 @@ export class MeshPipeline extends InstancedPipeline<MeshData> {
         pipe.initialize(renderer.gl);
         return pipe;
     }
+
+    // public override destroy(): void {
+    // ... override if using other resources
+    // }
 
     public initialize(gl: WebGL2RenderingContext): void {
         super.initialize(gl);
@@ -212,16 +217,16 @@ export class MeshPipeline extends InstancedPipeline<MeshData> {
     public bind(gl: WebGL2RenderingContext): void {
         super.bind(gl);
 
-        // compute your ortho projection:
         const w = this.renderer.worldWidth;
         const h = this.renderer.worldHeight;
-        // prettier-ignore
-        const proj = new Float32Array([
-            2/w,    0,      0,      0,
-            0,     -2/h,    0,      0,
-            0,      0,      1,      0,
-           -1,      1,      0,      1,
-        ]);
+        // // prettier-ignore
+        // const proj = new Float32Array([
+        //     2/w,    0,      0,      0,
+        //     0,     -2/h,    0,      0,
+        //     0,      0,      1,      0,
+        //    -1,      1,      0,      1,
+        // ]);
+        const proj = GLTools.createOrthoMatrix(w, h);
         gl.uniformMatrix4fv(this.uProjLoc, false, proj);
     }
 
