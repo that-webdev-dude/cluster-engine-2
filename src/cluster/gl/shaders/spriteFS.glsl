@@ -1,22 +1,9 @@
 #version 300 es
 precision mediump float;
+in vec2 v_uv;
+in vec4 v_color;
+uniform sampler2D u_sampler;
 out vec4 outColor;
 void main() {
-    outColor = vec4(1, 0, 0, 1);
+    outColor = texture(u_sampler, v_uv) * v_color;
 }
-
-// #version 300 es
-// precision mediump float;
-
-// in vec4 v_color;
-// in vec2 v_uv;
-
-// uniform sampler2D uTexture;
-
-// out vec4 outColor;
-
-// void main() {
-//     vec4 tex = texture(uTexture, v_uv);
-//     // outColor = tex * v_color;
-//     outColor = vec4(1, 0, 0, 1);
-// }

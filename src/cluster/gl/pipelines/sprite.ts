@@ -1,91 +1,74 @@
 import { InstancedPipeline } from "../Pipeline";
 import { Renderer } from "../Renderer";
+import { GLTools } from "../tools";
 import vsSource from "../shaders/spriteVs.glsl";
 import fsSource from "../shaders/spriteFs.glsl";
-import { GLTools } from "../tools";
 
-function createUnitQuadMesh(): Float32Array {
-    return new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]);
-}
-
+// exactly those buffers your ECS components supply:
+// Position, Offset, Size, Pivot, Angle, Color, Sprite(frame) :contentReference[oaicite:7]{index=7}
 export interface SpriteData extends Record<string, BufferSource> {
-    a_translation: Float32Array;
-    a_scale: Float32Array;
-    a_rotation: Float32Array;
-    a_pivot: Float32Array;
-    a_uv: Float32Array;
-    a_color: Uint8Array;
+    a_position: Float32Array; // [x, y] world px
+    a_offset: Float32Array; // [ox, oy] px
+    a_scale: Float32Array; // [width, height] px
+    a_pivot: Float32Array; // [px, py] px
+    a_angle: Float32Array; // radians
+    a_color: Uint8Array; // [r,g,b,a] 0–255
+    a_uvRect: Float32Array; // [u0, v0, u1, v1] normalized
 }
 
 export class SpritePipeline extends InstancedPipeline<SpriteData> {
-    private uCamPosLoc!: WebGLUniformLocation;
     private uProjLoc!: WebGLUniformLocation;
-    private uTextureLoc!: WebGLUniformLocation;
-    private texture!: WebGLTexture;
-    private mesh: Float32Array;
+    private uCamPosLoc!: WebGLUniformLocation;
+    private uSamplerLoc!: WebGLUniformLocation;
 
-    private constructor(renderer: Renderer, image: HTMLImageElement) {
-        const mesh = createUnitQuadMesh();
-        const vertexCount = mesh.length / 2;
-        super(renderer, vsSource, fsSource, vertexCount, renderer.gl.TRIANGLES);
-        this.mesh = mesh;
-        this.texture = this.createTexture(renderer.gl, image);
+    private constructor(renderer: Renderer, private texture: WebGLTexture) {
+        // 6 verts per quad (2 triangles)
+        super(renderer, vsSource, fsSource, 6, renderer.gl.TRIANGLES);
+        // define a unit quad centered at origin
+
+        const quad = new Float32Array([
+            -0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5,
+        ]);
+        this.setAttributeData("a_vertex", quad, renderer.gl.STATIC_DRAW);
     }
 
-    public static create(renderer: Renderer, img: HTMLImageElement) {
-        const pipe = new SpritePipeline(renderer, img);
-        pipe.initialize(renderer.gl);
-        return pipe;
+    /** Create one pipeline per atlas—multi-atlas grouping happens outside */
+    public static create(renderer: Renderer, texture: WebGLTexture) {
+        const p = new SpritePipeline(renderer, texture);
+        p.initialize(renderer.gl);
+        return p;
     }
 
-    private createTexture(gl: WebGL2RenderingContext, img: HTMLImageElement) {
-        const tex = gl.createTexture()!;
-        gl.bindTexture(gl.TEXTURE_2D, tex);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texImage2D(
-            gl.TEXTURE_2D,
-            0,
-            gl.RGBA,
-            gl.RGBA,
-            gl.UNSIGNED_BYTE,
-            img
-        );
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        return tex;
-    }
-
-    public initialize(gl: WebGL2RenderingContext): void {
+    public initialize(gl: WebGL2RenderingContext) {
         super.initialize(gl);
+
+        // grab uniforms
         this.uProjLoc = gl.getUniformLocation(this.program, "uProj")!;
         this.uCamPosLoc = gl.getUniformLocation(this.program, "uCamPos")!;
-        this.uTextureLoc = gl.getUniformLocation(this.program, "uTexture")!;
+        this.uSamplerLoc = gl.getUniformLocation(this.program, "u_sampler")!;
 
+        // register attributes exactly like mesh does
         this.registerAttribute("a_vertex", {
             location: 0,
             size: 2,
             type: gl.FLOAT,
             divisor: 0,
         });
-        this.setAttributeData("a_vertex", this.mesh, gl.STATIC_DRAW);
-
-        this.registerAttribute("a_translation", {
+        this.registerAttribute("a_position", {
             location: 1,
             size: 2,
             type: gl.FLOAT,
             divisor: 1,
         });
-        this.registerAttribute("a_scale", {
+        this.registerAttribute("a_offset", {
             location: 2,
             size: 2,
             type: gl.FLOAT,
             divisor: 1,
         });
-        this.registerAttribute("a_rotation", {
+        this.registerAttribute("a_scale", {
             location: 3,
-            size: 1,
+            size: 2,
             type: gl.FLOAT,
             divisor: 1,
         });
@@ -95,9 +78,9 @@ export class SpritePipeline extends InstancedPipeline<SpriteData> {
             type: gl.FLOAT,
             divisor: 1,
         });
-        this.registerAttribute("a_uv", {
+        this.registerAttribute("a_angle", {
             location: 5,
-            size: 4,
+            size: 1,
             type: gl.FLOAT,
             divisor: 1,
         });
@@ -107,39 +90,25 @@ export class SpritePipeline extends InstancedPipeline<SpriteData> {
             type: gl.UNSIGNED_BYTE,
             divisor: 1,
         });
+        this.registerAttribute("a_uvRect", {
+            location: 7,
+            size: 4,
+            type: gl.FLOAT,
+            divisor: 1,
+        });
 
+        // pre-allocate instance buffers (use mesh’s 1024 default for now) :contentReference[oaicite:8]{index=8}
         const maxInstances = 1024;
-        this.setAttributeData(
-            "a_translation",
-            new Float32Array(maxInstances * 2),
-            gl.DYNAMIC_DRAW
-        );
-        this.setAttributeData(
-            "a_scale",
-            new Float32Array(maxInstances * 2),
-            gl.DYNAMIC_DRAW
-        );
-        this.setAttributeData(
-            "a_rotation",
-            new Float32Array(maxInstances),
-            gl.DYNAMIC_DRAW
-        );
-        this.setAttributeData(
-            "a_pivot",
-            new Float32Array(maxInstances * 2),
-            gl.DYNAMIC_DRAW
-        );
-        this.setAttributeData(
-            "a_uv",
-            new Float32Array(maxInstances * 4),
-            gl.DYNAMIC_DRAW
-        );
-        this.setAttributeData(
-            "a_color",
-            new Uint8Array(maxInstances * 4),
-            gl.DYNAMIC_DRAW
-        );
+        // prettier-ignore
+        this.setAttributeData("a_position", new Float32Array(maxInstances*2))
+        this.setAttributeData("a_offset", new Float32Array(maxInstances * 2));
+        this.setAttributeData("a_scale", new Float32Array(maxInstances * 2));
+        this.setAttributeData("a_pivot", new Float32Array(maxInstances * 2));
+        this.setAttributeData("a_angle", new Float32Array(maxInstances * 1));
+        this.setAttributeData("a_color", new Uint8Array(maxInstances * 4));
+        this.setAttributeData("a_uvRect", new Float32Array(maxInstances * 4));
 
+        // record all pointers & divisors in the VAO once
         gl.bindVertexArray(this.vao);
         for (const [name, spec] of this.attributeSpecs) {
             const buf = this.buffers[name];
@@ -158,40 +127,19 @@ export class SpritePipeline extends InstancedPipeline<SpriteData> {
         gl.bindVertexArray(null);
     }
 
-    // public bind(gl: WebGL2RenderingContext): void {
-    //     super.bind(gl);
-
-    //     const w = this.renderer.worldWidth;
-    //     const h = this.renderer.worldHeight;
-    //     // // prettier-ignore
-    //     // const proj = new Float32Array([
-    //     //     2/w,    0,      0,      0,
-    //     //     0,     -2/h,    0,      0,
-    //     //     0,      0,      1,      0,
-    //     //    -1,      1,      0,      1,
-    //     // ]);
-    //     const proj = GLTools.createOrthoMatrix(w, h);
-    //     gl.uniformMatrix4fv(this.uProjLoc, false, proj);
-
-    //     gl.activeTexture(gl.TEXTURE0);
-    //     gl.bindTexture(gl.TEXTURE_2D, this.texture);
-    //     gl.uniform1i(this.uTextureLoc, 0);
-    // }
-
-    public bind(gl: WebGL2RenderingContext): void {
+    public bind(gl: WebGL2RenderingContext) {
         super.bind(gl);
-        gl.bindVertexArray(this.vao); // ← bind the VAO with all your attributes
-        // then your existing projection & texture setup…
-        const w = this.renderer.worldWidth;
-        const h = this.renderer.worldHeight;
-        gl.uniformMatrix4fv(
-            this.uProjLoc,
-            false,
-            GLTools.createOrthoMatrix(w, h)
+        // set ortho projection & camera exactly as mesh does :contentReference[oaicite:9]{index=9}
+        const proj = GLTools.createOrthoMatrix(
+            this.renderer.worldWidth,
+            this.renderer.worldHeight
         );
+        gl.uniformMatrix4fv(this.uProjLoc, false, proj);
+
+        // bind atlas texture
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this.texture);
-        gl.uniform1i(this.uTextureLoc, 0);
+        gl.uniform1i(this.uSamplerLoc, 0);
     }
 
     public setCamera(gl: WebGL2RenderingContext, x: number, y: number) {
