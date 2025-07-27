@@ -4,8 +4,7 @@ import { GLTools } from "../tools";
 import vsSource from "../shaders/spriteVs.glsl";
 import fsSource from "../shaders/spriteFs.glsl";
 
-// exactly those buffers your ECS components supply:
-// Position, Offset, Size, Pivot, Angle, Color, Sprite(frame) :contentReference[oaicite:7]{index=7}
+// exactly those buffers your ECS components supply: Position, Offset, Size, Pivot, Angle, Color, Sprite(frame)
 export interface SpriteData extends Record<string, BufferSource> {
     a_position: Float32Array; // [x, y] world px
     a_offset: Float32Array; // [ox, oy] px
@@ -20,27 +19,61 @@ export class SpritePipeline extends InstancedPipeline<SpriteData> {
     private uProjLoc!: WebGLUniformLocation;
     private uCamPosLoc!: WebGLUniformLocation;
     private uSamplerLoc!: WebGLUniformLocation;
+    private texture: WebGLTexture;
 
-    private constructor(renderer: Renderer, private texture: WebGLTexture) {
-        // 6 verts per quad (2 triangles)
+    private constructor(renderer: Renderer, private img: HTMLImageElement) {
         super(renderer, vsSource, fsSource, 6, renderer.gl.TRIANGLES);
-        // define a unit quad centered at origin
 
+        this.texture = this.createTexture(renderer);
+
+        // define a unit quad centered at origin - 6 verts per quad (2 triangles)
+        // prettier-ignore
         const quad = new Float32Array([
-            -0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5,
+            -0.5, -0.5, 
+            -0.5,  0.5,  
+             0.5,  0.5, 
+            -0.5, -0.5, 
+             0.5,  0.5,  
+             0.5, -0.5,
         ]);
+
         this.setAttributeData("a_vertex", quad, renderer.gl.STATIC_DRAW);
     }
 
+    private createTexture(renderer: Renderer) {
+        const gl = renderer.gl;
+        const tex = gl.createTexture()!;
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        // assume your art is not flipped
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            this.img
+        );
+        gl.generateMipmap(gl.TEXTURE_2D);
+        return tex;
+    }
+
     /** Create one pipeline per atlas—multi-atlas grouping happens outside */
-    public static create(renderer: Renderer, texture: WebGLTexture) {
-        const p = new SpritePipeline(renderer, texture);
+    public static create(renderer: Renderer, img: HTMLImageElement) {
+        const p = new SpritePipeline(renderer, img);
         p.initialize(renderer.gl);
         return p;
     }
 
     public initialize(gl: WebGL2RenderingContext) {
         super.initialize(gl);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
         // grab uniforms
         this.uProjLoc = gl.getUniformLocation(this.program, "uProj")!;
