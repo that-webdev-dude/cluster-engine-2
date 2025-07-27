@@ -16,10 +16,10 @@ export interface SpriteData extends Record<string, BufferSource> {
 }
 
 export class SpritePipeline extends InstancedPipeline<SpriteData> {
+    private texture: WebGLTexture;
     private uProjLoc!: WebGLUniformLocation;
     private uCamPosLoc!: WebGLUniformLocation;
     private uSamplerLoc!: WebGLUniformLocation;
-    private texture: WebGLTexture;
 
     private constructor(renderer: Renderer, private img: HTMLImageElement) {
         super(renderer, vsSource, fsSource, 6, renderer.gl.TRIANGLES);
