@@ -6,13 +6,13 @@ const STATUS = {
     action: "action",
 } as const;
 
-type Getter = (state: State) => any;
+export type Getter = (state: State) => any;
 
-type Mutation = (state: State, payload?: any) => void;
+export type Mutation = (state: State, payload?: any) => void;
 
-type Action = (store: Store, payload?: any) => void;
+export type Action = (store: Store, payload?: any) => void;
 
-type State = any;
+export type State = any;
 
 /**
  * The Store class is a centralized state management system.
