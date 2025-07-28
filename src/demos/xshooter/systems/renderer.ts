@@ -1,10 +1,10 @@
 import { Component } from "../components";
-import { StorageRenderSystem } from "../../../cluster/ecs/system";
-import { View } from "../../../cluster/ecs/scene";
-import { Chunk } from "../../../cluster/ecs/chunk";
-import { MeshPipeline, MeshData } from "../../../cluster/gl/pipelines/mesh";
+import { StorageRenderSystem } from "../../../cluster";
+import { View } from "../../../cluster";
+import { Chunk } from "../../../cluster";
+import { MeshPipeline, MeshData } from "../../../cluster";
 import { ComponentDescriptor } from "../../../cluster/types";
-import { Display } from "../../../cluster/core/Display";
+import { Display } from "../../../cluster";
 
 export class RendererSystem extends StorageRenderSystem {
     private renderer = Display.getInstance().createGPURenderingLayer();

@@ -1,6 +1,24 @@
-// TODO:
-// still not sure if updateables and renderables object are better than using
-// update and render functions callbacks
+/**
+ * File: src/cluster/core/Engine.ts
+ *
+ * Main game loop and fixed timestep engine for cluster-engine-2.
+ *
+ * Provides a robust framework for decoupling update and render cycles using an accumulator pattern,
+ * with optional debug metrics for performance analysis. Accepts arrays of updateable and renderable
+ * objects, each conforming to their respective interfaces. Callbacks can be registered to run at
+ * the end of each update/render loop.
+ *
+ * Features:
+ * - Fixed timestep update loop for deterministic simulation
+ * - Decoupled update and render logic for smooth animation
+ * - Support for any number of updateable/renderable/callback objects
+ * - Optional debug mode with FPS and runtime statistics
+ * - Clean shutdown and resource management
+ *
+ * TODO:
+ * - Evaluate whether using arrays of updateable/renderable objects is preferable to a single
+ *   update/render callback function pattern.
+ */
 
 /**
  * Indicates whether debug mode is enabled based on the CLUSTER_ENGINE_DEBUG environment variable.
@@ -8,23 +26,35 @@
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 /**
- * IUpdateable interface defines an object that can be updated.
+ * Interface for objects that can be updated each frame.
  */
 interface IUpdateable {
+    /**
+     * Updates the object.
+     * @param delta - The fixed timestep (in seconds).
+     * @param t - The total runtime (in seconds).
+     */
     update: (delta: number, t: number) => void;
 }
 
 /**
- * IRenderable interface defines an object that can be rendered.
+ * Interface for objects that can be rendered each frame.
  */
 interface IRenderable {
+    /**
+     * Renders the object.
+     * @param alpha - Interpolation factor between updates (0..1).
+     */
     render: (alpha: number) => void;
 }
 
 /**
- * ICallback interface defines an object that can be called at the end of the update loop.
+ * Interface for end-of-frame callback objects.
  */
 interface ICallback {
+    /**
+     * Called after update and render cycles.
+     */
     done: () => void;
 }
 
@@ -41,7 +71,7 @@ export class Engine {
     private running: boolean = false;
     private rafId: number | null = null;
 
-    // updateables and renderables arrays
+    // Arrays of updateable and renderable objects
     private updateables: IUpdateable[] = [];
     private renderables: IRenderable[] = [];
     private callbacks: ICallback[] = [];
@@ -57,8 +87,6 @@ export class Engine {
     /**
      * Creates an instance of Engine.
      *
-     * @param update - Function to update the engine state.
-     * @param render - Function to render the current state.
      * @param updatesPerSecond - The update frequency in Hz (default is 60).
      */
     constructor(updatesPerSecond = 60) {
@@ -66,17 +94,15 @@ export class Engine {
     }
 
     /**
-   * Adds an updateable object to the engine.
-
-   * @param updateable - An object that implements the IUpdateable interface.
-   */
+     * Adds an updateable object to the engine.
+     * @param updateable - An object that implements the IUpdateable interface.
+     */
     public addUpdateable(updateable: IUpdateable): void {
         this.updateables.push(updateable);
     }
 
     /**
      * Adds a renderable object to the engine.
-     *
      * @param renderable - An object that implements the IRenderable interface.
      */
     public addRenderable(renderable: IRenderable): void {
@@ -84,8 +110,7 @@ export class Engine {
     }
 
     /**
-     * Registers a new callback to be invoked by the engine.
-     *
+     * Registers a callback to be invoked at the end of each loop iteration.
      * @param callback - The callback instance to add.
      */
     public addCallback(callback: ICallback): void {
@@ -119,7 +144,6 @@ export class Engine {
 
     /**
      * Returns the current frames per second (FPS).
-     *
      * @returns The calculated FPS.
      */
     public getFPS(): number {
@@ -128,7 +152,6 @@ export class Engine {
 
     /**
      * Returns the total number of frames rendered during the last debug interval.
-     *
      * @returns The frame count.
      */
     public getTotalFrames(): number {
@@ -137,7 +160,6 @@ export class Engine {
 
     /**
      * Returns the elapsed time (in seconds) recorded during the last debug interval.
-     *
      * @returns The elapsed time.
      */
     public getElapsedTime(): number {
@@ -180,6 +202,7 @@ export class Engine {
         this.fpsAccumulator += frameTime;
         this.frameCount++;
 
+        // Fixed timestep updates
         while (this.accumulator >= this.timestep) {
             this.updateables.forEach((updateable) =>
                 updateable.update(this.timestep, this.totalTime)
@@ -187,10 +210,11 @@ export class Engine {
             this.accumulator -= this.timestep;
         }
 
+        // Alpha for smooth rendering
         const alpha = this.accumulator / this.timestep;
         this.renderables.forEach((renderable) => renderable.render(alpha));
 
-        // executes all the registered callbacks
+        // Execute all registered end-of-frame callbacks
         this.callbacks.forEach((callback) => callback.done());
 
         if (DEBUG) this.updateFPS();
@@ -198,8 +222,7 @@ export class Engine {
 
     /**
      * Updates the FPS value based on the number of frames and elapsed time.
-     *
-     * This method resets the debug counters once the update interval is met.
+     * Resets debug counters once the update interval is met.
      */
     private updateFPS(): void {
         if (this.fpsAccumulator >= this.fpsUpdateInterval) {
@@ -212,9 +235,8 @@ export class Engine {
 
     /**
      * Destroys the engine instance and cleans up resources.
-     *
-     * This method stops the engine, clears the requestAnimationFrame ID, and resets the running state.
-     * It also clears the update and render functions to prevent memory leaks.
+     * Stops the engine, clears requestAnimationFrame, resets running state,
+     * and clears updateables and renderables to prevent memory leaks.
      */
     public destroy(): void {
         this.updateables = [];
