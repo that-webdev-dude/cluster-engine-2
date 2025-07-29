@@ -30,7 +30,7 @@ export function getPlayerComponents(): ComponentValueMap {
         [Component.Size]: [32, 32],
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [0, 64, 32, 32],
-        [Component.Animation]: [6, 9, 0.25, 0],
+        [Component.Animation]: [6, 9, 6, 0.25, 0],
     } as ComponentValueMap;
 }
 

@@ -87,47 +87,52 @@ export class AnimationSystem extends StorageUpdateSystem {
                     const sprite = chunk.views.Sprite;
                     const animation = chunk.views.Animation;
 
-                    animation[i * 6 + 3] += dt; // increment elapsed time
+                    animation[i * 6 + 4] += dt; // increment animationElapsed
 
-                    let animationStartIndex = animation[i * 6 + 0];
-                    let animationEndIndex = animation[i * 6 + 1];
-                    let animationTime = animation[i * 6 + 2];
-                    let animationElapsed = animation[i * 6 + 3];
+                    // prettier-ignore
+                    let animationStartIndex     = animation[i * 6 + 0];
+                    // prettier-ignore
+                    let animationEndIndex       = animation[i * 6 + 1];
+                    // prettier-ignore
+                    let animationCurrentIndex   = animation[i * 6 + 2];
+                    // prettier-ignore
+                    let animationTime           = animation[i * 6 + 3];
+                    // prettier-ignore
+                    let animationElapsed        = animation[i * 6 + 4];
 
                     if (animationElapsed >= animationTime) {
-                        animation[i * 6 + 3] = 0;
+                        animation[i * 6 + 4] = 0;
 
-                        const spriteCurrentX = sprite[i * 4 + 0];
-                        const spriteCurrentY = sprite[i * 4 + 1];
-                        const currentAnimationIndex =
-                            spritesheet.frameIndexFromPx(
-                                spriteCurrentX,
-                                spriteCurrentY
+                        let nextAnimationRect: [
+                            number,
+                            number,
+                            number,
+                            number
+                        ] = [0, 0, 0, 0];
+
+                        if (animationCurrentIndex < animationEndIndex) {
+                            // proceed to next frame
+                            animationCurrentIndex++;
+
+                            animation[i * 6 + 2] = animationCurrentIndex;
+
+                            nextAnimationRect = spritesheet.frameRectFromIndex(
+                                animationCurrentIndex
                             );
-
-                        if (currentAnimationIndex < animationEndIndex) {
-                            const nextAnimationIndex =
-                                currentAnimationIndex + 1;
-                            const nextAnimationRect =
-                                spritesheet.frameRectFromIndex(
-                                    nextAnimationIndex
-                                );
-                            sprite[i * 4 + 0] = nextAnimationRect[0]; // x in px
-                            sprite[i * 4 + 1] = nextAnimationRect[1]; // y in px
-                            sprite[i * 4 + 2] = nextAnimationRect[2]; // w in px
-                            sprite[i * 4 + 3] = nextAnimationRect[3]; // h in px
                         } else {
                             // Reset to start frame
-                            const startFrameRect =
+                            nextAnimationRect =
                                 spritesheet.frameRectFromIndex(
                                     animationStartIndex
                                 );
 
-                            sprite[i * 4 + 0] = startFrameRect[0]; // x in px
-                            sprite[i * 4 + 1] = startFrameRect[1]; // y in px
-                            sprite[i * 4 + 2] = startFrameRect[2]; // w in px
-                            sprite[i * 4 + 3] = startFrameRect[3]; // h in px
+                            animation[i * 6 + 2] = animationStartIndex;
                         }
+
+                        sprite[i * 4 + 0] = nextAnimationRect[0]; // x in px
+                        sprite[i * 4 + 1] = nextAnimationRect[1]; // y in px
+                        sprite[i * 4 + 2] = nextAnimationRect[2]; // w in px
+                        sprite[i * 4 + 3] = nextAnimationRect[3]; // h in px
                     }
                 }
             }
