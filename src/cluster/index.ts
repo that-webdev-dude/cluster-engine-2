@@ -8,6 +8,7 @@ export { Sound } from "./core/Sound";
 export { Audio } from "./core/Sound";
 
 // ecs
+export { CommandBuffer } from "./ecs/cmd";
 export { Archetype } from "./ecs/archetype";
 export { Chunk } from "./ecs/chunk";
 export { Game } from "./ecs/game";

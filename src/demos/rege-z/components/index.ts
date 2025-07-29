@@ -14,6 +14,7 @@ export enum Component {
     Bullet,
     Camera,
     Sprite,
+    Animation,
 }
 
 const DESCRIPTORS = {
@@ -122,6 +123,13 @@ const DESCRIPTORS = {
         count: 4,
         buffer: Float32Array,
         default: [0, 0, 0, 0], // framex - framey - framew - frameh
+    },
+    Animation: {
+        type: Component.Animation,
+        name: "Animation",
+        count: 6,
+        buffer: Float32Array,
+        default: [6, 9, 32, 32, 1, 0], // startFrameIdx - endFrameIdx - frameW - frameY - frameTime - frameElapsed
     },
 };
 
