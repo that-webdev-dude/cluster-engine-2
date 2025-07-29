@@ -99,6 +99,24 @@ export class AnimationSystem extends StorageUpdateSystem {
                     let animationTime           = animation[i * 6 + 3];
                     // prettier-ignore
                     let animationElapsed        = animation[i * 6 + 4];
+                    // prettier-ignore
+                    let animationPlaying        = animation[i * 6 + 5];
+
+                    if (animationPlaying === 0) {
+                        // Reset current frame and elapsed time
+                        animation[i * 6 + 2] = animationStartIndex;
+                        animation[i * 6 + 4] = 0;
+
+                        // Force the sprite back to the start frame
+                        const startRect =
+                            spritesheet.frameRectFromIndex(animationStartIndex);
+                        sprite[i * 4 + 0] = startRect[0];
+                        sprite[i * 4 + 1] = startRect[1];
+                        sprite[i * 4 + 2] = startRect[2];
+                        sprite[i * 4 + 3] = startRect[3];
+
+                        continue;
+                    }
 
                     if (animationElapsed >= animationTime) {
                         animation[i * 6 + 4] = 0;
