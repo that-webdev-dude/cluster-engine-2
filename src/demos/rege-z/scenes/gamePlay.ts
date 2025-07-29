@@ -1,9 +1,10 @@
-import { Scene } from "../../../cluster";
-import { playerArchetype, getPlayerComponents } from "../entities/player";
-import { SpriteRendererSystem } from "../systems/GLRenderer";
+import store from "../stores/store";
+import { playerArchetype } from "../entities/player";
+import { getPlayerComponents } from "../entities/player";
+import { SpriteRendererSystem } from "../systems/RendererSystem";
 import { AnimationSystem } from "../systems/AnimationSystem";
 import { PlayerSystem } from "../systems/PlayerSystem";
-import store from "../stores/store";
+import { Scene } from "../../../cluster";
 
 export function createGamePlay() {
     const scene = new Scene({

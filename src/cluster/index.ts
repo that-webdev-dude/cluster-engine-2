@@ -33,3 +33,4 @@ export { RectPipeline, RectData } from "./gl/pipelines/rect";
 
 // types
 export type { State, Action, Mutation, Getter } from "./core/Store";
+export type { ComponentValueMap } from "./types";

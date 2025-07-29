@@ -1,8 +1,8 @@
-import { StorageUpdateSystem } from "../../../cluster";
-import { CommandBuffer } from "../../../cluster";
-import { View } from "../../../cluster";
 import { Component } from "../components";
+import { View } from "../../../cluster";
 import { Input } from "../../../cluster";
+import { CommandBuffer } from "../../../cluster";
+import { StorageUpdateSystem } from "../../../cluster";
 
 export class PlayerSystem extends StorageUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
