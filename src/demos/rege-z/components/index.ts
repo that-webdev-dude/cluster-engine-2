@@ -127,9 +127,9 @@ const DESCRIPTORS = {
     Animation: {
         type: Component.Animation,
         name: "Animation",
-        count: 6,
+        count: 4,
         buffer: Float32Array,
-        default: [6, 9, 32, 32, 1, 0], // startFrameIdx - endFrameIdx - frameW - frameY - frameTime - frameElapsed
+        default: [0, 0, 0, 0], // startFrameIdx - endFrameIdx - frameTime - frameElapsed
     },
 };
 

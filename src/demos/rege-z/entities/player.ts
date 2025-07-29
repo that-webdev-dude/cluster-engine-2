@@ -29,8 +29,8 @@ export function getPlayerComponents(): ComponentValueMap {
         [Component.Pivot]: [0, 0],
         [Component.Size]: [32, 32],
         [Component.Color]: [255, 255, 255, 255],
-        [Component.Sprite]: [64, 32, 32, 32],
-        [Component.Animation]: [6, 9, 32, 32, 0.25, 0],
+        [Component.Sprite]: [0, 64, 32, 32],
+        [Component.Animation]: [6, 9, 0.25, 0],
     } as ComponentValueMap;
 }
 

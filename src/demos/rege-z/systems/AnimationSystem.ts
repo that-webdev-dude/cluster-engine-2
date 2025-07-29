@@ -87,15 +87,15 @@ export class AnimationSystem extends StorageUpdateSystem {
                     const sprite = chunk.views.Sprite;
                     const animation = chunk.views.Animation;
 
-                    animation[i * 6 + 5] += dt; // increment elapsed time
+                    animation[i * 6 + 3] += dt; // increment elapsed time
 
                     let animationStartIndex = animation[i * 6 + 0];
                     let animationEndIndex = animation[i * 6 + 1];
-                    let animationTime = animation[i * 6 + 4];
-                    let animationElapsed = animation[i * 6 + 5];
+                    let animationTime = animation[i * 6 + 2];
+                    let animationElapsed = animation[i * 6 + 3];
 
                     if (animationElapsed >= animationTime) {
-                        animation[i * 6 + 5] = 0;
+                        animation[i * 6 + 3] = 0;
 
                         const spriteCurrentX = sprite[i * 4 + 0];
                         const spriteCurrentY = sprite[i * 4 + 1];
