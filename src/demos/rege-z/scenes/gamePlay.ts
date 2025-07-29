@@ -1,6 +1,7 @@
 import store from "../stores/store";
 import { playerArchetype } from "../entities/player";
 import { getPlayerComponents } from "../entities/player";
+import { createTileMap } from "../entities/tilemap";
 import { SpriteRendererSystem } from "../systems/RendererSystem";
 import { AnimationSystem } from "../systems/AnimationSystem";
 import { PlayerSystem } from "../systems/PlayerSystem";
@@ -16,6 +17,8 @@ export function createGamePlay() {
         guiUpdateSystems: [],
         guiRenderSystems: [],
     });
+
+    createTileMap(scene, 32);
 
     scene.createEntity(playerArchetype, getPlayerComponents());
 

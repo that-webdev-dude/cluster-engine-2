@@ -3,8 +3,8 @@ import type { State, Action, Mutation, Getter } from "../../../cluster";
 
 const state: State = {
     appId: "#app",
-    worldW: 800,
-    worldH: 400,
+    worldW: 832,
+    worldH: 448,
 } as const;
 
 const actions: Record<string, Action> = {} as const;

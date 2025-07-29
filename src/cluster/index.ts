@@ -31,6 +31,10 @@ export { CirclePipeline, CircleData } from "./gl/pipelines/circle";
 export { MeshPipeline, MeshData } from "./gl/pipelines/mesh";
 export { RectPipeline, RectData } from "./gl/pipelines/rect";
 
+// tools
+export { Spritesheet } from "./tools/Spritesheet";
+export { Cmath } from "./tools/Cmath";
+
 // types
 export type { State, Action, Mutation, Getter } from "./core/Store";
 export type { ComponentValueMap } from "./types";

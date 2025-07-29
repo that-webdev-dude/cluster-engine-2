@@ -15,6 +15,7 @@ export enum Component {
     Camera,
     Sprite,
     Animation,
+    Tile,
 }
 
 const DESCRIPTORS = {
@@ -130,6 +131,13 @@ const DESCRIPTORS = {
         count: 6,
         buffer: Float32Array,
         default: [0, 0, 0, 0, 0, 0], // startFrameIdx - endFrameIdx - currentFrameIdx - frameTime - frameElapsed - playing?
+    },
+    Tile: {
+        type: Component.Tile,
+        name: "Tile",
+        count: 1,
+        buffer: Float32Array,
+        default: [1], // is a tile?
     },
 };
 

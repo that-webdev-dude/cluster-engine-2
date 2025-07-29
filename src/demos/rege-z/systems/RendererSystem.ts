@@ -1,6 +1,6 @@
 // src/renderer/GLRenderer.ts
 
-import { charactersImg } from "../assets";
+import { spritesheetImg } from "../assets";
 import { Component } from "../components";
 import { Display } from "../../../cluster";
 import { View } from "../../../cluster";
@@ -29,10 +29,10 @@ export class SpriteRendererSystem extends StorageRenderSystem {
 
         // — lazy init pipeline
         if (!this.pipeline) {
-            if (charactersImg.complete && charactersImg.naturalWidth > 0) {
+            if (spritesheetImg.complete && spritesheetImg.naturalWidth > 0) {
                 this.pipeline = SpritePipeline.create(
                     this.renderer,
-                    charactersImg
+                    spritesheetImg
                 );
             }
         }
@@ -58,8 +58,10 @@ export class SpriteRendererSystem extends StorageRenderSystem {
                 if (count === 0) return;
 
                 // copy over Position, Size, Color
-                // prettier-ignore
-                this.positions.set(chunk.views.Position.subarray(0, count * 2), 0);
+                this.positions.set(
+                    chunk.views.Position.subarray(0, count * 2),
+                    0
+                );
                 this.scales.set(chunk.views.Size.subarray(0, count * 2), 0);
                 this.colors.set(chunk.views.Color.subarray(0, count * 4), 0);
 
@@ -93,7 +95,7 @@ export class SpriteRendererSystem extends StorageRenderSystem {
 
                 // Dynamic UVs from the Sprite component
                 const s = chunk.views.Sprite; // [frameX,frameY,frameW,frameH] in px
-                const img = charactersImg;
+                const img = spritesheetImg;
 
                 for (let i = 0; i < count; i++) {
                     const fx = s[i * 4 + 0];
