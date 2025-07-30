@@ -118,7 +118,8 @@ export class AnimationSystem extends StorageUpdateSystem {
                         continue;
                     }
 
-                    if (animationElapsed >= animationTime) {
+                    // console.log(animation);
+                    if (animation[i * 6 + 4] > animationTime) {
                         animation[i * 6 + 4] = 0;
 
                         let nextAnimationRect: [

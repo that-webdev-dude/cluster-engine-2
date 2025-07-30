@@ -1,6 +1,5 @@
 import { Cmath, Scene } from "../../../../cluster";
 import { tileArchetype, getTileComponents } from "../../entities/tile";
-import { DESCRIPTORS } from "../../components";
 import { Spritesheet } from "../../../../cluster"; // reuse helper for frame rects
 import { charactersImg } from "../../assets";
 

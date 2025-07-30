@@ -9,7 +9,9 @@ const worldH = store.get("worldH");
 
 export const playerSchema = Archetype.register(
     DESCRIPTORS.Player,
+    DESCRIPTORS.PreviousPosition,
     DESCRIPTORS.Position,
+    DESCRIPTORS.Velocity,
     DESCRIPTORS.Offset,
     DESCRIPTORS.Angle,
     DESCRIPTORS.Pivot,
@@ -22,14 +24,16 @@ export const playerSchema = Archetype.register(
 export function getPlayerComponents(): ComponentValueMap {
     return {
         [Component.Player]: [1],
+        [Component.PreviousPosition]: [worldW / 2, worldH / 2],
         [Component.Position]: [worldW / 2, worldH / 2],
+        [Component.Velocity]: [0, 0],
         [Component.Offset]: [0, 0],
         [Component.Angle]: [0],
         [Component.Pivot]: [0, 0],
         [Component.Size]: [32, 32],
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [0, 0, 32, 32],
-        [Component.Animation]: [0, 3, 0, 0.1, 0, 1],
+        [Component.Animation]: [4, 5, 4, 1, 0, 1],
     } as ComponentValueMap;
 }
 
