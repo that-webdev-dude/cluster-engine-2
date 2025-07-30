@@ -12,10 +12,10 @@ const display = Display.getInstance({
     height,
     parent,
     backgroundColor: {
-        r: 255,
+        r: 0,
         g: 0,
         b: 0,
-        a: 255,
+        a: 0,
     },
 });
 

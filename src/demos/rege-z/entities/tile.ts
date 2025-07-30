@@ -16,7 +16,7 @@ export function getTileComponents(
     y: number,
     tileSize: number,
     frame: [number, number, number, number],
-    color: [number, number, number, number] = [255, 255, 255, 255]
+    color: [number, number, number, number] = [255, 255, 255, 240]
 ): ComponentValueMap {
     return {
         [Component.Tile]: [1],

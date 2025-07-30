@@ -39,10 +39,23 @@ export class SpriteRendererSystem extends StorageRenderSystem {
         if (!this.pipeline) return;
 
         // (1) update your camera if you have one
-        view.forEachChunkWith([Component.Position /*, Camera*/], (chunk) => {
-            // example: lock camera at origin
-            this.cameraPos[0] = 0;
-            this.cameraPos[1] = 0;
+        view.forEachChunkWith([Component.Camera], (chunk) => {
+            const cur = chunk.views.Position;
+            const prev = chunk.views.PreviousPosition;
+
+            if (!prev) {
+                // no PreviousPosition, just use current
+                console.warn(
+                    "[SpriteRendererSystem]: No PreviousPosition found, using current position for camera"
+                );
+                prev[0] = cur[0];
+                prev[1] = cur[1];
+            }
+            const interpolatedX = prev[0] + (cur[0] - prev[0]) * alpha;
+            const interpolatedY = prev[1] + (cur[1] - prev[1]) * alpha;
+
+            this.cameraPos[0] = Math.floor(interpolatedX);
+            this.cameraPos[1] = Math.floor(interpolatedY);
         });
 
         // (2) draw all entities with a Sprite component
@@ -57,11 +70,6 @@ export class SpriteRendererSystem extends StorageRenderSystem {
                 const count = chunk.count;
                 if (count === 0) return;
 
-                // copy over Position, Size, Color
-                this.positions.set(
-                    chunk.views.Position.subarray(0, count * 2),
-                    0
-                );
                 this.scales.set(chunk.views.Size.subarray(0, count * 2), 0);
                 this.colors.set(chunk.views.Color.subarray(0, count * 4), 0);
 
@@ -98,6 +106,28 @@ export class SpriteRendererSystem extends StorageRenderSystem {
                 const img = spritesheetImg;
 
                 for (let i = 0; i < count; i++) {
+                    // let's interpolate the positions here
+                    // if you have PreviousPosition and want interpolation you can do that here
+                    const prevPos = chunk.views.PreviousPosition;
+                    const currPos = chunk.views.Position;
+                    let posX = 0;
+                    let posY = 0;
+                    if (prevPos) {
+                        posX =
+                            prevPos[i * 2 + 0] +
+                            (currPos[i * 2 + 0] - prevPos[i * 2 + 0]) * alpha;
+
+                        posY =
+                            prevPos[i * 2 + 1] +
+                            (currPos[i * 2 + 1] - prevPos[i * 2 + 1]) * alpha;
+                    } else {
+                        // no PreviousPosition, just use current
+                        posX = currPos[i * 2 + 0];
+                        posY = currPos[i * 2 + 1];
+                    }
+                    this.positions[i * 2 + 0] = Math.floor(posX);
+                    this.positions[i * 2 + 1] = Math.floor(posY);
+
                     const fx = s[i * 4 + 0];
                     const fy = s[i * 4 + 1];
                     const fw = s[i * 4 + 2];

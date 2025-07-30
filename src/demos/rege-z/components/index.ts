@@ -13,6 +13,7 @@ export enum Component {
     Player,
     Bullet,
     Camera,
+    Tracker,
     Sprite,
     Animation,
     Tile,
@@ -117,6 +118,13 @@ const DESCRIPTORS = {
         count: 3,
         buffer: Uint8Array,
         default: [1, 0, 0], // enabled? - shakeOffsetX - shakeOffsetY
+    },
+    Tracker: {
+        type: Component.Tracker,
+        name: "Tracker",
+        count: 3,
+        buffer: Uint8Array,
+        default: [-1, 0, 0], // means subjectIdx - subjectPositionX - subjectPositionY
     },
     Sprite: {
         type: Component.Sprite,
