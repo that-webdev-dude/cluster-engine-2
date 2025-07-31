@@ -11,6 +11,7 @@ export enum Component {
     Health,
     Lives,
     Player,
+    Enemy,
     Bullet,
     Camera,
     Tracker,
@@ -104,6 +105,13 @@ const DESCRIPTORS = {
         count: 1,
         buffer: Uint8Array,
         default: [1], // means "is Player"
+    },
+    Enemy: {
+        type: Component.Enemy,
+        name: "Enemy",
+        count: 1,
+        buffer: Uint8Array,
+        default: [1], // means "is Enemy"
     },
     Bullet: {
         type: Component.Bullet,

@@ -14,14 +14,18 @@ export class CameraSystem extends StorageUpdateSystem {
     private shakeSeedY: number = 0;
     private basePosition: [number, number] = [0, 0];
 
-    private displayW: number;
-    private displayH: number;
+    private readonly displayW: number;
+    private readonly displayH: number;
+    private readonly worldW: number;
+    private readonly worldH: number;
 
     constructor(readonly store: Store) {
         super(store);
 
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
+        this.worldW = store.get("worldW");
+        this.worldH = store.get("worldH");
 
         // store.on<PlayerHitEvent>("playerHit", (e) => {
         //     if (this.shakeTime <= 0) {
@@ -81,32 +85,44 @@ export class CameraSystem extends StorageUpdateSystem {
                 // this.basePosition[0] -= kx * speed * dt;
                 // this.basePosition[1] -= ky * speed * dt;
 
-                let trackerX = 0;
-                let trackerY = 0;
+                this.basePosition[0] = 0;
+                this.basePosition[1] = 0;
+
                 if (tracker) {
                     const trackerIdx = tracker[0];
-                    view.forEachChunkWith(
-                        [trackerIdx, Component.Position],
-                        (chunk) => {
-                            const count = chunk.count;
-                            if (count === 0) return;
+                    if (trackerIdx >= 0) {
+                        let trackerX = 0;
+                        let trackerY = 0;
 
-                            if (chunk.count > 1)
-                                console.warn(
-                                    "[CameraSystem]: Multiple trackers found, using first one"
-                                );
+                        view.forEachChunkWith(
+                            [trackerIdx, Component.Position],
+                            (chunk) => {
+                                const count = chunk.count;
+                                if (count === 0) return;
 
-                            for (let i = 0; i < 1; i++) {
-                                trackerX = chunk.views.Position[i * 2 + 0];
-                                trackerY = chunk.views.Position[i * 2 + 1];
+                                if (chunk.count > 1)
+                                    console.warn(
+                                        "[CameraSystem]: Multiple trackers found, using first one"
+                                    );
+
+                                for (let i = 0; i < 1; i++) {
+                                    trackerX = chunk.views.Position[i * 2 + 0];
+                                    trackerY = chunk.views.Position[i * 2 + 1];
+                                }
                             }
-                        }
-                    );
-                    this.basePosition[0] = trackerX - this.displayW / 2;
-                    this.basePosition[1] = trackerY - this.displayH / 2;
-                } else {
-                    this.basePosition[0] = 0;
-                    this.basePosition[1] = 0;
+                        );
+                        // Clamp the camera position to the world bounds
+                        this.basePosition[0] = Cmath.clamp(
+                            trackerX - this.displayW / 2,
+                            0,
+                            this.worldW - this.displayW
+                        );
+                        this.basePosition[1] = Cmath.clamp(
+                            trackerY - this.displayH / 2,
+                            0,
+                            this.worldH - this.displayH
+                        );
+                    }
                 }
 
                 pos[0] = this.basePosition[0];

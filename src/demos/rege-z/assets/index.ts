@@ -1,8 +1,8 @@
-import charactersImageURL from "./_characters.png";
 import spritesheetImageURL from "./_spritesheet.png";
 import { Assets } from "../../../cluster";
+import { Spritesheet } from "../../../cluster";
 
-const charactersImg = Assets.image(charactersImageURL);
 const spritesheetImg = Assets.image(spritesheetImageURL);
+const spritesheet = new Spritesheet(spritesheetImg, 6, 3); // 6 rows, 3 columns
 
-export { charactersImg, spritesheetImg };
+export { spritesheetImg, spritesheet };

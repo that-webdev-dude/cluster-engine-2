@@ -3,6 +3,8 @@ import { playerArchetype } from "../entities/player";
 import { getPlayerComponents } from "../entities/player";
 import { cameraArchetype } from "../entities/camera";
 import { getCameraComponents } from "../entities/camera";
+import { enemyArchetype } from "../entities/zombie";
+import { getEnemyComponents } from "../entities/zombie";
 import { createTileMap } from "../entities/tilemap";
 import { SpriteRendererSystem } from "../systems/RendererSystem";
 import { AnimationSystem } from "../systems/AnimationSystem";
@@ -27,6 +29,8 @@ export function createGamePlay() {
     createTileMap(scene, 32);
 
     scene.createEntity(playerArchetype, getPlayerComponents());
+
+    scene.createEntity(enemyArchetype, getEnemyComponents());
 
     scene.createEntity(cameraArchetype, getCameraComponents());
 

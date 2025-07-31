@@ -3,8 +3,8 @@ import { Game } from "../../cluster";
 import { createGamePlay } from "./scenes/gamePlay";
 import store from "./stores/store";
 
-const width = store.get("worldW");
-const height = store.get("worldH");
+const width = store.get("displayW");
+const height = store.get("displayH");
 const parent = store.get("appId");
 
 const display = Display.getInstance({

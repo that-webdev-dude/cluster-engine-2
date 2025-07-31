@@ -1,11 +1,8 @@
-import { spritesheetImg } from "../assets";
+import { spritesheet } from "../assets";
 import { Component } from "../components";
 import { View } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster";
 import { StorageUpdateSystem } from "../../../cluster";
-import { Spritesheet } from "../../../cluster";
-
-const spritesheet = new Spritesheet(spritesheetImg, 6, 3); // maybe give it in the constructor
 
 export class AnimationSystem extends StorageUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {

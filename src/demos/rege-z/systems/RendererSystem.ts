@@ -1,6 +1,6 @@
 // src/renderer/GLRenderer.ts
 
-import { spritesheetImg } from "../assets";
+import { spritesheet } from "../assets";
 import { Component } from "../components";
 import { Display } from "../../../cluster";
 import { View } from "../../../cluster";
@@ -26,6 +26,8 @@ export class SpriteRendererSystem extends StorageRenderSystem {
 
     render(view: View, alpha: number) {
         const gl = this.renderer.gl;
+
+        const spritesheetImg = spritesheet.img;
 
         // — lazy init pipeline
         if (!this.pipeline) {

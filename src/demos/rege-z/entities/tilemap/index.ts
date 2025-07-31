@@ -1,30 +1,19 @@
+import store from "../../stores/store";
 import { Cmath, Scene } from "../../../../cluster";
 import { tileArchetype, getTileComponents } from "../../entities/tile";
-import { Spritesheet } from "../../../../cluster"; // reuse helper for frame rects
-import { charactersImg } from "../../assets";
+import { spritesheet } from "../../assets";
 
-// Build a spritesheet helper: assume tiles are 32×32 pixels and arranged in a grid
-const tileSheet = new Spritesheet(charactersImg, /*rows=*/ 4, /*cols=*/ 3);
+const worldW = store.get("worldW");
+const worldH = store.get("worldH");
 
-// Example map: 0 = empty, 1..n = tile indices in the atlas
-// prettier-ignore
-const map: number[][] = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,],
-];
+const map: number[][] = [];
+for (let row = 0; row < worldH / 32; row++) {
+    map[row] = [];
+    for (let col = 0; col < worldW / 32; col++) {
+        // Randomly place tiles, for example
+        map[row][col] = Cmath.rand(12, 15);
+    }
+}
 
 export function createTileMap(scene: Scene, tileSize = 32) {
     for (let row = 0; row < map.length; row++) {
@@ -32,7 +21,7 @@ export function createTileMap(scene: Scene, tileSize = 32) {
             const tileIndex = map[row][col];
             if (tileIndex > 0) {
                 // Convert tile index to a frame rectangle in the atlas
-                const frame = tileSheet.frameRectFromIndex(
+                const frame = spritesheet.frameRectFromIndex(
                     Cmath.rand(1, 4) + 12 - 1
                 );
                 const x = col * tileSize;
