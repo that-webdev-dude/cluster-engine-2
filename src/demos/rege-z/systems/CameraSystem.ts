@@ -2,8 +2,9 @@ import { ECSUpdateSystem } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster";
 import { Cmath } from "../../../cluster";
 import { View } from "../../../cluster";
-import { Component } from "../components";
+import { Component, DESCRIPTORS } from "../components";
 import { Store } from "../../../cluster";
+import { EntityMeta, Buffer } from "../../../cluster/types";
 
 export class CameraSystem extends ECSUpdateSystem {
     private shakeTime = 0;
@@ -14,13 +15,17 @@ export class CameraSystem extends ECSUpdateSystem {
     private shakeSeedY: number = 0;
 
     private basePosition: [number, number] = [0, 0];
+    private subjectPosition: Buffer | undefined = undefined;
 
     private readonly displayW: number;
     private readonly displayH: number;
     private readonly worldW: number;
     private readonly worldH: number;
 
-    constructor(readonly store: Store) {
+    constructor(
+        readonly store: Store,
+        readonly subject: EntityMeta | undefined = undefined
+    ) {
         super(store);
 
         this.displayW = store.get("displayW");
@@ -64,6 +69,20 @@ export class CameraSystem extends ECSUpdateSystem {
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
+        if (this.subject && !this.subjectPosition) {
+            const pos = view.getEntityComponent<Float32Array>(
+                this.subject,
+                DESCRIPTORS["Position"]
+            );
+
+            if (pos !== undefined) {
+                this.subjectPosition = pos;
+                return;
+            }
+
+            this.subjectPosition = new Float32Array(2);
+        }
+
         view.forEachChunkWith(
             [
                 Component.Camera,
@@ -75,7 +94,6 @@ export class CameraSystem extends ECSUpdateSystem {
                 const pos = chunk.views.Position;
                 const prev = chunk.views.PreviousPosition;
                 const speed = chunk.views.Speed;
-                const tracker = chunk.views.Tracker;
 
                 prev[0] = pos[0];
                 prev[1] = pos[1];
@@ -86,44 +104,20 @@ export class CameraSystem extends ECSUpdateSystem {
                 // this.basePosition[0] -= kx * speed * dt;
                 // this.basePosition[1] -= ky * speed * dt;
 
+                // Clamp the camera position to the world bounds
                 this.basePosition[0] = 0;
                 this.basePosition[1] = 0;
-
-                if (tracker) {
-                    const trackerIdx = tracker[0];
-                    if (trackerIdx >= 0) {
-                        let trackerX = 0;
-                        let trackerY = 0;
-
-                        view.forEachChunkWith(
-                            [trackerIdx, Component.Position],
-                            (chunk) => {
-                                const count = chunk.count;
-                                if (count === 0) return;
-
-                                if (chunk.count > 1)
-                                    console.warn(
-                                        "[CameraSystem]: Multiple trackers found, using first one"
-                                    );
-
-                                for (let i = 0; i < 1; i++) {
-                                    trackerX = chunk.views.Position[i * 2 + 0];
-                                    trackerY = chunk.views.Position[i * 2 + 1];
-                                }
-                            }
-                        );
-                        // Clamp the camera position to the world bounds
-                        this.basePosition[0] = Cmath.clamp(
-                            trackerX - this.displayW / 2,
-                            0,
-                            this.worldW - this.displayW
-                        );
-                        this.basePosition[1] = Cmath.clamp(
-                            trackerY - this.displayH / 2,
-                            0,
-                            this.worldH - this.displayH
-                        );
-                    }
+                if (this.subjectPosition) {
+                    this.basePosition[0] = Cmath.clamp(
+                        this.subjectPosition[0] - this.displayW / 2,
+                        0,
+                        this.worldW - this.displayW
+                    );
+                    this.basePosition[1] = Cmath.clamp(
+                        this.subjectPosition[1] - this.displayH / 2,
+                        0,
+                        this.worldH - this.displayH
+                    );
                 }
 
                 pos[0] = this.basePosition[0];

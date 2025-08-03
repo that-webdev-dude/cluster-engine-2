@@ -14,17 +14,19 @@ import { CameraSystem } from "../systems/CameraSystem";
 import { Scene } from "../../../cluster";
 
 export function createGamePlay() {
-    const scene = new Scene({
-        storageUpdateSystems: [
-            new PlayerSystem(store),
-            new MotionSystem(store),
-            new AnimationSystem(store),
-            new CameraSystem(store),
-        ],
-        storageRenderSystems: [new SpriteRendererSystem()],
-        guiUpdateSystems: [],
-        guiRenderSystems: [],
-    });
+    // const scene = new Scene({
+    //     storageUpdateSystems: [
+    //         new PlayerSystem(store),
+    //         new MotionSystem(store),
+    //         new AnimationSystem(store),
+    //         new CameraSystem(store),
+    //     ],
+    //     storageRenderSystems: [new SpriteRendererSystem()],
+    //     guiUpdateSystems: [],
+    //     guiRenderSystems: [],
+    // });
+
+    const scene = new Scene();
 
     createTileMap(scene, 32);
 
@@ -33,6 +35,14 @@ export function createGamePlay() {
     scene.createEntity(zombieArchetype, getZombieComponents());
 
     scene.createEntity(cameraArchetype, getCameraComponents());
+
+    // systems
+    scene.useECSSystem("update", new PlayerSystem(store));
+    scene.useECSSystem("update", new MotionSystem(store));
+    scene.useECSSystem("update", new AnimationSystem(store));
+    scene.useECSSystem("update", new CameraSystem(store, playerMeta));
+
+    scene.useECSSystem("render", new SpriteRendererSystem());
 
     return scene;
 }
