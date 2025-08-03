@@ -7,8 +7,8 @@ import type { ComponentValueMap } from "../../../cluster";
 const worldW = store.get("worldW");
 const worldH = store.get("worldH");
 
-export const enemySchema = Archetype.register(
-    DESCRIPTORS.Enemy,
+export const zombieSchema = Archetype.register(
+    DESCRIPTORS.Zombie,
     DESCRIPTORS.PreviousPosition,
     DESCRIPTORS.Position,
     DESCRIPTORS.Velocity,
@@ -21,9 +21,9 @@ export const enemySchema = Archetype.register(
     DESCRIPTORS.Animation
 );
 
-export function getEnemyComponents(): ComponentValueMap {
+export function getZombieComponents(): ComponentValueMap {
     return {
-        [Component.Enemy]: [1],
+        [Component.Zombie]: [1],
         [Component.PreviousPosition]: [worldW / 2, worldH / 2],
         [Component.Position]: [worldW / 2, worldH / 2],
         [Component.Velocity]: [0, 0],
@@ -37,4 +37,4 @@ export function getEnemyComponents(): ComponentValueMap {
     } as ComponentValueMap;
 }
 
-export const enemyArchetype = Archetype.create("enemy", enemySchema, 1);
+export const zombieArchetype = Archetype.create("zombie", zombieSchema, 1);

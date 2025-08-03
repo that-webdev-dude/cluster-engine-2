@@ -11,13 +11,13 @@ export enum Component {
     Health,
     Lives,
     Player,
-    Enemy,
     Bullet,
     Camera,
     Tracker,
     Sprite,
     Animation,
     Tile,
+    Zombie,
 }
 
 const DESCRIPTORS = {
@@ -106,13 +106,7 @@ const DESCRIPTORS = {
         buffer: Uint8Array,
         default: [1], // means "is Player"
     },
-    Enemy: {
-        type: Component.Enemy,
-        name: "Enemy",
-        count: 1,
-        buffer: Uint8Array,
-        default: [1], // means "is Enemy"
-    },
+
     Bullet: {
         type: Component.Bullet,
         name: "Bullet",
@@ -154,6 +148,13 @@ const DESCRIPTORS = {
         count: 1,
         buffer: Float32Array,
         default: [1], // is a tile?
+    },
+    Zombie: {
+        type: Component.Zombie,
+        name: "Zombie",
+        count: 1,
+        buffer: Uint8Array,
+        default: [1], // means "is Zombie"
     },
 };
 

@@ -12,6 +12,7 @@ export class CameraSystem extends StorageUpdateSystem {
     private maxShakeIntensity = 2;
     private shakeSeedX: number = 0;
     private shakeSeedY: number = 0;
+
     private basePosition: [number, number] = [0, 0];
 
     private readonly displayW: number;
