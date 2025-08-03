@@ -151,6 +151,12 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             );
         }
 
+        // if the chunk is already empty return undefined
+        if (chunk && chunk.count === 0) {
+            console.warn(`Storage.delete: the chunk is already empty !!!!`);
+            return undefined;
+        }
+
         if (chunk.getGeneration(row) !== generation) return undefined;
 
         const meta = chunk.delete(row);
@@ -160,9 +166,13 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
         if (chunk.count < 0)
             console.warn(`Storage.delete: the chunk has a count < 0 !!!!`);
 
-        if (chunk.count === 0) {
-            this.destroyChunkInstance(chunkId);
-        } else if (!chunk.full) {
+        // if (chunk.count === 0) {
+        //     this.destroyChunkInstance(chunkId);
+        // } else if (!chunk.full) {
+        //     this.partialChunkIds.add(chunkId);
+        // }
+
+        if (!chunk.full) {
             this.partialChunkIds.add(chunkId);
         }
 

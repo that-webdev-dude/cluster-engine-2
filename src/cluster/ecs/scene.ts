@@ -120,8 +120,8 @@ export class Scene {
             return false;
         }
 
-        storage.delete(chunkId, row, generation);
+        const deletedMeta = storage.delete(chunkId, row, generation);
 
-        return true;
+        return deletedMeta === undefined ? false : true;
     }
 }

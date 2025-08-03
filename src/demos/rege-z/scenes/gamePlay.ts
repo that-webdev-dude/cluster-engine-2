@@ -28,7 +28,7 @@ export function createGamePlay() {
 
     createTileMap(scene, 32);
 
-    scene.createEntity(playerArchetype, getPlayerComponents());
+    let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
 
     scene.createEntity(zombieArchetype, getZombieComponents());
 
