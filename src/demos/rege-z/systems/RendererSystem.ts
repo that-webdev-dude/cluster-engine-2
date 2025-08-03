@@ -7,9 +7,9 @@ import { View } from "../../../cluster";
 import { Chunk } from "../../../cluster";
 import { SpriteData } from "../../../cluster";
 import { SpritePipeline } from "../../../cluster";
-import { StorageRenderSystem } from "../../../cluster";
+import { ECSRenderSystem } from "../../../cluster";
 
-export class SpriteRendererSystem extends StorageRenderSystem {
+export class SpriteRendererSystem extends ECSRenderSystem {
     private renderer = Display.getInstance().createGPURenderingLayer();
     private pipeline: SpritePipeline | null = null;
 

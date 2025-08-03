@@ -19,7 +19,7 @@ export abstract class ECSUpdateSystem {
 /**
  * Abstract base class for systems that can render Chunks of data each frame.
  */
-export abstract class StorageRenderSystem {
+export abstract class ECSRenderSystem {
     abstract render(view: View, alpha: number): void;
 }
 

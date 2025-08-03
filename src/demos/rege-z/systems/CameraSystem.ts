@@ -1,11 +1,11 @@
-import { StorageUpdateSystem } from "../../../cluster";
+import { ECSUpdateSystem } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster";
 import { Cmath } from "../../../cluster";
 import { View } from "../../../cluster";
 import { Component } from "../components";
 import { Store } from "../../../cluster";
 
-export class CameraSystem extends StorageUpdateSystem {
+export class CameraSystem extends ECSUpdateSystem {
     private shakeTime = 0;
     private shakeElapsed = 0;
     private shakeDuration = 0.5;

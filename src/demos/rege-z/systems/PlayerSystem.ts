@@ -2,9 +2,9 @@ import { Component } from "../components";
 import { View } from "../../../cluster";
 import { Input } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster";
-import { StorageUpdateSystem } from "../../../cluster";
+import { ECSUpdateSystem } from "../../../cluster";
 
-export class PlayerSystem extends StorageUpdateSystem {
+export class PlayerSystem extends ECSUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith(
             [

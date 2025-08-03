@@ -15,8 +15,8 @@ export { Game } from "./ecs/game";
 export { View } from "./ecs/scene";
 export { Scene } from "./ecs/scene";
 export {
-    StorageRenderSystem,
-    ECSUpdateSystem as StorageUpdateSystem,
+    ECSRenderSystem,
+    ECSUpdateSystem,
     GUIRenderSystem,
     GUIUpdateSystem,
 } from "./ecs/system";

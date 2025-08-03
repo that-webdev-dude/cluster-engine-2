@@ -6,7 +6,7 @@ import {
 } from "../types";
 import {
     ECSUpdateSystem,
-    StorageRenderSystem,
+    ECSRenderSystem,
     GUIUpdateSystem,
     GUIRenderSystem,
 } from "./system";
@@ -38,7 +38,7 @@ export class Scene {
     readonly cmd: CommandBuffer;
     readonly view: View;
     readonly storageUpdateSystems: ECSUpdateSystem[] = [];
-    readonly storageRenderSystems: StorageRenderSystem[] = [];
+    readonly storageRenderSystems: ECSRenderSystem[] = [];
     readonly guiUpdateSystems: GUIUpdateSystem[] = [];
     readonly guiRenderSystems: GUIRenderSystem[] = [];
 
@@ -47,7 +47,7 @@ export class Scene {
 
     constructor(options: {
         storageUpdateSystems: ECSUpdateSystem[];
-        storageRenderSystems: StorageRenderSystem[];
+        storageRenderSystems: ECSRenderSystem[];
         guiUpdateSystems: GUIUpdateSystem[];
         guiRenderSystems: GUIRenderSystem[];
     }) {

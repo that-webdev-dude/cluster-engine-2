@@ -2,9 +2,9 @@ import { spritesheet } from "../assets";
 import { Component } from "../components";
 import { View } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster";
-import { StorageUpdateSystem } from "../../../cluster";
+import { ECSUpdateSystem } from "../../../cluster";
 
-export class AnimationSystem extends StorageUpdateSystem {
+export class AnimationSystem extends ECSUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith(
             [Component.Sprite, Component.Animation],
