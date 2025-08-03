@@ -36,5 +36,5 @@ export { Spritesheet } from "./tools/Spritesheet";
 export { Cmath } from "./tools/Cmath";
 
 // types
-export type { State, Action, Mutation, Getter } from "./core/Store";
+export type { State, Action, Mutation, Getter, StoreEvent } from "./core/Store";
 export type { ComponentValueMap } from "./types";

@@ -26,6 +26,8 @@ export function getPlayerComponents(): ComponentValueMap {
         [Component.Player]: [1],
         [Component.PreviousPosition]: [worldW / 2, worldH / 2],
         [Component.Position]: [worldW / 2, worldH / 2],
+        // [Component.PreviousPosition]: [0, 0],
+        // [Component.Position]: [0, 0],
         [Component.Velocity]: [0, 0],
         [Component.Offset]: [0, 0],
         [Component.Angle]: [0],

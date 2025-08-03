@@ -11,7 +11,9 @@ import { AnimationSystem } from "../systems/AnimationSystem";
 import { MotionSystem } from "../systems/MotionStstem";
 import { PlayerSystem } from "../systems/PlayerSystem";
 import { CameraSystem } from "../systems/CameraSystem";
+import { CollisionSystem } from "../systems/CollisionSystem";
 import { Scene } from "../../../cluster";
+import { Component } from "../components";
 
 export function createGamePlay() {
     // const scene = new Scene({
@@ -32,7 +34,9 @@ export function createGamePlay() {
 
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
 
-    scene.createEntity(zombieArchetype, getZombieComponents());
+    for (let i = 0; i < 10; i++) {
+        scene.createEntity(zombieArchetype, getZombieComponents());
+    }
 
     scene.createEntity(cameraArchetype, getCameraComponents());
 
@@ -41,6 +45,20 @@ export function createGamePlay() {
     scene.useECSSystem("update", new MotionSystem(store));
     scene.useECSSystem("update", new AnimationSystem(store));
     scene.useECSSystem("update", new CameraSystem(store, playerMeta));
+    scene.useECSSystem(
+        "update",
+        new CollisionSystem(store, [
+            {
+                main: Component.Player,
+                targets: [
+                    {
+                        target: Component.Zombie,
+                        eventType: "player-zombie-collision",
+                    },
+                ],
+            },
+        ])
+    );
 
     scene.useECSSystem("render", new SpriteRendererSystem());
 

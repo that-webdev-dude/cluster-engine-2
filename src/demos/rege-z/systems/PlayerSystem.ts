@@ -1,10 +1,23 @@
 import { Component } from "../components";
 import { View } from "../../../cluster";
 import { Input } from "../../../cluster";
+import { Store } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster";
 import { ECSUpdateSystem } from "../../../cluster";
+import { CollisionEvent } from "../events";
 
 export class PlayerSystem extends ECSUpdateSystem {
+    constructor(readonly store: Store) {
+        super(store);
+
+        store.on<CollisionEvent>(
+            "player-zombie-collision",
+            (e) => {
+                console.log("player is hit");
+            },
+            false
+        );
+    }
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith(
             [
