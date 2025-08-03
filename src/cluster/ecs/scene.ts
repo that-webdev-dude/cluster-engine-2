@@ -5,7 +5,7 @@ import {
     EntityMeta,
 } from "../types";
 import {
-    StorageUpdateSystem,
+    ECSUpdateSystem,
     StorageRenderSystem,
     GUIUpdateSystem,
     GUIRenderSystem,
@@ -37,7 +37,7 @@ export class Scene {
     readonly archetypes: Map<Signature, Storage<any>> = new Map();
     readonly cmd: CommandBuffer;
     readonly view: View;
-    readonly storageUpdateSystems: StorageUpdateSystem[] = [];
+    readonly storageUpdateSystems: ECSUpdateSystem[] = [];
     readonly storageRenderSystems: StorageRenderSystem[] = [];
     readonly guiUpdateSystems: GUIUpdateSystem[] = [];
     readonly guiRenderSystems: GUIRenderSystem[] = [];
@@ -46,7 +46,7 @@ export class Scene {
     public dialog: Scene | undefined = undefined;
 
     constructor(options: {
-        storageUpdateSystems: StorageUpdateSystem[];
+        storageUpdateSystems: ECSUpdateSystem[];
         storageRenderSystems: StorageRenderSystem[];
         guiUpdateSystems: GUIUpdateSystem[];
         guiRenderSystems: GUIRenderSystem[];

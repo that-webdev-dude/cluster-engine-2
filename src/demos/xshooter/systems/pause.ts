@@ -1,10 +1,10 @@
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { Store } from "../../../cluster";
 import { Input } from "../../../cluster";
 import { GLOBALS } from "../globals";
 import { GameResumeEvent } from "../events";
 
-export class PauseSystem extends StorageUpdateSystem {
+export class PauseSystem extends ECSUpdateSystem {
     constructor(readonly store: Store) {
         super(store);
     }

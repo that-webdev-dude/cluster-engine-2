@@ -1,4 +1,4 @@
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { meteorArchetype, getMeteorComponents } from "../entities/meteor";
@@ -10,7 +10,7 @@ const State = {
     spawnInterval: 1,
 };
 
-export class LevelSystem extends StorageUpdateSystem {
+export class LevelSystem extends ECSUpdateSystem {
     private counter = State.spawnInterval;
 
     constructor(readonly store: Store) {

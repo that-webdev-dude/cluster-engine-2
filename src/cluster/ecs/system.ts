@@ -6,7 +6,7 @@ import { GUIContainer } from "../gui/GUIbuilders";
 /**
  * Abstract base class for systems that can be updated each frame.
  */
-export abstract class StorageUpdateSystem {
+export abstract class ECSUpdateSystem {
     constructor(protected store: Store) {}
     abstract update(
         view: View,

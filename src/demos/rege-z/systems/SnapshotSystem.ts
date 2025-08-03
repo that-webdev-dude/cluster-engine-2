@@ -1,9 +1,9 @@
 import { Component } from "../components";
 import { View } from "../../../cluster/ecs/scene";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 
-export class SnapshotSystem extends StorageUpdateSystem {
+export class SnapshotSystem extends ECSUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         view.forEachChunkWith(
             [Component.PreviousPosition, Component.Position],

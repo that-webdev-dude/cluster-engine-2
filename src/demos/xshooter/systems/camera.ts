@@ -1,4 +1,4 @@
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { Cmath } from "../../../cluster/tools";
 import { View } from "../../../cluster/ecs/scene";
@@ -7,7 +7,7 @@ import { Store } from "../../../cluster";
 import { Keyboard } from "../input";
 import { PlayerHitEvent } from "../events";
 
-export class CameraSystem extends StorageUpdateSystem {
+export class CameraSystem extends ECSUpdateSystem {
     private shakeTime = 0;
     private shakeElapsed = 0;
     private shakeDuration = 0.5;

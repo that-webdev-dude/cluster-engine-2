@@ -1,4 +1,4 @@
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Component } from "../components";
@@ -6,7 +6,7 @@ import { meteorArchetype } from "../entities/meteor";
 import { BulletHitEvent, MeteorHitEvent, PlayerHitEvent } from "../events";
 import { EntityMeta } from "../../../cluster/types";
 
-export class CollisionSystem extends StorageUpdateSystem {
+export class CollisionSystem extends ECSUpdateSystem {
     update(view: View, cmd: CommandBuffer, dt: number) {
         // Gather meteor data
         const meteors: {

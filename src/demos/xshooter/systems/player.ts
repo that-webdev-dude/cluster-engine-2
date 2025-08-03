@@ -1,4 +1,4 @@
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
@@ -12,7 +12,7 @@ const State = {
     shotInterval: 0.5,
 };
 
-export class PlayerSystem extends StorageUpdateSystem {
+export class PlayerSystem extends ECSUpdateSystem {
     private counter = State.shotInterval;
 
     constructor(readonly store: Store) {

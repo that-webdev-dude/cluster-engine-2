@@ -1,4 +1,4 @@
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
@@ -10,7 +10,7 @@ import { meteorArchetype } from "../entities/meteor";
 
 const { worldW, worldH } = GLOBALS;
 
-export class MeteorSystem extends StorageUpdateSystem {
+export class MeteorSystem extends ECSUpdateSystem {
     constructor(readonly store: Store) {
         super(store);
 

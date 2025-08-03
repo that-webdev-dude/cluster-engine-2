@@ -16,7 +16,7 @@ export { View } from "./ecs/scene";
 export { Scene } from "./ecs/scene";
 export {
     StorageRenderSystem,
-    StorageUpdateSystem,
+    ECSUpdateSystem as StorageUpdateSystem,
     GUIRenderSystem,
     GUIUpdateSystem,
 } from "./ecs/system";

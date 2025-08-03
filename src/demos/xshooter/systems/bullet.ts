@@ -1,4 +1,4 @@
-import { StorageUpdateSystem } from "../../../cluster/ecs/system";
+import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { View } from "../../../cluster/ecs/scene";
 import { Cmath } from "../../../cluster/tools";
@@ -10,7 +10,7 @@ import { BulletHitEvent } from "../events";
 
 const { worldW, worldH } = GLOBALS;
 
-export class BulletSystem extends StorageUpdateSystem {
+export class BulletSystem extends ECSUpdateSystem {
     constructor(readonly store: Store) {
         super(store);
 
