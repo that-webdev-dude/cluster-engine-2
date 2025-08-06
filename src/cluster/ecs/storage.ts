@@ -109,7 +109,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             const descriptor = this.archetype.descriptors.get(type);
             if (descriptor === undefined) {
                 throw new Error(
-                    `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype descriptors`
+                    `Storage.assign.DEBUG: illegal assignement - component ${type} is not in the archetype ${this.archetype.name} descriptors`
                 );
             }
 

@@ -15,7 +15,7 @@ const displayDefaults = {
 export class Game {
     private engine: Engine = new Engine(60);
     private scenes: Array<Scene> = []; // a stack of Scene instances
-    private debugUpdates: number = 2; // updates just two frames
+    private debugUpdates: number = 10; // updates just two frames
 
     constructor(
         readonly store: Store = new Store({}),

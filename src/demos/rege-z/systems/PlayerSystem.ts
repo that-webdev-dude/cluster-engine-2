@@ -7,13 +7,30 @@ import { ECSUpdateSystem } from "../../../cluster";
 import { CollisionEvent } from "../events";
 
 export class PlayerSystem extends ECSUpdateSystem {
+    private worldW: number = 0;
+    private worldH: number = 0;
+    private displayW: number = 0;
+    private displayH: number = 0;
+
     constructor(readonly store: Store) {
         super(store);
+
+        this.worldW = store.get("worldW");
+        this.worldH = store.get("worldH");
+        this.displayW = store.get("displayW");
+        this.displayH = store.get("displayH");
 
         store.on<CollisionEvent>(
             "player-zombie-collision",
             (e) => {
-                console.log("player is hit");
+                console.log("zombie collision");
+            },
+            false
+        );
+        store.on<CollisionEvent>(
+            "player-wall-collision",
+            (e) => {
+                console.log("wall collision");
             },
             false
         );
@@ -35,6 +52,7 @@ export class PlayerSystem extends ECSUpdateSystem {
                 for (let i = 0; i < count; i++) {
                     const animation = chunk.views.Animation;
                     const scale = chunk.views.Size;
+                    const pos = chunk.views.Position;
                     const vel = chunk.views.Velocity;
 
                     const inputX = Input.Keyboard.x();
@@ -45,9 +63,21 @@ export class PlayerSystem extends ECSUpdateSystem {
                     vel[i * 2 + 1] = inputY * 200;
 
                     // adjust the player's facing direction based on input
-                    if (inputX > 0) {
+                    // 1. Center camera on player
+                    let camX = pos[0] - this.displayW / 2;
+                    // 2. Clamp camera to world bounds
+                    camX = Math.max(
+                        0,
+                        Math.min(camX, this.worldW - this.displayW)
+                    );
+                    // 3. Convert player's world position to screen position
+                    const scrX = pos[0] - camX;
+
+                    const mx = Input.Mouse.virtualPosition.x;
+
+                    if (mx - scrX > 0) {
                         scale[i * 2 + 0] = Math.abs(scale[i * 2 + 0]);
-                    } else if (inputX < 0) {
+                    } else if (mx - scrX < 0) {
                         scale[i * 2 + 0] = -Math.abs(scale[i * 2 + 0]);
                     }
 

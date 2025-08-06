@@ -16,7 +16,10 @@ export enum Component {
     Sprite,
     Animation,
     Tile,
+    Wall,
+    Floor,
     Zombie,
+    Weapon,
 }
 
 const DESCRIPTORS = {
@@ -141,12 +144,33 @@ const DESCRIPTORS = {
         buffer: Float32Array,
         default: [1], // is a tile?
     },
+    Wall: {
+        type: Component.Wall,
+        name: "Wall",
+        count: 1,
+        buffer: Float32Array,
+        default: [1], // is a tile?
+    },
+    Floor: {
+        type: Component.Floor,
+        name: "Floor",
+        count: 1,
+        buffer: Float32Array,
+        default: [1], // is a tile?
+    },
     Zombie: {
         type: Component.Zombie,
         name: "Zombie",
         count: 1,
         buffer: Uint8Array,
         default: [1], // means "is Zombie"
+    },
+    Weapon: {
+        type: Component.Weapon,
+        name: "Weapon",
+        count: 1,
+        buffer: Uint8Array,
+        default: [1], // means "is Weapon"
     },
 };
 

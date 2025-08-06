@@ -33,6 +33,7 @@ export { RectPipeline, RectData } from "./gl/pipelines/rect";
 
 // tools
 export { Spritesheet } from "./tools/Spritesheet";
+export { Vector } from "./tools/Vector";
 export { Cmath } from "./tools/Cmath";
 
 // types

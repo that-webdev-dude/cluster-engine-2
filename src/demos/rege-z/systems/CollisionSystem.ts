@@ -34,18 +34,18 @@ export class CollisionSystem extends ECSUpdateSystem {
         for (const collisionSpec of this.config) {
             const { main, targets } = collisionSpec;
 
-            const targetDataArray: {
-                archetype: Archetype<any>;
-                generation: number;
-                chunkId: number;
-                row: number;
-                x: number;
-                y: number;
-                hw: number;
-                hh: number;
-            }[] = [];
-
             targets.forEach(({ target, eventType }) => {
+                const targetDataArray: {
+                    archetype: Archetype<any>;
+                    generation: number;
+                    chunkId: number;
+                    row: number;
+                    x: number;
+                    y: number;
+                    hw: number;
+                    hh: number;
+                }[] = [];
+
                 // collect the targets
                 view.forEachChunkWith(
                     [target, Component.Position, Component.Size],
@@ -61,6 +61,10 @@ export class CollisionSystem extends ECSUpdateSystem {
                             );
 
                             const archetype = chunk.archetype;
+                            // console.log(
+                            //     "🚀 ~ CollisionSystem ~ update ~ archetype:",
+                            //     archetype
+                            // );
                             const generation = chunk.getGeneration(i);
 
                             targetDataArray.push({

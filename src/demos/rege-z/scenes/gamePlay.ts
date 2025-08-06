@@ -14,25 +14,21 @@ import { CameraSystem } from "../systems/CameraSystem";
 import { CollisionSystem } from "../systems/CollisionSystem";
 import { Scene } from "../../../cluster";
 import { Component } from "../components";
+import {
+    getWeaponComponents,
+    weaponArchetype,
+    weaponSchema,
+} from "../entities/weapon";
+import { WeaponSystem } from "../systems/WeaponSystem";
 
 export function createGamePlay() {
-    // const scene = new Scene({
-    //     storageUpdateSystems: [
-    //         new PlayerSystem(store),
-    //         new MotionSystem(store),
-    //         new AnimationSystem(store),
-    //         new CameraSystem(store),
-    //     ],
-    //     storageRenderSystems: [new SpriteRendererSystem()],
-    //     guiUpdateSystems: [],
-    //     guiRenderSystems: [],
-    // });
-
     const scene = new Scene();
 
     createTileMap(scene, 32);
 
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
+
+    scene.createEntity(weaponArchetype, getWeaponComponents());
 
     for (let i = 0; i < 10; i++) {
         scene.createEntity(zombieArchetype, getZombieComponents());
@@ -43,6 +39,7 @@ export function createGamePlay() {
     // systems
     scene.useECSSystem("update", new PlayerSystem(store));
     scene.useECSSystem("update", new MotionSystem(store));
+    scene.useECSSystem("update", new WeaponSystem(store, playerMeta));
     scene.useECSSystem("update", new AnimationSystem(store));
     scene.useECSSystem("update", new CameraSystem(store, playerMeta));
     scene.useECSSystem(
@@ -54,6 +51,10 @@ export function createGamePlay() {
                     {
                         target: Component.Zombie,
                         eventType: "player-zombie-collision",
+                    },
+                    {
+                        target: Component.Wall,
+                        eventType: "player-wall-collision",
                     },
                 ],
             },
