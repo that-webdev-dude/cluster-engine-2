@@ -89,13 +89,13 @@ export class View {
 }
 
 export class Scene {
-    readonly archetypes: Map<Signature, Storage<any>> = new Map();
+    readonly ECSStorage: Map<Signature, Storage<any>> = new Map();
     readonly cmd: CommandBuffer;
     readonly view: View;
-    readonly storageUpdateSystems: ECSUpdateSystem[] = [];
-    readonly storageRenderSystems: ECSRenderSystem[] = [];
-    readonly guiUpdateSystems: GUIUpdateSystem[] = [];
-    readonly guiRenderSystems: GUIRenderSystem[] = [];
+    readonly ECSUpdateSystems: ECSUpdateSystem[] = [];
+    readonly ECSRenderSystems: ECSRenderSystem[] = [];
+    readonly GUIUpdateSystems: GUIUpdateSystem[] = [];
+    readonly GUIRenderSystems: GUIRenderSystem[] = [];
 
     public gui: GUIContainer = new GUIContainer();
     public dialog: Scene | undefined = undefined;
@@ -107,13 +107,13 @@ export class Scene {
         guiRenderSystems: GUIRenderSystem[];
     }) {
         if (options) {
-            this.storageUpdateSystems = options.storageUpdateSystems;
-            this.storageRenderSystems = options.storageRenderSystems;
-            this.guiUpdateSystems = options.guiUpdateSystems;
-            this.guiRenderSystems = options.guiRenderSystems;
+            this.ECSUpdateSystems = options.storageUpdateSystems;
+            this.ECSRenderSystems = options.storageRenderSystems;
+            this.GUIUpdateSystems = options.guiUpdateSystems;
+            this.GUIRenderSystems = options.guiRenderSystems;
         }
 
-        this.view = new View(this.archetypes);
+        this.view = new View(this.ECSStorage);
         this.cmd = new CommandBuffer(this);
     }
 
@@ -123,10 +123,10 @@ export class Scene {
 
     destroy(): void {
         // Clear all storages
-        for (const storage of this.archetypes.values()) {
+        for (const storage of this.ECSStorage.values()) {
             storage.clear(); // assume clear() releases all chunks and entities
         }
-        this.archetypes.clear();
+        this.ECSStorage.clear();
 
         // Clear GUI tree
         this.gui.clear();
@@ -135,23 +135,23 @@ export class Scene {
         this.cmd.clear();
 
         // Clear all systems (optional if scene won't be reused)
-        this.storageUpdateSystems.length = 0;
-        this.storageRenderSystems.length = 0;
-        this.guiUpdateSystems.length = 0;
-        this.guiRenderSystems.length = 0;
+        this.ECSUpdateSystems.length = 0;
+        this.ECSRenderSystems.length = 0;
+        this.GUIUpdateSystems.length = 0;
+        this.GUIRenderSystems.length = 0;
     }
 
     createEntity<S extends readonly ComponentDescriptor[]>(
         archetype: Archetype<S>,
         comps: ComponentValueMap
     ): EntityMeta {
-        let storage = this.archetypes.get(archetype.signature) as
+        let storage = this.ECSStorage.get(archetype.signature) as
             | Storage<S>
             | undefined;
 
         if (!storage) {
             storage = new Storage(archetype);
-            this.archetypes.set(archetype.signature, storage);
+            this.ECSStorage.set(archetype.signature, storage);
         }
 
         const { chunkId, row, generation } = storage.allocate(comps);
@@ -166,7 +166,7 @@ export class Scene {
 
     removeEntity(meta: EntityMeta): boolean {
         const { archetype, chunkId, row, generation } = meta;
-        const storage = this.archetypes.get(archetype.signature);
+        const storage = this.ECSStorage.get(archetype.signature);
         if (!storage) {
             if (DEBUG)
                 console.warn(
@@ -184,20 +184,20 @@ export class Scene {
 
     useECSSystem(type: SystemType, system: ECSUpdateSystem | ECSRenderSystem) {
         if (type === "update" && system instanceof ECSUpdateSystem) {
-            this.storageUpdateSystems.push(system);
+            this.ECSUpdateSystems.push(system);
         } else {
             if (system instanceof ECSRenderSystem) {
-                this.storageRenderSystems.push(system);
+                this.ECSRenderSystems.push(system);
             }
         }
     }
 
     useGUISystem(type: SystemType, system: GUIUpdateSystem | GUIRenderSystem) {
         if (type === "update" && system instanceof GUIUpdateSystem) {
-            this.guiUpdateSystems.push(system);
+            this.GUIUpdateSystems.push(system);
         } else {
             if (system instanceof GUIRenderSystem) {
-                this.guiRenderSystems.push(system);
+                this.GUIRenderSystems.push(system);
             }
         }
     }

@@ -1,10 +1,10 @@
 import { Archetype, ECSUpdateSystem } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster";
 import { View } from "../../../cluster";
-import { Component } from "../components";
-import { ComponentType, EntityMeta } from "../../../cluster/types";
 import { Store } from "../../../cluster";
+import { Component } from "../components";
 import { CollisionEvent } from "../events";
+import { ComponentType, EntityMeta } from "../../../cluster/types";
 
 export interface CollisionTarget {
     target: ComponentType;
@@ -61,10 +61,7 @@ export class CollisionSystem extends ECSUpdateSystem {
                             );
 
                             const archetype = chunk.archetype;
-                            // console.log(
-                            //     "🚀 ~ CollisionSystem ~ update ~ archetype:",
-                            //     archetype
-                            // );
+
                             const generation = chunk.getGeneration(i);
 
                             targetDataArray.push({

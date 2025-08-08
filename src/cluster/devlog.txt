@@ -5,15 +5,16 @@ TODO features:
 - if chunk is full upload the whole thing? (no subarrays)
 - make consistent error messaging across the codebase
 - add an updateEntity in Scene
-- make the archetypes map in Scene a Graphinstead of a Map for fast search
+- make the archetypes map in Scene a Graph instead of a Map for fast search
 - no need anymore the Renderer file in gl
 - in GUI if store hasn't changed, there's no need to render
 - the renderer resize doesn't fucking work
 - the renderer graphics looks blurry
 - static and dynamic layering to add
 - write unit tests for everything
+- systems need to be profiled
 
-TODO next:
+TODO next (xshooter):
 - camera remove offsets from component
 - camera adjust component by getting the system props
 - better archetype grouping?
@@ -25,3 +26,14 @@ TODO next:
 - weapon
 - explosion
 - special weapon
+
+TODO next (rage-z)
+- need a local to world coords converter
+- make a boundary system
+🚧 collision system should include a collision vector in collision event data
+- collision system should work on hitbox component
+- FX system could be made of multiple subsystems
+- every component have an active flag
+- culling system
+- scene should have storages renamed (like ecs storage and gui storage)
+- the gui storage needs to be an actual storage

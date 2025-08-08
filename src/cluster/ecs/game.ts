@@ -29,20 +29,20 @@ export class Game {
     }
 
     private runUpdateSystems(scene: Scene, dt: number, t: number) {
-        scene.storageUpdateSystems.forEach((system) => {
+        scene.ECSUpdateSystems.forEach((system) => {
             system.update(scene!.view, scene!.cmd, dt, t);
         });
-        scene.guiUpdateSystems.forEach((system) => {
+        scene.GUIUpdateSystems.forEach((system) => {
             system.update(scene!.gui, dt, t);
         });
     }
 
     private runRenderSystems(scene: Scene, alpha: number) {
-        scene.storageRenderSystems.forEach((system) => {
+        scene.ECSRenderSystems.forEach((system) => {
             system.render(scene!.view, scene.dialog !== undefined ? 1 : alpha);
         });
         // render the GUI
-        scene.guiRenderSystems.forEach((system) => {
+        scene.GUIRenderSystems.forEach((system) => {
             system.render(scene!.gui);
         });
     }
