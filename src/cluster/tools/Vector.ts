@@ -13,6 +13,14 @@ export class Vector {
     /**
      * Creates a new Vector instance from the provided coordinates.
      * @param coordinates - The coordinates of the vector.
+     */
+    static create(x: number, y: number): Vector {
+        return new Vector(x, y);
+    }
+
+    /**
+     * Creates a new Vector instance from the provided coordinates.
+     * @param coordinates - The coordinates of the vector.
      * @returns A new Vector instance.
      */
     static from({ x, y }: Vector | { x: number; y: number }): Vector {

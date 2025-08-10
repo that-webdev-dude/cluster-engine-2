@@ -1,4 +1,4 @@
-import { Component } from "../components";
+import { Component, DESCRIPTORS } from "../components";
 import { View } from "../../../cluster";
 import { Input } from "../../../cluster";
 import { Store } from "../../../cluster";
@@ -11,6 +11,8 @@ export class PlayerSystem extends ECSUpdateSystem {
     private worldH: number = 0;
     private displayW: number = 0;
     private displayH: number = 0;
+
+    private currentView: View | undefined = undefined;
 
     constructor(readonly store: Store) {
         super(store);
@@ -30,12 +32,20 @@ export class PlayerSystem extends ECSUpdateSystem {
         store.on<CollisionEvent>(
             "player-wall-collision",
             (e) => {
-                console.log("wall collision");
+                const { mainMeta } = e.data;
+                const mainColor = this.currentView?.getEntityComponent(
+                    mainMeta,
+                    DESCRIPTORS.Color
+                );
+                mainColor && (mainColor[0] = 0); // Change player color to red on collision
             },
             false
         );
     }
     update(view: View, cmd: CommandBuffer, dt: number) {
+        // cache the view for this update cycle
+        this.currentView = view;
+
         view.forEachChunkWith(
             [
                 Component.Player,
@@ -54,6 +64,13 @@ export class PlayerSystem extends ECSUpdateSystem {
                     const scale = chunk.views.Size;
                     const pos = chunk.views.Position;
                     const vel = chunk.views.Velocity;
+                    const col = chunk.views.Color;
+
+                    // reset the color each frame
+                    col[i * 4 + 0] = 255; // R
+                    col[i * 4 + 1] = 255; // G
+                    col[i * 4 + 2] = 255; // B
+                    col[i * 4 + 3] = 255; // A
 
                     const inputX = Input.Keyboard.x();
                     const inputY = Input.Keyboard.y();

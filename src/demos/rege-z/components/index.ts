@@ -108,7 +108,6 @@ const DESCRIPTORS = {
         buffer: Uint8Array,
         default: [1], // means "is Player"
     },
-
     Bullet: {
         type: Component.Bullet,
         name: "Bullet",

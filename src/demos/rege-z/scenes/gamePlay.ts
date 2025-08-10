@@ -12,6 +12,7 @@ import { MotionSystem } from "../systems/MotionStstem";
 import { PlayerSystem } from "../systems/PlayerSystem";
 import { CameraSystem } from "../systems/CameraSystem";
 import { CollisionSystem } from "../systems/CollisionSystem";
+import { TilemapSystem } from "../systems/TilemapSystem";
 import { Scene } from "../../../cluster";
 import { Component } from "../components";
 import {
@@ -37,6 +38,7 @@ export function createGamePlay() {
     scene.createEntity(cameraArchetype, getCameraComponents());
 
     // systems
+    scene.useECSSystem("update", new TilemapSystem(store));
     scene.useECSSystem("update", new PlayerSystem(store));
     scene.useECSSystem("update", new MotionSystem(store));
     scene.useECSSystem("update", new WeaponSystem(store, playerMeta));

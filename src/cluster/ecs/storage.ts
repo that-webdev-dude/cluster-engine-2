@@ -84,7 +84,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
         this.liveRecords++;
 
         if (comps !== undefined) {
-            this.assign(chunkId, row, comps);
+            this.assign(chunkId, row, generation, comps);
         }
 
         return { chunkId, row, generation };
@@ -93,14 +93,23 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
     assign(
         chunkId: number,
         row: number,
+        generation: number,
         comps: ComponentValueMap
-    ): { chunkId: number; row: number } {
+    ):
+        | {
+              chunkId: number;
+              row: number;
+              generation: number;
+          }
+        | undefined {
         const chunk = this.chunks.get(chunkId);
         if (!chunk) {
             throw new Error(
                 `Storage.assign: illegal assignement - the chunkId ${chunkId} doesn't exists`
             );
         }
+
+        if (chunk.getGeneration(row) !== generation) return undefined;
 
         for (const [typeStr, value] of Object.entries(comps)) {
             const type = Number(typeStr) as ComponentType; // case to a number for getting the ComponentType
@@ -129,7 +138,7 @@ export class Storage<S extends readonly ComponentDescriptor[]> {
             }
         }
 
-        return { chunkId, row };
+        return { chunkId, row, generation };
     }
 
     delete(

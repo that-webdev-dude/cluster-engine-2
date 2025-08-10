@@ -44,25 +44,25 @@ describe("StorageV2 ▶ edge and complex cases", () => {
 
     it("throws when assigning to invalid chunkId", () => {
         expect(() => {
-            storage.assign(999, 0, {
+            storage.assign(999, 0, 0, {
                 [Component.Position]: [1, 2],
             });
         }).toThrow(/doesn't exists/);
     });
 
     it("throws on assign with missing component type", () => {
-        const { chunkId, row } = storage.allocate();
+        const { chunkId, row, generation } = storage.allocate();
         expect(() => {
-            storage.assign(chunkId, row, {
+            storage.assign(chunkId, row, generation, {
                 [9999]: [0, 0],
             } as any);
         }).toThrow(/not in the archetype descriptors/);
     });
 
     it("throws when component data is wrong length", () => {
-        const { chunkId, row } = storage.allocate();
+        const { chunkId, row, generation } = storage.allocate();
         expect(() => {
-            storage.assign(chunkId, row, {
+            storage.assign(chunkId, row, generation, {
                 [Component.Position]: [1, 2, 3],
             });
         }).toThrow(/must be an array of length/);

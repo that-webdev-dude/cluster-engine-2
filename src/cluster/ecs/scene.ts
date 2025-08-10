@@ -72,7 +72,8 @@ export class View {
             return undefined;
         }
 
-        return view.subarray(row, row + descriptor.count) as T;
+        const base = row * descriptor.count;
+        return view.subarray(base, base + descriptor.count) as T;
     }
 
     forEachChunkWith(
@@ -180,6 +181,24 @@ export class Scene {
         const deletedMeta = storage.delete(chunkId, row, generation);
 
         return deletedMeta === undefined ? false : true;
+    }
+
+    updateEntity(meta: EntityMeta, comps: ComponentValueMap) {
+        const { archetype, chunkId, row, generation } = meta;
+        const storage = this.ECSStorage.get(archetype.signature);
+        if (!storage) {
+            if (DEBUG)
+                console.warn(
+                    `Scene.updateEntity: missing storage for ${Archetype.format(
+                        archetype
+                    )}`
+                );
+            return false;
+        }
+
+        const updatedMeta = storage.assign(chunkId, row, generation, comps);
+
+        return updatedMeta === undefined ? false : true;
     }
 
     useECSSystem(type: SystemType, system: ECSUpdateSystem | ECSRenderSystem) {

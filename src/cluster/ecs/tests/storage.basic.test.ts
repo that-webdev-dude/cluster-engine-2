@@ -39,12 +39,12 @@ describe("StorageV2 ▶ basic operations", () => {
     });
 
     it("assigns values correctly", () => {
-        const { chunkId, row } = storage.allocate();
-        const result = storage.assign(chunkId, row, {
+        const { chunkId, row, generation } = storage.allocate();
+        const result = storage.assign(chunkId, row, generation, {
             [Component.Position]: [10, 20],
         });
-        expect(result.chunkId).toBe(chunkId);
-        expect(result.row).toBe(row);
+        expect(result!.chunkId).toBe(chunkId);
+        expect(result!.row).toBe(row);
 
         const chunk = storage.getChunk(chunkId)!;
         const view = chunk.getView<Float32Array>(schema[0]);

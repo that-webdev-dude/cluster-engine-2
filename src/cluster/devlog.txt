@@ -32,8 +32,8 @@ TODO next (rage-z)
 - make a boundary system
 🚧 collision system should include a collision vector in collision event data
 - collision system should work on hitbox component
+- collision system should have a broad phase
 - FX system could be made of multiple subsystems
 - every component have an active flag
 - culling system
-- scene should have storages renamed (like ecs storage and gui storage)
 - the gui storage needs to be an actual storage
