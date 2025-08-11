@@ -1,5 +1,5 @@
 import { Component } from "../components";
-import { View } from "../../../cluster/ecs/scene";
+import { View } from "../../../cluster";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 

@@ -1,6 +1,6 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
-import { View } from "../../../cluster/ecs/scene";
+import { View } from "../../../cluster";
 import { meteorArchetype, getMeteorComponents } from "../entities/meteor";
 import { Store } from "../../../cluster";
 import { Input } from "../../../cluster";

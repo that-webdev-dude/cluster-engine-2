@@ -12,7 +12,7 @@ export { CommandBuffer } from "./ecs/cmd";
 export { Archetype } from "./ecs/archetype";
 export { Chunk } from "./ecs/chunk";
 export { Game } from "./ecs/game";
-export { View } from "./ecs/scene";
+export { View } from "./ecs/view";
 export { Scene } from "./ecs/scene";
 export {
     ECSRenderSystem,

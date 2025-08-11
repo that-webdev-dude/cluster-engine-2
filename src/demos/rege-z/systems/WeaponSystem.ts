@@ -27,13 +27,13 @@ export class WeaponSystem extends ECSUpdateSystem {
 
     update(view: View, cmd: CommandBuffer, dt: number) {
         if (this.owner && !this.ownerPosition) {
-            const pos = view.getEntityComponent<Float32Array>(
+            const slice = view.getSlice<Float32Array>(
                 this.owner,
                 DESCRIPTORS["Position"]
             );
 
-            if (pos !== undefined) {
-                this.ownerPosition = pos;
+            if (slice !== undefined) {
+                this.ownerPosition = slice.arr;
                 return;
             }
 

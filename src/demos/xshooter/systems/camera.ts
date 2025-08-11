@@ -1,7 +1,7 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { Cmath } from "../../../cluster/tools";
-import { View } from "../../../cluster/ecs/scene";
+import { View } from "../../../cluster";
 import { Component } from "../components";
 import { Store } from "../../../cluster";
 import { Keyboard } from "../input";

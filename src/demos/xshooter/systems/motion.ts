@@ -1,6 +1,6 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
-import { View } from "../../../cluster/ecs/scene";
+import { View } from "../../../cluster";
 import { Component } from "../components";
 
 export class MotionSystem extends ECSUpdateSystem {

@@ -17,77 +17,78 @@ import { Chunk } from "./chunk";
 import { CommandBuffer } from "./cmd";
 import { DEBUG } from "../tools";
 import { GUIContainer } from "../gui/GUIbuilders";
+import { View } from "./view";
 
 type SystemType = "update" | "render";
 
-export class View {
-    constructor(private readonly archetypeMap: Map<Signature, Storage<any>>) {}
+// export class View {
+//     constructor(private readonly archetypeMap: Map<Signature, Storage<any>>) {}
 
-    getEntityComponent<T extends Buffer>(
-        meta: EntityMeta,
-        descriptor: ComponentDescriptor
-    ): T | undefined {
-        const { archetype, chunkId, row, generation } = meta;
+//     getEntityComponent<T extends Buffer>(
+//         meta: EntityMeta,
+//         descriptor: ComponentDescriptor
+//     ): T | undefined {
+//         const { archetype, chunkId, row, generation } = meta;
 
-        const storage = this.archetypeMap.get(archetype.signature);
-        if (!storage) {
-            if (DEBUG) {
-                console.warn(
-                    `View.getEntityComponent: No storage found for archetype signature ${Archetype.format(
-                        archetype
-                    )}`
-                );
-            }
-            return undefined;
-        }
+//         const storage = this.archetypeMap.get(archetype.signature);
+//         if (!storage) {
+//             if (DEBUG) {
+//                 console.warn(
+//                     `View.getEntityComponent: No storage found for archetype signature ${Archetype.format(
+//                         archetype
+//                     )}`
+//                 );
+//             }
+//             return undefined;
+//         }
 
-        const chunk = storage.getChunk(chunkId);
-        if (!chunk) {
-            if (DEBUG) {
-                console.warn(
-                    `View.getEntityComponent: No chunk found for chunkId ${chunkId} in archetype ${Archetype.format(
-                        archetype
-                    )}`
-                );
-            }
-            return undefined;
-        }
+//         const chunk = storage.getChunk(chunkId);
+//         if (!chunk) {
+//             if (DEBUG) {
+//                 console.warn(
+//                     `View.getEntityComponent: No chunk found for chunkId ${chunkId} in archetype ${Archetype.format(
+//                         archetype
+//                     )}`
+//                 );
+//             }
+//             return undefined;
+//         }
 
-        if (generation !== chunk.getGeneration(row)) {
-            if (DEBUG) {
-                console.warn(
-                    `View.getEntityComponent: Generation mismatch for entity at row ${row} in chunk ${chunkId}`
-                );
-            }
-            return undefined;
-        }
+//         if (generation !== chunk.getGeneration(row)) {
+//             if (DEBUG) {
+//                 console.warn(
+//                     `View.getEntityComponent: Generation mismatch for entity at row ${row} in chunk ${chunkId}`
+//                 );
+//             }
+//             return undefined;
+//         }
 
-        const view = chunk.getView<T>(descriptor);
-        if (!view) {
-            if (DEBUG) {
-                console.warn(
-                    `View.getEntityComponent: No view found for descriptor ${descriptor.name} in chunk ${chunkId}`
-                );
-            }
-            return undefined;
-        }
+//         const view = chunk.getView<T>(descriptor);
+//         if (!view) {
+//             if (DEBUG) {
+//                 console.warn(
+//                     `View.getEntityComponent: No view found for descriptor ${descriptor.name} in chunk ${chunkId}`
+//                 );
+//             }
+//             return undefined;
+//         }
 
-        const base = row * descriptor.count;
-        return view.subarray(base, base + descriptor.count) as T;
-    }
+//         const base = row * descriptor.count;
+//         return view.subarray(base, base + descriptor.count) as T;
+//     }
 
-    forEachChunkWith(
-        comps: ComponentType[],
-        cb: (chunk: Readonly<Chunk<any>>, chunkId: number) => void
-    ) {
-        const sig = Archetype.makeSignature(...comps);
-        for (const [archSig, storage] of this.archetypeMap) {
-            if ((archSig & sig) === sig) {
-                storage.forEachChunk(cb);
-            }
-        }
-    }
-}
+//     forEachChunkWith(
+//         comps: ComponentType[],
+//         cb: (chunk: Readonly<Chunk<any>>, chunkId: number) => void
+//     ) {
+//         const sig = Archetype.makeSignature(...comps);
+//         for (const [archSig, storage] of this.archetypeMap) {
+//             if ((archSig & sig) === sig) {
+//                 storage.forEachChunk(cb);
+//             }
+//         }
+//     }
+// }
 
 export class Scene {
     readonly ECSStorage: Map<Signature, Storage<any>> = new Map();

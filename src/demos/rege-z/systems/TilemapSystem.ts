@@ -14,12 +14,38 @@ export class TilemapSystem extends ECSUpdateSystem {
         store.on<CollisionEvent>(
             "player-wall-collision",
             (e) => {
-                const { otherMeta } = e.data;
-                const otherColor = this.currentView?.getEntityComponent(
-                    otherMeta,
+                const otherMetaP = e.data.primary?.otherMeta;
+                if (otherMetaP === undefined) return;
+                let slice = this.currentView?.getSlice(
+                    otherMetaP,
                     DESCRIPTORS.Color
                 );
-                otherColor && (otherColor[1] = 0); // Change player color to red on collision
+                if (slice !== undefined) {
+                    const { arr, base } = slice;
+                    arr[base + 1] = 0;
+                }
+
+                const otherMetaS = e.data.secondary?.otherMeta;
+                if (otherMetaS === undefined) return;
+                slice = this.currentView?.getSlice(
+                    otherMetaS,
+                    DESCRIPTORS.Color
+                );
+                if (slice !== undefined) {
+                    const { arr, base } = slice;
+                    arr[base + 2] = 0;
+                }
+
+                const otherMetaT = e.data.tertiary?.otherMeta;
+                if (otherMetaT === undefined) return;
+                slice = this.currentView?.getSlice(
+                    otherMetaT,
+                    DESCRIPTORS.Color
+                );
+                if (slice !== undefined) {
+                    const { arr, base } = slice;
+                    arr[base + 3] = 0;
+                }
             },
             false
         );

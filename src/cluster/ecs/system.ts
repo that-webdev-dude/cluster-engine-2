@@ -1,5 +1,5 @@
 import { Store } from "../core/Store";
-import { View } from "./scene";
+import { View } from "./view";
 import { CommandBuffer } from "./cmd";
 import { GUIContainer } from "../gui/GUIbuilders";
 

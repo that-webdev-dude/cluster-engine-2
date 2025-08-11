@@ -13,6 +13,8 @@ export class PlayerSystem extends ECSUpdateSystem {
     private displayH: number = 0;
 
     private currentView: View | undefined = undefined;
+    private isCollidingWithWall: boolean = false;
+    private collisionNormals: Array<{ x: number; y: number }> = [];
 
     constructor(readonly store: Store) {
         super(store);
@@ -32,12 +34,58 @@ export class PlayerSystem extends ECSUpdateSystem {
         store.on<CollisionEvent>(
             "player-wall-collision",
             (e) => {
-                const { mainMeta } = e.data;
-                const mainColor = this.currentView?.getEntityComponent(
+                const { mainMeta, primary, secondary, tertiary } = e.data;
+                if (!primary) return;
+
+                // Mark that we're colliding with a wall
+                this.isCollidingWithWall = true;
+
+                // Store collision normals for input blocking
+                this.collisionNormals = [];
+                if (primary) this.collisionNormals.push(primary.normal);
+                if (secondary) this.collisionNormals.push(secondary.normal);
+                if (tertiary) this.collisionNormals.push(tertiary.normal);
+
+                // Move the player out of collision using the MTV
+                const posSlice = this.currentView?.getSlice(
+                    mainMeta,
+                    DESCRIPTORS.Position
+                );
+                if (posSlice) {
+                    const { arr, base } = posSlice;
+                    arr[base + 0] += primary.mtv.x;
+                    arr[base + 1] += primary.mtv.y;
+                }
+
+                // Handle velocity correction for sliding with all contacts to prevent jitter
+                const velSlice = this.currentView?.getSlice(
+                    mainMeta,
+                    DESCRIPTORS.Velocity
+                );
+                if (velSlice) {
+                    const { arr: velArr, base: velBase } = velSlice;
+
+                    // Apply velocity correction for all normals to prevent jitter
+                    for (const normal of this.collisionNormals) {
+                        const vDotN =
+                            velArr[velBase + 0] * normal.x +
+                            velArr[velBase + 1] * normal.y;
+                        if (vDotN < 0) {
+                            velArr[velBase + 0] -= vDotN * normal.x;
+                            velArr[velBase + 1] -= vDotN * normal.y;
+                        }
+                    }
+                }
+
+                // Optionally, color feedback (keep this if you want visual feedback)
+                const colorSlice = this.currentView?.getSlice(
                     mainMeta,
                     DESCRIPTORS.Color
                 );
-                mainColor && (mainColor[0] = 0); // Change player color to red on collision
+                if (colorSlice) {
+                    const { arr, base } = colorSlice;
+                    arr[base + 0] = 0;
+                }
             },
             false
         );
@@ -75,9 +123,37 @@ export class PlayerSystem extends ECSUpdateSystem {
                     const inputX = Input.Keyboard.x();
                     const inputY = Input.Keyboard.y();
 
-                    // Update velocity x and y based on input
-                    vel[i * 2 + 0] = inputX * 200;
-                    vel[i * 2 + 1] = inputY * 200;
+                    // Block input that would move into walls
+                    let finalInputX = inputX;
+                    let finalInputY = inputY;
+
+                    if (this.isCollidingWithWall) {
+                        // Check if input would move into any collision normal
+                        for (const normal of this.collisionNormals) {
+                            const inputDotNormal =
+                                inputX * normal.x + inputY * normal.y;
+                            if (inputDotNormal < 0) {
+                                // Input is moving into the wall, block it
+                                if (Math.abs(normal.x) > Math.abs(normal.y)) {
+                                    // Wall is more horizontal, block X input
+                                    finalInputX = 0;
+                                } else {
+                                    // Wall is more vertical, block Y input
+                                    finalInputY = 0;
+                                }
+                            }
+                        }
+                    }
+
+                    // Update velocity based on filtered input
+                    vel[i * 2 + 0] = finalInputX * 200;
+                    vel[i * 2 + 1] = finalInputY * 200;
+
+                    // Reset collision state if we're not moving into walls
+                    if (finalInputX === 0 && finalInputY === 0) {
+                        this.isCollidingWithWall = false;
+                        this.collisionNormals = [];
+                    }
 
                     // adjust the player's facing direction based on input
                     // 1. Center camera on player
@@ -98,7 +174,7 @@ export class PlayerSystem extends ECSUpdateSystem {
                         scale[i * 2 + 0] = -Math.abs(scale[i * 2 + 0]);
                     }
 
-                    let isWalking = inputX !== 0 || inputY !== 0;
+                    let isWalking = finalInputX !== 0 || finalInputY !== 0;
                     let currentStart = animation[i * 6 + 0];
                     let currentEnd = animation[i * 6 + 1];
 

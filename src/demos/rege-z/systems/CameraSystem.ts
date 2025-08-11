@@ -70,13 +70,9 @@ export class CameraSystem extends ECSUpdateSystem {
 
     update(view: View, cmd: CommandBuffer, dt: number) {
         if (this.subject && !this.subjectPosition) {
-            const pos = view.getEntityComponent<Float32Array>(
-                this.subject,
-                DESCRIPTORS["Position"]
-            );
-
-            if (pos !== undefined) {
-                this.subjectPosition = pos;
+            const slice = view.getSlice(this.subject, DESCRIPTORS.Position);
+            if (slice !== undefined) {
+                this.subjectPosition = slice.arr;
                 return;
             }
 
