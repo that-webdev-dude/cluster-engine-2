@@ -35,6 +35,13 @@ export { RectPipeline, RectData } from "./gl/pipelines/rect";
 export { Spritesheet } from "./tools/Spritesheet";
 export { Vector } from "./tools/Vector";
 export { Cmath } from "./tools/Cmath";
+export {
+    UniformGrid,
+    SparseGrid,
+    Quadtree,
+    LooseQuadtree,
+    BVH,
+} from "./tools/Partitioner";
 
 // types
 export type { State, Action, Mutation, Getter, StoreEvent } from "./core/Store";

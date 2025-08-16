@@ -68,6 +68,12 @@ export function getFloorComponents(
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
+        [Component.AABB]: [
+            x - tileSize / 2,
+            y - tileSize / 2,
+            x + tileSize / 2,
+            y + tileSize / 2,
+        ],
     } as ComponentValueMap;
 }
 

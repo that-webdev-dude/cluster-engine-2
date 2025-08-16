@@ -36,7 +36,7 @@ export function getZombieComponents(): ComponentValueMap {
         [Component.Pivot]: [0, 0],
         [Component.Size]: [-32, 32],
         [Component.Color]: [255, 255, 255, 255],
-        [Component.Sprite]: [0, 0, 32, 32],
+        [Component.Sprite]: [0, 2 * 32, 32, 32],
         [Component.Animation]: [6, 9, 6, 0.2, 0, 1],
     } as ComponentValueMap;
 }

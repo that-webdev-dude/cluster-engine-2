@@ -22,20 +22,24 @@ export const playerSchema = Archetype.register(
 );
 
 export function getPlayerComponents(): ComponentValueMap {
+    const x = worldW / 2;
+    const y = worldH / 2;
+    const w = 32;
+    const h = 32;
+
     return {
         [Component.Player]: [1],
-        [Component.PreviousPosition]: [worldW / 2, worldH / 2],
-        [Component.Position]: [worldW / 2, worldH / 2],
-        // [Component.PreviousPosition]: [0, 0],
-        // [Component.Position]: [0, 0],
+        [Component.PreviousPosition]: [x, y],
+        [Component.Position]: [x, y],
         [Component.Velocity]: [0, 0],
         [Component.Offset]: [0, 0],
         [Component.Angle]: [0],
         [Component.Pivot]: [0, 0],
-        [Component.Size]: [32, 32],
+        [Component.Size]: [w, h],
         [Component.Color]: [255, 255, 255, 255],
-        [Component.Sprite]: [0, 0, 32, 32],
+        [Component.Sprite]: [0, 0, w, h],
         [Component.Animation]: [4, 5, 4, 0.2, 0, 1],
+        [Component.AABB]: [x - w * 0.5, y - h * 0.5, x + w * 0.5, y + y * 0.5],
     } as ComponentValueMap;
 }
 

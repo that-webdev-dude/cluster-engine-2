@@ -1,8 +1,6 @@
 import store from "../../stores/store";
 import { Cmath, Scene } from "../../../../cluster";
 import {
-    tileArchetype,
-    getTileComponents,
     wallArchetype,
     getWallComponents,
     floorArchetype,

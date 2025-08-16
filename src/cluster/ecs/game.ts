@@ -83,10 +83,10 @@ export class Game {
         this.scenes.forEach((scene) => {
             scene.cmd.flush();
         });
-        // this.debugUpdates++;
-        // if (this.debugUpdates > 8) {
-        //     this.stop();
-        // }
+        this.debugUpdates++;
+        if (this.debugUpdates > 1000) {
+            this.stop();
+        }
     }
 
     start() {

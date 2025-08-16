@@ -20,6 +20,7 @@ export enum Component {
     Floor,
     Zombie,
     Weapon,
+    AABB,
 }
 
 const DESCRIPTORS = {
@@ -170,6 +171,13 @@ const DESCRIPTORS = {
         count: 1,
         buffer: Uint8Array,
         default: [1], // means "is Weapon"
+    },
+    AABB: {
+        type: Component.AABB,
+        name: "AABB",
+        count: 4,
+        buffer: Float32Array,
+        default: [0, 0, 0, 0], // means minX, minY, maxX, MaxY
     },
 };
 
