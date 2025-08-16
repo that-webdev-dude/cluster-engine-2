@@ -14,6 +14,7 @@ export { Chunk } from "./ecs/chunk";
 export { Game } from "./ecs/game";
 export { View } from "./ecs/view";
 export { Scene } from "./ecs/scene";
+export { Entity } from "./ecs/entity";
 export {
     ECSRenderSystem,
     ECSUpdateSystem,

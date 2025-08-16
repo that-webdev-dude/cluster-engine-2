@@ -1,5 +1,4 @@
-import { DESCRIPTORS } from "../components";
-import { Component } from "../components";
+import { DESCRIPTORS, Component } from "../components";
 import { Archetype } from "../../../cluster";
 import type { ComponentValueMap } from "../../../cluster";
 
@@ -10,13 +9,16 @@ export const tileSchema = Archetype.register(
     DESCRIPTORS.Color,
     DESCRIPTORS.Sprite
 );
+
 export const wallSchema = Archetype.register(
     DESCRIPTORS.Wall,
     DESCRIPTORS.Position,
     DESCRIPTORS.Size,
     DESCRIPTORS.Color,
-    DESCRIPTORS.Sprite
+    DESCRIPTORS.Sprite,
+    DESCRIPTORS.AABB
 );
+
 export const floorSchema = Archetype.register(
     DESCRIPTORS.Floor,
     DESCRIPTORS.Position,
@@ -53,6 +55,12 @@ export function getWallComponents(
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
+        [Component.AABB]: [
+            x - tileSize / 2,
+            y - tileSize / 2,
+            x + tileSize / 2,
+            y + tileSize / 2,
+        ],
     } as ComponentValueMap;
 }
 export function getFloorComponents(
@@ -68,12 +76,6 @@ export function getFloorComponents(
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
-        [Component.AABB]: [
-            x - tileSize / 2,
-            y - tileSize / 2,
-            x + tileSize / 2,
-            y + tileSize / 2,
-        ],
     } as ComponentValueMap;
 }
 

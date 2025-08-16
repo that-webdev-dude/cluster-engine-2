@@ -13,6 +13,7 @@ TODO features:
 - static and dynamic layering to add
 - write unit tests for everything
 - systems need to be profiled
+- create a BaseSparseSet for duplicate methods implementations
 
 TODO next (xshooter):
 - camera remove offsets from component

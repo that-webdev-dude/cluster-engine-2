@@ -13,8 +13,8 @@ const displayDefaults = {
 };
 
 export class Game {
-    private engine: Engine = new Engine(60);
-    private scenes: Array<Scene> = []; // a stack of Scene instances
+    private readonly engine: Engine = new Engine(60);
+    private readonly scenes: Array<Scene> = []; // a stack of Scene instances
     private debugUpdates: number = 10; // updates just two frames
 
     constructor(
@@ -30,20 +30,20 @@ export class Game {
 
     private runUpdateSystems(scene: Scene, dt: number, t: number) {
         scene.ECSUpdateSystems.forEach((system) => {
-            system.update(scene!.view, scene!.cmd, dt, t);
+            system.update(scene.view, scene.cmd, dt, t);
         });
         scene.GUIUpdateSystems.forEach((system) => {
-            system.update(scene!.gui, dt, t);
+            system.update(scene.gui, dt, t);
         });
     }
 
     private runRenderSystems(scene: Scene, alpha: number) {
         scene.ECSRenderSystems.forEach((system) => {
-            system.render(scene!.view, scene.dialog !== undefined ? 1 : alpha);
+            system.render(scene.view, scene.dialog !== undefined ? 1 : alpha);
         });
         // render the GUI
         scene.GUIRenderSystems.forEach((system) => {
-            system.render(scene!.gui);
+            system.render(scene.gui);
         });
     }
 
@@ -52,7 +52,6 @@ export class Game {
         if (currentScene !== undefined) {
             currentScene.destroy();
         }
-        // this.display.destroyRenderingLayers();
         scene.initialize();
         this.scenes.push(scene);
     }
@@ -83,10 +82,10 @@ export class Game {
         this.scenes.forEach((scene) => {
             scene.cmd.flush();
         });
-        this.debugUpdates++;
-        if (this.debugUpdates > 1000) {
-            this.stop();
-        }
+        // this.debugUpdates++;
+        // if (this.debugUpdates > 1000) {
+        //     this.stop();
+        // }
     }
 
     start() {

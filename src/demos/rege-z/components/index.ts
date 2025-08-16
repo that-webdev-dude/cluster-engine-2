@@ -177,7 +177,7 @@ const DESCRIPTORS = {
         name: "AABB",
         count: 4,
         buffer: Float32Array,
-        default: [0, 0, 0, 0], // means minX, minY, maxX, MaxY
+        default: [0, 0, 0, 0], // means minX, minY, maxX, maxY
     },
 };
 

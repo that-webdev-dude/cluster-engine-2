@@ -1,6 +1,5 @@
 import store from "../stores/store";
-import { DESCRIPTORS } from "../components";
-import { Component } from "../components";
+import { DESCRIPTORS, Component } from "../components";
 import { Archetype, Cmath } from "../../../cluster";
 import type { ComponentValueMap } from "../../../cluster";
 
@@ -22,19 +21,20 @@ export const zombieSchema = Archetype.register(
 );
 
 export function getZombieComponents(): ComponentValueMap {
-    const posX = Cmath.rand(16, worldW - 16);
-    const posY = Cmath.rand(16, worldH - 16);
+    const x = Cmath.rand(16, worldW - 16);
+    const y = Cmath.rand(16, worldH - 16);
+    const w = 32;
+    const h = 32;
+
     return {
         [Component.Zombie]: [1],
-        // [Component.PreviousPosition]: [worldW / 2, worldH / 2],
-        // [Component.Position]: [worldW / 2, worldH / 2],
-        [Component.PreviousPosition]: [posX, posY],
-        [Component.Position]: [posX, posY],
+        [Component.PreviousPosition]: [x, y],
+        [Component.Position]: [x, y],
         [Component.Velocity]: [0, 0],
         [Component.Offset]: [0, 0],
         [Component.Angle]: [0],
         [Component.Pivot]: [0, 0],
-        [Component.Size]: [-32, 32],
+        [Component.Size]: [-w, h],
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [0, 2 * 32, 32, 32],
         [Component.Animation]: [6, 9, 6, 0.2, 0, 1],

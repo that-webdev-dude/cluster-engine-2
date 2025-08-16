@@ -1,6 +1,5 @@
 import store from "../stores/store";
-import { DESCRIPTORS } from "../components";
-import { Component } from "../components";
+import { DESCRIPTORS, Component } from "../components";
 import { Archetype } from "../../../cluster";
 import type { ComponentValueMap } from "../../../cluster";
 
@@ -18,7 +17,8 @@ export const playerSchema = Archetype.register(
     DESCRIPTORS.Size,
     DESCRIPTORS.Color,
     DESCRIPTORS.Sprite,
-    DESCRIPTORS.Animation
+    DESCRIPTORS.Animation,
+    DESCRIPTORS.AABB
 );
 
 export function getPlayerComponents(): ComponentValueMap {

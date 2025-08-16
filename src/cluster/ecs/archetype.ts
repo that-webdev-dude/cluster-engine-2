@@ -19,7 +19,7 @@ export type Archetype<S extends readonly ComponentDescriptor[]> = {
 };
 
 function makeSignature(...types: ComponentType[]): Signature {
-    return types.reduce((mask, t) => mask | (1 << t), 0) as Signature;
+    return types.reduce((mask, t) => mask | (1 << t), 0);
 }
 
 function register<S extends readonly ComponentDescriptor[]>(...desc: S): S {
