@@ -14,7 +14,7 @@ import { ComponentType, EntityMeta } from "../../../cluster/types";
 import { BigSparseSet } from "../../../cluster/tools/SparseSet";
 import { AABB } from "../../../cluster/tools/Partitioner";
 
-export interface CollisionPair {
+export interface CollisionPairs {
     main: ComponentType;
     targets: {
         target: ComponentType;
@@ -42,15 +42,17 @@ export class CollisionSystem extends ECSUpdateSystem {
     private collisionActiveRect: CollisionActiveRect | undefined = undefined;
     private readonly displayW: number;
     private readonly displayH: number;
-    private readonly mainEntities: BigSparseSet<bigint, CollisionEntity> =
-        new BigSparseSet();
     private readonly targEntities: BigSparseSet<bigint, CollisionEntity> =
         new BigSparseSet();
     private readonly collisionMap: Map<string, CollisionContact[]> = new Map();
 
+    // spatial partitioning properties
+    private readonly spatialGrid: UniformGrid<bigint> = new UniformGrid(64); // for now 64 is set as default cell size
+    private readonly spatialGridQueryCache: bigint[] = [];
+
     public constructor(
         store: Store,
-        private readonly config?: CollisionPair[]
+        private readonly config?: CollisionPairs[]
     ) {
         super(store);
 
@@ -58,6 +60,13 @@ export class CollisionSystem extends ECSUpdateSystem {
         this.displayH = store.get("displayH");
     }
 
+    /**
+     * Retrieves the active collision rectangle for the current view.
+     * This rectangle is determined by the first camera entity found (with Position and Size components).
+     * If no camera is present, it falls back to the display dimensions.
+     * @param view The ECS view to search for camera entities.
+     * @returns The active collision rectangle, or undefined if not available.
+     */
     private getCollisionActiveRect(
         view: View
     ): CollisionActiveRect | undefined {
@@ -71,7 +80,12 @@ export class CollisionSystem extends ECSUpdateSystem {
                         "[CollisionSystem] Multiple cameras found - using the first one"
                     );
 
-                for (let i = 0; i < 1; i++) {
+                // Fix: Remove unnecessary loop and add bounds checking
+                if (
+                    chunk.count > 0 &&
+                    chunk.views.Position &&
+                    chunk.views.Size
+                ) {
                     activeRect ??= {
                         position: chunk.views.Position,
                         size: chunk.views.Size,
@@ -87,20 +101,6 @@ export class CollisionSystem extends ECSUpdateSystem {
                 size: new Float32Array([this.displayW, this.displayH]),
             };
         }
-
-        // Debug logging for collision active area
-        // if (activeRect) {
-        //     console.log("[CollisionSystem] Active area set:", {
-        //         position: [activeRect.position[0], activeRect.position[1]],
-        //         size: [activeRect.size[0], activeRect.size[1]],
-        //         bounds: {
-        //             left: activeRect.position[0],
-        //             top: activeRect.position[1],
-        //             right: activeRect.position[0] + activeRect.size[0],
-        //             bottom: activeRect.position[1] + activeRect.size[1],
-        //         },
-        //     });
-        // }
 
         return activeRect;
     }
@@ -125,18 +125,11 @@ export class CollisionSystem extends ECSUpdateSystem {
         const hw = w * 0.5;
         const hh = h * 0.5;
 
-        base = row * 4;
-        // update the AABB component to make sure is aligned with the entity position
-        chunk.views.AABB[base + 0] = x - hw;
-        chunk.views.AABB[base + 1] = y - hh;
-        chunk.views.AABB[base + 2] = x + hw;
-        chunk.views.AABB[base + 3] = y + hh;
-
         const aabb: AABB = {
-            minX: chunk.views.AABB[base + 0],
-            minY: chunk.views.AABB[base + 1],
-            maxX: chunk.views.AABB[base + 2],
-            maxY: chunk.views.AABB[base + 3],
+            minX: x - hw,
+            minY: y - hh,
+            maxX: x + hw,
+            maxY: y + hh,
         };
 
         const entityID = Entity.createMetaID(meta);
@@ -164,8 +157,8 @@ export class CollisionSystem extends ECSUpdateSystem {
     private getCollisionTargets(view: View): void {
         if (!this.config) return;
 
-        this.mainEntities.clear();
         this.targEntities.clear();
+        this.spatialGrid.clear();
 
         for (const collisionSpec of this.config) {
             const { targets } = collisionSpec;
@@ -185,15 +178,33 @@ export class CollisionSystem extends ECSUpdateSystem {
                                 chunkId,
                                 i
                             );
+
+                            // store the targets
                             this.storeCollisionTarget(
                                 { ...entity, eventType },
                                 this.targEntities
+                            );
+
+                            // insert into spatial grid for spatial partitioning
+                            this.spatialGrid.insert(
+                                entity.entityID,
+                                entity.aabb
                             );
                         }
                     }
                 );
             }
         }
+    }
+
+    private getCollisionCandidates(mainEntity: CollisionEntity) {
+        const candidates = this.spatialGrid.queryRegion(mainEntity.aabb);
+
+        // clear and reuse the cache array to avoid allocations
+        this.spatialGridQueryCache.length = 0;
+        this.spatialGridQueryCache.push(...candidates);
+
+        return this.spatialGridQueryCache;
     }
 
     private getCollisionContact(
@@ -313,6 +324,65 @@ export class CollisionSystem extends ECSUpdateSystem {
         );
     }
 
+    private emitCollisionEvent(
+        mainEntity: CollisionEntity,
+        cmd: CommandBuffer
+    ) {
+        if (this.collisionMap.size > 0) {
+            // Sort contacts for each event type by priority (collision ranking)
+            this.collisionMap.forEach((contacts, eventType) => {
+                contacts.sort((a, b) => {
+                    if (Math.abs(b.depth - a.depth) > 0.001)
+                        return b.depth - a.depth;
+                    if (Math.abs(b.area - a.area) > 0.001)
+                        return b.area - a.area;
+                    return b.ndv - a.ndv;
+                });
+
+                const mainMeta: EntityMeta = mainEntity.meta;
+                const primary = contacts[0];
+                const secondary = contacts[1];
+                const tertiary = contacts[2];
+
+                // emits the event type
+                this.store.emit<CollisionEvent>({
+                    type: eventType,
+                    data: {
+                        cmd,
+                        mainMeta,
+                        primary,
+                        secondary,
+                        tertiary,
+                    },
+                });
+            });
+        }
+    }
+
+    private updateAllAABBs(view: View): void {
+        view.forEachChunkWith(
+            [Component.AABB, Component.Position, Component.Size],
+            (chunk, chunkId) => {
+                for (let i = 0; i < chunk.count; i++) {
+                    let base = i * 2;
+                    const x = chunk.views.Position[base + 0];
+                    const y = chunk.views.Position[base + 1];
+                    const w = Math.abs(chunk.views.Size[base + 0]);
+                    const h = Math.abs(chunk.views.Size[base + 1]);
+                    const hw = w * 0.5;
+                    const hh = h * 0.5;
+
+                    base = i * 4;
+                    // update the AABB component to make sure is aligned with the entity position
+                    chunk.views.AABB[base + 0] = x - hw;
+                    chunk.views.AABB[base + 1] = y - hh;
+                    chunk.views.AABB[base + 2] = x + hw;
+                    chunk.views.AABB[base + 3] = y + hh;
+                }
+            }
+        );
+    }
+
     public update(view: View, cmd: CommandBuffer, dt: number) {
         if (!this.config) return;
 
@@ -325,6 +395,9 @@ export class CollisionSystem extends ECSUpdateSystem {
             return;
         }
 
+        // update all AABB components to make sure they align with the entity positions before processing
+        this.updateAllAABBs(view);
+
         // start the testing loop
         for (const collisionSpec of this.config) {
             const { main } = collisionSpec;
@@ -333,7 +406,7 @@ export class CollisionSystem extends ECSUpdateSystem {
             this.getCollisionTargets(view);
 
             // exit immediately if there are no targets
-            if (this.targEntities.size() <= 0) return;
+            if (this.targEntities.size() <= 0) continue;
 
             view.forEachChunkWith(
                 // loops on each main in the config
@@ -344,11 +417,22 @@ export class CollisionSystem extends ECSUpdateSystem {
                         const mainEntity: CollisionEntity =
                             this.getCollisionEntity(chunk, chunkId, i);
 
-                        // skip if the main is out of the active ares
+                        // skip if the main is out of the active area
                         if (!this.testForActiveArea(mainEntity)) continue;
 
                         this.collisionMap.clear();
-                        this.targEntities.forEach((target) => {
+
+                        // use the spatial grid to get the candidates to test against the main entity
+                        const candidates =
+                            this.getCollisionCandidates(mainEntity);
+
+                        // skip if there are no candidates
+                        if (candidates.length === 0) continue;
+
+                        for (const candidateID of candidates) {
+                            const target = this.targEntities.get(candidateID);
+                            if (!target) continue;
+
                             // AABB collision test: check if the boxes overlap
                             if (this.detectCollision(mainEntity, target)) {
                                 // if there's a collision stores the contact into the collisionMap
@@ -359,44 +443,18 @@ export class CollisionSystem extends ECSUpdateSystem {
                                     i,
                                     dt
                                 );
+
                                 // in collisionMap we group contacts by event type directly
                                 const eventType = target.eventType || "default";
                                 if (!this.collisionMap.has(eventType)) {
                                     this.collisionMap.set(eventType, []);
                                 }
+
                                 this.collisionMap.get(eventType)!.push(contact);
                             }
-                        });
-
-                        if (this.collisionMap.size > 0) {
-                            // Sort contacts for each event type by priority (collision ranking)
-                            this.collisionMap.forEach((contacts, eventType) => {
-                                contacts.sort((a, b) => {
-                                    if (Math.abs(b.depth - a.depth) > 0.001)
-                                        return b.depth - a.depth;
-                                    if (Math.abs(b.area - a.area) > 0.001)
-                                        return b.area - a.area;
-                                    return b.ndv - a.ndv;
-                                });
-
-                                const mainMeta: EntityMeta = mainEntity.meta;
-                                const primary = contacts[0];
-                                const secondary = contacts[1];
-                                const tertiary = contacts[2];
-
-                                // emits the event type
-                                this.store.emit<CollisionEvent>({
-                                    type: eventType,
-                                    data: {
-                                        cmd,
-                                        mainMeta,
-                                        primary,
-                                        secondary,
-                                        tertiary,
-                                    },
-                                });
-                            });
                         }
+
+                        this.emitCollisionEvent(mainEntity, cmd);
                     }
                 }
             );
