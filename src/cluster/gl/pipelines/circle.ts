@@ -1,5 +1,5 @@
+import { GPURenderingLayer as Renderer } from "../../core/Display";
 import { InstancedPipeline } from "../Pipeline";
-import { Renderer } from "../Renderer";
 import { GLTools } from "../tools";
 import vsSource from "../shaders/circleVs.glsl";
 import fsSource from "../shaders/circleFs.glsl";

@@ -1,4 +1,5 @@
-import { Renderer } from "./Renderer";
+import { GPURenderingLayer as Renderer } from "../core/Display";
+import { Buffer } from "../types";
 
 /**
  * Describes a vertex attribute specification for a WebGL pipeline.

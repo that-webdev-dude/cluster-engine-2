@@ -5,7 +5,6 @@ TODO features:
 - if chunk is full upload the whole thing? (no subarrays)
 - make consistent error messaging across the codebase
 - make the archetypes map in Scene a Graph instead of a Map for fast search
-- no need anymore the Renderer file in gl
 - in GUI if store hasn't changed, there's no need to render
 - the renderer resize doesn't fucking work
 - the renderer graphics looks blurry
