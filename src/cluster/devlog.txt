@@ -4,7 +4,6 @@ TODO features:
 - fix the interp angles for smooth rotation
 - if chunk is full upload the whole thing? (no subarrays)
 - make consistent error messaging across the codebase
-- add an updateEntity in Scene
 - make the archetypes map in Scene a Graph instead of a Map for fast search
 - no need anymore the Renderer file in gl
 - in GUI if store hasn't changed, there's no need to render
@@ -31,10 +30,9 @@ TODO next (xshooter):
 TODO next (rage-z)
 - need a local to world coords converter
 - make a boundary system
-🚧 collision system should include a collision vector in collision event data
 - collision system should work on hitbox component
-- collision system should have a broad phase
 - FX system could be made of multiple subsystems
 - every component have an active flag
-- culling system
+- culling sub system
 - the gui storage needs to be an actual storage
+- add a dryrun in the systems
