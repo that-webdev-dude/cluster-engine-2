@@ -42,9 +42,9 @@ export class CollisionSystem extends ECSUpdateSystem {
     private collisionActiveRect: CollisionActiveRect | undefined = undefined;
     private readonly displayW: number;
     private readonly displayH: number;
+    private readonly collisionMap: Map<string, CollisionContact[]> = new Map();
     private readonly targEntities: BigSparseSet<bigint, CollisionEntity> =
         new BigSparseSet();
-    private readonly collisionMap: Map<string, CollisionContact[]> = new Map();
 
     // spatial partitioning properties
     private readonly spatialGrid: UniformGrid<bigint> = new UniformGrid(64); // for now 64 is set as default cell size
@@ -154,46 +154,37 @@ export class CollisionSystem extends ECSUpdateSystem {
         }
     }
 
-    private getCollisionTargets(view: View): void {
+    private getCollisionTargets(
+        view: View,
+        targetSpecs: { target: ComponentType; eventType: string }[]
+    ): void {
         if (!this.config) return;
 
         this.targEntities.clear();
         this.spatialGrid.clear();
 
-        for (const collisionSpec of this.config) {
-            const { targets } = collisionSpec;
+        for (const { target, eventType } of targetSpecs) {
+            view.forEachChunkWith(
+                [target, Component.AABB, Component.Position, Component.Size],
+                (chunk, chunkId) => {
+                    for (let i = 0; i < chunk.count; i++) {
+                        const entity = this.getCollisionEntity(
+                            chunk,
+                            chunkId,
+                            i
+                        );
 
-            for (const { target, eventType } of targets) {
-                view.forEachChunkWith(
-                    [
-                        target,
-                        Component.AABB,
-                        Component.Position,
-                        Component.Size,
-                    ],
-                    (chunk, chunkId) => {
-                        for (let i = 0; i < chunk.count; i++) {
-                            const entity = this.getCollisionEntity(
-                                chunk,
-                                chunkId,
-                                i
-                            );
+                        // store the targets
+                        this.storeCollisionTarget(
+                            { ...entity, eventType },
+                            this.targEntities
+                        );
 
-                            // store the targets
-                            this.storeCollisionTarget(
-                                { ...entity, eventType },
-                                this.targEntities
-                            );
-
-                            // insert into spatial grid for spatial partitioning
-                            this.spatialGrid.insert(
-                                entity.entityID,
-                                entity.aabb
-                            );
-                        }
+                        // insert into spatial grid for spatial partitioning
+                        this.spatialGrid.insert(entity.entityID, entity.aabb);
                     }
-                );
-            }
+                }
+            );
         }
     }
 
@@ -400,10 +391,10 @@ export class CollisionSystem extends ECSUpdateSystem {
 
         // start the testing loop
         for (const collisionSpec of this.config) {
-            const { main } = collisionSpec;
+            const { main, targets } = collisionSpec;
 
             // collects the targets for this main entity
-            this.getCollisionTargets(view);
+            this.getCollisionTargets(view, targets);
 
             // exit immediately if there are no targets
             if (this.targEntities.size() <= 0) continue;
@@ -432,6 +423,10 @@ export class CollisionSystem extends ECSUpdateSystem {
                         for (const candidateID of candidates) {
                             const target = this.targEntities.get(candidateID);
                             if (!target) continue;
+
+                            // Skip self when main and target component are the same
+                            if (target.entityID === mainEntity.entityID)
+                                continue;
 
                             // AABB collision test: check if the boxes overlap
                             if (this.detectCollision(mainEntity, target)) {

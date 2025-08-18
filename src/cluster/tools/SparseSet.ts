@@ -179,7 +179,7 @@ export class SparseSet<I extends number, D> {
      * Remove all mappings.
      */
     clear(): void {
-        this.sparse.length = 0;
+        this.sparse = [];
         this.dense.length = 0;
         this.data.length = 0;
     }

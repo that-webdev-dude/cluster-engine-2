@@ -15,14 +15,16 @@ export const zombieSchema = Archetype.register(
     DESCRIPTORS.Angle,
     DESCRIPTORS.Pivot,
     DESCRIPTORS.Size,
+    DESCRIPTORS.Speed,
     DESCRIPTORS.Color,
     DESCRIPTORS.Sprite,
-    DESCRIPTORS.Animation
+    DESCRIPTORS.Animation,
+    DESCRIPTORS.AABB
 );
 
 export function getZombieComponents(): ComponentValueMap {
-    const x = Cmath.rand(16, worldW - 16);
-    const y = Cmath.rand(16, worldH - 16);
+    const x = Cmath.rand(56, worldW - 56);
+    const y = Cmath.rand(56, worldH - 56);
     const w = 32;
     const h = 32;
 
@@ -35,9 +37,11 @@ export function getZombieComponents(): ComponentValueMap {
         [Component.Angle]: [0],
         [Component.Pivot]: [0, 0],
         [Component.Size]: [-w, h],
+        [Component.Speed]: [Cmath.rand(15, 55)],
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [0, 2 * 32, 32, 32],
         [Component.Animation]: [6, 9, 6, 0.2, 0, 1],
+        [Component.AABB]: [x - w * 0.5, y - h * 0.5, x + w * 0.5, y + y * 0.5],
     } as ComponentValueMap;
 }
 

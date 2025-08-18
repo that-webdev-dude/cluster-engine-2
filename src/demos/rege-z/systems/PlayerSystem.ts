@@ -1,16 +1,18 @@
-import { Component, DESCRIPTORS } from "../components";
-import { View } from "../../../cluster";
-import { Input } from "../../../cluster";
-import { Store } from "../../../cluster";
-import { CommandBuffer } from "../../../cluster";
-import { ECSUpdateSystem } from "../../../cluster";
+import {
+    View,
+    Input,
+    Store,
+    CommandBuffer,
+    ECSUpdateSystem,
+} from "../../../cluster";
 import { CollisionEvent } from "../events";
+import { Component, DESCRIPTORS } from "../components";
 
 export class PlayerSystem extends ECSUpdateSystem {
-    private worldW: number = 0;
-    private worldH: number = 0;
-    private displayW: number = 0;
-    private displayH: number = 0;
+    private readonly worldW: number = 0;
+    private readonly worldH: number = 0;
+    private readonly displayW: number = 0;
+    private readonly displayH: number = 0;
 
     private currentView: View | undefined = undefined;
     private isCollidingWithWall: boolean = false;

@@ -1,94 +1,18 @@
-import {
-    ComponentDescriptor,
-    ComponentValueMap,
-    ComponentType,
-    EntityMeta,
-    Buffer,
-} from "../types";
+import { ComponentDescriptor, ComponentValueMap, EntityMeta } from "../types";
+import { Archetype, Signature } from "./archetype";
+import { CommandBuffer } from "./cmd";
+import { Storage } from "./storage";
+import { DEBUG } from "../tools";
+import { View } from "./view";
+import { GUIContainer } from "../gui/GUIbuilders";
 import {
     ECSUpdateSystem,
     ECSRenderSystem,
     GUIUpdateSystem,
     GUIRenderSystem,
 } from "./system";
-import { Archetype, Signature } from "./archetype";
-import { Storage } from "./storage";
-import { Chunk } from "./chunk";
-import { CommandBuffer } from "./cmd";
-import { DEBUG } from "../tools";
-import { GUIContainer } from "../gui/GUIbuilders";
-import { View } from "./view";
 
 type SystemType = "update" | "render";
-
-// export class View {
-//     constructor(private readonly archetypeMap: Map<Signature, Storage<any>>) {}
-
-//     getEntityComponent<T extends Buffer>(
-//         meta: EntityMeta,
-//         descriptor: ComponentDescriptor
-//     ): T | undefined {
-//         const { archetype, chunkId, row, generation } = meta;
-
-//         const storage = this.archetypeMap.get(archetype.signature);
-//         if (!storage) {
-//             if (DEBUG) {
-//                 console.warn(
-//                     `View.getEntityComponent: No storage found for archetype signature ${Archetype.format(
-//                         archetype
-//                     )}`
-//                 );
-//             }
-//             return undefined;
-//         }
-
-//         const chunk = storage.getChunk(chunkId);
-//         if (!chunk) {
-//             if (DEBUG) {
-//                 console.warn(
-//                     `View.getEntityComponent: No chunk found for chunkId ${chunkId} in archetype ${Archetype.format(
-//                         archetype
-//                     )}`
-//                 );
-//             }
-//             return undefined;
-//         }
-
-//         if (generation !== chunk.getGeneration(row)) {
-//             if (DEBUG) {
-//                 console.warn(
-//                     `View.getEntityComponent: Generation mismatch for entity at row ${row} in chunk ${chunkId}`
-//                 );
-//             }
-//             return undefined;
-//         }
-
-//         const view = chunk.getView<T>(descriptor);
-//         if (!view) {
-//             if (DEBUG) {
-//                 console.warn(
-//                     `View.getEntityComponent: No view found for descriptor ${descriptor.name} in chunk ${chunkId}`
-//                 );
-//             }
-//             return undefined;
-//         }
-
-//         const base = row * descriptor.count;
-//         return view.subarray(base, base + descriptor.count) as T;
-//     }
-
-//     forEachChunkWith(
-//         comps: ComponentType[],
-//         cb: (chunk: Readonly<Chunk<any>>, chunkId: number) => void
-//     ) {
-//         const sig = Archetype.makeSignature(...comps);
-//         for (const [archSig, storage] of this.archetypeMap) {
-//             if ((archSig & sig) === sig) {
-//                 storage.forEachChunk(cb);
-//             }
-//         }
-//     }
-// }
 
 export class Scene {
     readonly ECSStorage: Map<Signature, Storage<any>> = new Map();
@@ -181,7 +105,7 @@ export class Scene {
 
         const deletedMeta = storage.delete(chunkId, row, generation);
 
-        return deletedMeta === undefined ? false : true;
+        return deletedMeta !== undefined;
     }
 
     updateEntity(meta: EntityMeta, comps: ComponentValueMap) {
@@ -199,26 +123,22 @@ export class Scene {
 
         const updatedMeta = storage.assign(chunkId, row, generation, comps);
 
-        return updatedMeta === undefined ? false : true;
+        return updatedMeta !== undefined;
     }
 
     useECSSystem(type: SystemType, system: ECSUpdateSystem | ECSRenderSystem) {
         if (type === "update" && system instanceof ECSUpdateSystem) {
             this.ECSUpdateSystems.push(system);
-        } else {
-            if (system instanceof ECSRenderSystem) {
-                this.ECSRenderSystems.push(system);
-            }
+        } else if (system instanceof ECSRenderSystem) {
+            this.ECSRenderSystems.push(system);
         }
     }
 
     useGUISystem(type: SystemType, system: GUIUpdateSystem | GUIRenderSystem) {
         if (type === "update" && system instanceof GUIUpdateSystem) {
             this.GUIUpdateSystems.push(system);
-        } else {
-            if (system instanceof GUIRenderSystem) {
-                this.GUIRenderSystems.push(system);
-            }
+        } else if (system instanceof GUIRenderSystem) {
+            this.GUIRenderSystems.push(system);
         }
     }
 }
