@@ -13,6 +13,7 @@ TODO features:
 - write unit tests for everything
 - systems need to be profiled
 - create a BaseSparseSet for duplicate methods implementations
+- module organization and tooling should be organized better than this
 
 TODO next (xshooter):
 - camera remove offsets from component
@@ -36,3 +37,4 @@ TODO next (rage-z)
 - culling sub system
 - the gui storage needs to be an actual storage
 - add a dryrun in the systems
+- the collision system should probably collect the target entities once and not per-main entity
