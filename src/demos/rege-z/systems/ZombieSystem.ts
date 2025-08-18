@@ -17,8 +17,23 @@ export class ZombieSystem extends ECSUpdateSystem {
 
     constructor(readonly store: Store, readonly target: EntityMeta) {
         super(store);
+    }
 
-        store.on<CollisionEvent>("zombie-zombie-collision", (e) => {
+    // this will run once when the scene is loaded
+    prerun(view: View): void {
+        // cache the view for this update cycle
+        this.currentView = view;
+
+        // stores the entityMeta of the target first
+        if (this.targetPos === undefined) {
+            const slice = view.getSlice(this.target, DESCRIPTORS.Position);
+            if (slice !== undefined) {
+                this.targetPos = slice.arr;
+            }
+        }
+
+        // event handlers
+        this.store.on<CollisionEvent>("zombie-zombie-collision", (e) => {
             const { mainMeta, primary } = e.data;
             if (!primary) return;
 
@@ -37,17 +52,6 @@ export class ZombieSystem extends ECSUpdateSystem {
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
-        // cache the view for this update cycle
-        this.currentView = view;
-
-        // stores the entityMeta of the target first
-        if (this.targetPos === undefined) {
-            const slice = view.getSlice(this.target, DESCRIPTORS.Position);
-            if (slice !== undefined) {
-                this.targetPos = slice.arr;
-            }
-        }
-
         if (!this.targetPos) return;
 
         view.forEachChunkWith(

@@ -6,8 +6,15 @@ import { GUIContainer } from "../gui/GUIbuilders";
 /**
  * Abstract base class for systems that can be updated each frame.
  */
-export abstract class ECSUpdateSystem {
+abstract class BaseECSSystem {
     constructor(protected store: Store) {}
+    prerun(view: View): void {
+        // Optional hook with only View; subclasses may override.
+    }
+}
+
+export abstract class ECSUpdateSystem extends BaseECSSystem {
+    // Per-frame update with full context.
     abstract update(
         view: View,
         cmd: CommandBuffer,
@@ -19,7 +26,7 @@ export abstract class ECSUpdateSystem {
 /**
  * Abstract base class for systems that can render Chunks of data each frame.
  */
-export abstract class ECSRenderSystem {
+export abstract class ECSRenderSystem extends BaseECSSystem {
     abstract render(view: View, alpha: number): void;
 }
 

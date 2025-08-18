@@ -67,7 +67,7 @@ export function createGamePlay() {
         ])
     );
 
-    scene.useECSSystem("render", new SpriteRendererSystem());
+    scene.useECSSystem("render", new SpriteRendererSystem(store));
 
     return scene;
 }

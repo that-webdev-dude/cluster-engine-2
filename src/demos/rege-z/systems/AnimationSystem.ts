@@ -50,12 +50,7 @@ export class AnimationSystem extends ECSUpdateSystem {
                     if (animation[i * 6 + 4] > animationTime) {
                         animation[i * 6 + 4] = 0;
 
-                        let nextAnimationRect: [
-                            number,
-                            number,
-                            number,
-                            number
-                        ] = [0, 0, 0, 0];
+                        let nextAnimationRect: [number, number, number, number];
 
                         if (animationCurrentIndex < animationEndIndex) {
                             // proceed to next frame

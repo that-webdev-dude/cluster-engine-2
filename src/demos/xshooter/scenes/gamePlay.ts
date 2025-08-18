@@ -45,7 +45,7 @@ export function createGamePlay() {
             new CollisionSystem(store),
             new CameraSystem(store),
         ],
-        storageRenderSystems: [new RendererSystem()],
+        storageRenderSystems: [new RendererSystem(store)],
         guiUpdateSystems: [
             new GUITimerSystem(store),
             new GUILivesSysten(store),

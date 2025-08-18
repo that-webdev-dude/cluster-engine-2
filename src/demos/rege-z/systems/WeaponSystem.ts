@@ -11,10 +11,10 @@ const Mouse = Input.Mouse;
 
 export class WeaponSystem extends ECSUpdateSystem {
     private ownerPosition: Buffer | undefined = undefined;
-    private worldW: number = 0;
-    private worldH: number = 0;
-    private displayW: number = 0;
-    private displayH: number = 0;
+    private readonly worldW: number = 0;
+    private readonly worldH: number = 0;
+    private readonly displayW: number = 0;
+    private readonly displayH: number = 0;
 
     constructor(readonly store: Store, readonly owner?: EntityMeta) {
         super(store);
@@ -25,7 +25,7 @@ export class WeaponSystem extends ECSUpdateSystem {
         this.displayH = store.get("displayH");
     }
 
-    update(view: View, cmd: CommandBuffer, dt: number) {
+    prerun(view: View): void {
         if (this.owner && !this.ownerPosition) {
             const slice = view.getSlice<Float32Array>(
                 this.owner,
@@ -39,6 +39,11 @@ export class WeaponSystem extends ECSUpdateSystem {
 
             this.ownerPosition = new Float32Array(2);
         }
+    }
+
+    update(view: View, cmd: CommandBuffer, dt: number) {
+        if (!this.ownerPosition)
+            console.warn("[WeaponSustem]: this weapon has no owner");
 
         view.forEachChunkWith([Component.Weapon, Component.Angle], (chunk) => {
             // only one player is expected

@@ -28,6 +28,15 @@ export class Game {
         );
     }
 
+    private prerunAllSystems(scene: Scene) {
+        scene.ECSUpdateSystems.forEach((system) => {
+            system.prerun(scene.view);
+        });
+        scene.ECSRenderSystems.forEach((system) => {
+            system.prerun(scene.view);
+        });
+    }
+
     private runUpdateSystems(scene: Scene, dt: number, t: number) {
         scene.ECSUpdateSystems.forEach((system) => {
             system.update(scene.view, scene.cmd, dt, t);
@@ -53,6 +62,7 @@ export class Game {
             currentScene.destroy();
         }
         scene.initialize();
+        this.prerunAllSystems(scene);
         this.scenes.push(scene);
     }
 

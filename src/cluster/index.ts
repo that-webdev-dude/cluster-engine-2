@@ -1,26 +1,18 @@
-export { Assets } from "./core/Assets";
-export { Display } from "./core/Display";
-export { Emitter } from "./core/Emitter";
-export { Engine } from "./core/Engine";
-export { Input } from "./core/Input";
-export { Store } from "./core/Store";
-export { Sound } from "./core/Sound";
-export { Audio } from "./core/Sound";
+// core exports
+export { Assets, Display, Input, Store, Sound, Audio } from "./core";
 
 // ecs
-export { CommandBuffer } from "./ecs/cmd";
+export type { CommandBuffer } from "./ecs/cmd";
+export type { View } from "./ecs/view";
 export { Archetype } from "./ecs/archetype";
 export { Chunk } from "./ecs/chunk";
 export { Game } from "./ecs/game";
-export { View } from "./ecs/view";
 export { Scene } from "./ecs/scene";
 export { Entity } from "./ecs/entity";
-export {
-    ECSRenderSystem,
-    ECSUpdateSystem,
-    GUIRenderSystem,
-    GUIUpdateSystem,
-} from "./ecs/system";
+export { ECSRenderSystem } from "./ecs/system";
+export { ECSUpdateSystem } from "./ecs/system";
+export { GUIRenderSystem } from "./ecs/system";
+export { GUIUpdateSystem } from "./ecs/system";
 
 // gl
 export {

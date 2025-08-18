@@ -2,25 +2,27 @@
 
 import { spritesheet } from "../assets";
 import { Component } from "../components";
-import { Display } from "../../../cluster";
-import { View } from "../../../cluster";
-import { Chunk } from "../../../cluster";
-import { SpriteData } from "../../../cluster";
-import { SpritePipeline } from "../../../cluster";
-import { ECSRenderSystem } from "../../../cluster";
+import {
+    Display,
+    View,
+    Chunk,
+    SpriteData,
+    SpritePipeline,
+    ECSRenderSystem,
+} from "../../../cluster";
 
 export class SpriteRendererSystem extends ECSRenderSystem {
-    private renderer = Display.getInstance().createGPURenderingLayer();
+    private readonly renderer = Display.getInstance().createGPURenderingLayer();
     private pipeline: SpritePipeline | null = null;
 
     // per-instance SoA buffers, size = Chunk.DEFAULT_CAPACITY
     private positions = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private offsets = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private pivots = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private scales = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private angles = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
-    private colors = new Uint8Array(Chunk.DEFAULT_CAPACITY * 4);
-    private uvRects = new Float32Array(Chunk.DEFAULT_CAPACITY * 4);
+    private readonly offsets = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private readonly pivots = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private readonly scales = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private readonly angles = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
+    private readonly colors = new Uint8Array(Chunk.DEFAULT_CAPACITY * 4);
+    private readonly uvRects = new Float32Array(Chunk.DEFAULT_CAPACITY * 4);
 
     private cameraPos: [number, number] = [0, 0];
 
