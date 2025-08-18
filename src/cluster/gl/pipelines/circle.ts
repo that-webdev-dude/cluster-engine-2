@@ -3,6 +3,7 @@ import { InstancedPipeline } from "../Pipeline";
 import { GLTools } from "../tools";
 import vsSource from "../shaders/circleVs.glsl";
 import fsSource from "../shaders/circleFs.glsl";
+import { Buffer } from "../../types";
 
 // private utility to define the circle mesh vertices
 function createUnitCircleMesh(segments = 36): Float32Array {
@@ -26,7 +27,7 @@ function createUnitCircleMesh(segments = 36): Float32Array {
  * @property a_scale - [r0, r1, …]
  * @property a_color - [r,g,b,a,  r,g,b,a, …]
  */
-export interface CircleData extends Record<string, BufferSource> {
+export interface CircleData extends Record<string, Buffer> {
     a_translation: Float32Array; // [x0, y0, x1, y1, …]
     a_scale: Float32Array; // [r0, r1, …]
     a_color: Uint8Array; // [r,g,b,a,  r,g,b,a, …]
@@ -35,7 +36,7 @@ export interface CircleData extends Record<string, BufferSource> {
 export class CirclePipeline extends InstancedPipeline<CircleData> {
     private uCamPosLoc!: WebGLUniformLocation;
     private uProjLoc!: WebGLUniformLocation;
-    private mesh: Float32Array;
+    private readonly mesh: Float32Array;
 
     constructor(renderer: Renderer) {
         const mesh = createUnitCircleMesh();
@@ -141,13 +142,7 @@ export class CirclePipeline extends InstancedPipeline<CircleData> {
 
         const w = this.renderer.worldWidth;
         const h = this.renderer.worldHeight;
-        // // prettier-ignore
-        // const proj = new Float32Array([
-        //     2/w,    0,      0,      0,
-        //     0,     -2/h,    0,      0,
-        //     0,      0,      1,      0,
-        //    -1,      1,      0,      1,
-        // ]);
+
         const proj = GLTools.createOrthoMatrix(w, h);
         gl.uniformMatrix4fv(this.uProjLoc, false, proj);
     }

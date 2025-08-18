@@ -3,6 +3,7 @@ import { InstancedPipeline } from "../Pipeline";
 import { GLTools } from "../tools";
 import vsSource from "../shaders/meshVs.glsl";
 import fsSource from "../shaders/meshFs.glsl";
+import { Buffer } from "../../types";
 
 /**
  * Creates a unit-sized regular polygon mesh centered at the origin.
@@ -69,7 +70,7 @@ function createUnitMeshMesh(sides: number): Float32Array {
  * This interface extends a generic record mapping string keys to `BufferSource` values,
  * and defines specific attributes for mesh rendering.
  */
-export interface MeshData extends Record<string, BufferSource> {
+export interface MeshData extends Record<string, Buffer> {
     a_position: Float32Array;
     a_offset: Float32Array;
     a_scale: Float32Array;
@@ -81,7 +82,7 @@ export interface MeshData extends Record<string, BufferSource> {
 export class MeshPipeline extends InstancedPipeline<MeshData> {
     private uCamPosLoc!: WebGLUniformLocation;
     private uProjLoc!: WebGLUniformLocation;
-    private mesh: Float32Array;
+    private readonly mesh: Float32Array;
 
     private constructor(renderer: Renderer, segments: number = 36) {
         const mesh = createUnitMeshMesh(segments);
@@ -219,13 +220,7 @@ export class MeshPipeline extends InstancedPipeline<MeshData> {
 
         const w = this.renderer.worldWidth;
         const h = this.renderer.worldHeight;
-        // // prettier-ignore
-        // const proj = new Float32Array([
-        //     2/w,    0,      0,      0,
-        //     0,     -2/h,    0,      0,
-        //     0,      0,      1,      0,
-        //    -1,      1,      0,      1,
-        // ]);
+
         const proj = GLTools.createOrthoMatrix(w, h);
         gl.uniformMatrix4fv(this.uProjLoc, false, proj);
     }

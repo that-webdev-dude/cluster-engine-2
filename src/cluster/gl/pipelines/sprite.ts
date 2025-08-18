@@ -3,9 +3,10 @@ import { InstancedPipeline } from "../Pipeline";
 import { GLTools } from "../tools";
 import vsSource from "../shaders/spriteVs.glsl";
 import fsSource from "../shaders/spriteFs.glsl";
+import { Buffer } from "../../types";
 
 // exactly those buffers your ECS components supply: Position, Offset, Size, Pivot, Angle, Color, Sprite(frame)
-export interface SpriteData extends Record<string, BufferSource> {
+export interface SpriteData extends Record<string, Buffer> {
     a_position: Float32Array; // [x, y] world px
     a_offset: Float32Array; // [ox, oy] px
     a_scale: Float32Array; // [width, height] px
@@ -16,12 +17,15 @@ export interface SpriteData extends Record<string, BufferSource> {
 }
 
 export class SpritePipeline extends InstancedPipeline<SpriteData> {
-    private texture: WebGLTexture;
+    private readonly texture: WebGLTexture;
     private uProjLoc!: WebGLUniformLocation;
     private uCamPosLoc!: WebGLUniformLocation;
     private uSamplerLoc!: WebGLUniformLocation;
 
-    private constructor(renderer: Renderer, private img: HTMLImageElement) {
+    private constructor(
+        renderer: Renderer,
+        private readonly img: HTMLImageElement
+    ) {
         super(renderer, vsSource, fsSource, 6, renderer.gl.TRIANGLES);
 
         this.texture = this.createTexture(renderer);
@@ -42,7 +46,7 @@ export class SpritePipeline extends InstancedPipeline<SpriteData> {
 
     private createTexture(renderer: Renderer) {
         const gl = renderer.gl;
-        const tex = gl.createTexture()!;
+        const tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);

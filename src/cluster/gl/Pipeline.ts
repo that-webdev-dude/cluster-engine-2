@@ -110,7 +110,7 @@ export abstract class Pipeline<DataSoA> {
     ): WebGLProgram {
         const vs = this.compileShader(gl, gl.VERTEX_SHADER, vsSource);
         const fs = this.compileShader(gl, gl.FRAGMENT_SHADER, fsSource);
-        const program = gl.createProgram()!;
+        const program = gl.createProgram();
         gl.attachShader(program, vs);
         gl.attachShader(program, fs);
         gl.linkProgram(program);
@@ -128,7 +128,7 @@ export abstract class Pipeline<DataSoA> {
 }
 
 export class InstancedPipeline<
-    DataSoA extends Record<string, BufferSource>
+    DataSoA extends Record<string, Buffer>
 > extends Pipeline<DataSoA> {
     protected program!: WebGLProgram;
 
@@ -138,10 +138,10 @@ export class InstancedPipeline<
 
     constructor(
         renderer: Renderer,
-        private vsSource: string,
-        private fsSource: string,
-        private vCount: number,
-        private primitive: GLenum,
+        private readonly vsSource: string,
+        private readonly fsSource: string,
+        private readonly vCount: number,
+        private readonly primitive: GLenum,
         componentTypes?: string[]
     ) {
         super(renderer, componentTypes || []);
@@ -159,7 +159,7 @@ export class InstancedPipeline<
 
     public setAttributeData(
         name: string,
-        data: BufferSource,
+        data: Buffer,
         usage: GLenum = this.gl.DYNAMIC_DRAW
     ) {
         const gl = this.gl;
@@ -195,7 +195,7 @@ export class InstancedPipeline<
         // Upload just the dynamic (divisor>0) buffers with bufferSubData
         for (const [name, spec] of this.attributeSpecs) {
             if ((spec.divisor ?? 0) === 0) continue; // skip mesh
-            const arr = data[name as keyof DataSoA] as unknown as BufferSource;
+            const arr = data[name as keyof DataSoA] as unknown as Buffer;
             const buf = this.buffers[name];
             gl.bindBuffer(gl.ARRAY_BUFFER, buf);
             // update only the contents—no realloc:

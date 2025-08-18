@@ -3,6 +3,7 @@ import { InstancedPipeline } from "../Pipeline";
 import { GLTools } from "../tools";
 import vsSource from "../shaders/rectVs.glsl";
 import fsSource from "../shaders/rectFs.glsl";
+import { Buffer } from "../../types";
 
 // private utility to define the rect mesh vertices
 function createUnitQuadMesh(): Float32Array {
@@ -28,7 +29,7 @@ function createUnitQuadMesh(): Float32Array {
  * @property a_scale - [w0, h0, w1, h2, …]
  * @property a_color - [r,g,b,a,  r,g,b,a, …]
  */
-export interface RectData extends Record<string, BufferSource> {
+export interface RectData extends Record<string, Buffer> {
     a_translation: Float32Array; // [x0, y0, x1, y1, …]
     a_scale: Float32Array; // [r0, r1, …]
     a_color: Uint8Array; // [r,g,b,a,  r,g,b,a, …]
@@ -39,7 +40,7 @@ export interface RectData extends Record<string, BufferSource> {
 export class RectPipeline extends InstancedPipeline<RectData> {
     private uCamPosLoc!: WebGLUniformLocation;
     private uProjLoc!: WebGLUniformLocation;
-    private mesh: Float32Array;
+    private readonly mesh: Float32Array;
 
     private constructor(renderer: Renderer) {
         const mesh = createUnitQuadMesh();
@@ -167,13 +168,7 @@ export class RectPipeline extends InstancedPipeline<RectData> {
 
         const w = this.renderer.worldWidth;
         const h = this.renderer.worldHeight;
-        // // prettier-ignore
-        // const proj = new Float32Array([
-        //     2/w,    0,      0,      0,
-        //     0,     -2/h,    0,      0,
-        //     0,      0,      1,      0,
-        //    -1,      1,      0,      1,
-        // ]);
+
         const proj = GLTools.createOrthoMatrix(w, h);
         gl.uniformMatrix4fv(this.uProjLoc, false, proj);
     }
