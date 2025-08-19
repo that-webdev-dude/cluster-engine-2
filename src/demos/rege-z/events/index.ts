@@ -1,12 +1,12 @@
-import { CommandBuffer } from "../../../cluster";
-import { StoreEvent } from "../../../cluster";
-import { Vector } from "../../../cluster";
+import { CommandBuffer, StoreEvent, View } from "../../../cluster";
+import { AABB } from "../../../cluster/tools/aabb";
 import { EntityMeta } from "../../../cluster/types";
 
 export type VectorLike = { x: number; y: number };
 
 export type CollisionContact = {
     otherMeta: EntityMeta;
+    otherAABB: AABB;
     overlap: VectorLike; // (xWidth, yWidth), positive
     normal: VectorLike; // unit axis from other -> main
     depth: number; // min overlap along axis
@@ -20,11 +20,11 @@ export type CollisionContact = {
 export interface CollisionEvent extends StoreEvent {
     type: string;
     data: {
-        dt?: number;
+        view?: View;
         cmd: CommandBuffer;
+        dt: number;
         mainMeta: EntityMeta;
-        mainPos?: Float32Array;
-        mainVel?: Float32Array;
+        mainAABB: AABB;
         primary?: CollisionContact;
         secondary?: CollisionContact;
         tertiary?: CollisionContact;

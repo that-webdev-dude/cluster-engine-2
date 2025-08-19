@@ -8,13 +8,16 @@ import {
 import { CollisionEvent } from "../events";
 import { Component, DESCRIPTORS } from "../components";
 
+import { moveAndSlide } from "../../../cluster/tools/aabb";
+import { AABB } from "../../../cluster/tools/Partitioner";
+
 export class PlayerSystem extends ECSUpdateSystem {
     private readonly worldW: number = 0;
     private readonly worldH: number = 0;
     private readonly displayW: number = 0;
     private readonly displayH: number = 0;
 
-    private currentView: View | undefined = undefined;
+    // private currentView: View | undefined = undefined;
     private isCollidingWithWall: boolean = false;
     private collisionNormals: Array<{ x: number; y: number }> = [];
 
@@ -39,58 +42,78 @@ export class PlayerSystem extends ECSUpdateSystem {
         this.store.on<CollisionEvent>(
             "player-wall-collision",
             (e) => {
-                const { mainMeta, primary, secondary, tertiary } = e.data;
-                if (!primary) return;
-
-                // Mark that we're colliding with a wall
-                this.isCollidingWithWall = true;
-
-                // Store collision normals for input blocking
-                this.collisionNormals = [];
-                if (primary) this.collisionNormals.push(primary.normal);
-                if (secondary) this.collisionNormals.push(secondary.normal);
-                if (tertiary) this.collisionNormals.push(tertiary.normal);
-
-                // Move the player out of collision using the MTV
-                const posSlice = this.currentView?.getSlice(
+                const {
                     mainMeta,
-                    DESCRIPTORS.Position
-                );
-                if (posSlice) {
-                    const { arr, base } = posSlice;
-                    arr[base + 0] += primary.mtv.x;
-                    arr[base + 1] += primary.mtv.y;
-                }
+                    mainAABB,
+                    view,
+                    dt,
+                    primary,
+                    secondary,
+                    tertiary,
+                } = e.data;
+                if (!primary || !view) return;
 
-                // Handle velocity correction for sliding with all contacts to prevent jitter
-                const velSlice = this.currentView?.getSlice(
-                    mainMeta,
-                    DESCRIPTORS.Velocity
-                );
+                let positionAABB = mainAABB;
+
+                let velocity = {
+                    x: 0,
+                    y: 0,
+                };
+                const velSlice = view.getSlice(mainMeta, DESCRIPTORS.Velocity);
                 if (velSlice) {
-                    const { arr: velArr, base: velBase } = velSlice;
-
-                    // Apply velocity correction for all normals to prevent jitter
-                    for (const normal of this.collisionNormals) {
-                        const vDotN =
-                            velArr[velBase + 0] * normal.x +
-                            velArr[velBase + 1] * normal.y;
-                        if (vDotN < 0) {
-                            velArr[velBase + 0] -= vDotN * normal.x;
-                            velArr[velBase + 1] -= vDotN * normal.y;
-                        }
-                    }
+                    const { arr, base } = velSlice;
+                    velocity.x = arr[base + 0];
+                    velocity.y = arr[base + 1];
                 }
 
-                // Optionally, color feedback (keep this if you want visual feedback)
-                const colorSlice = this.currentView?.getSlice(
-                    mainMeta,
-                    DESCRIPTORS.Color
-                );
-                if (colorSlice) {
-                    const { arr, base } = colorSlice;
-                    arr[base + 0] = 0;
-                }
+                let primAABB = primary.otherAABB;
+                let secAABB = secondary?.otherAABB;
+                let terAABB = tertiary?.otherAABB;
+
+                const obstacles = [primAABB];
+
+                moveAndSlide(positionAABB, velocity, dt, obstacles);
+
+                // // Mark that we're colliding with a wall
+                // this.isCollidingWithWall = true;
+
+                // // Store collision normals for input blocking
+                // this.collisionNormals = [];
+                // if (primary) this.collisionNormals.push(primary.normal);
+                // if (secondary) this.collisionNormals.push(secondary.normal);
+                // if (tertiary) this.collisionNormals.push(tertiary.normal);
+
+                // // Move the player out of collision using the MTV
+                // const posSlice = view.getSlice(mainMeta, DESCRIPTORS.Position);
+                // if (posSlice) {
+                //     const { arr, base } = posSlice;
+                //     arr[base + 0] += primary.mtv.x;
+                //     arr[base + 1] += primary.mtv.y;
+                // }
+
+                // // Handle velocity correction for sliding with all contacts to prevent jitter
+                // const velSlice = view.getSlice(mainMeta, DESCRIPTORS.Velocity);
+                // if (velSlice) {
+                //     const { arr: velArr, base: velBase } = velSlice;
+
+                //     // Apply velocity correction for all normals to prevent jitter
+                //     for (const normal of this.collisionNormals) {
+                //         const vDotN =
+                //             velArr[velBase + 0] * normal.x +
+                //             velArr[velBase + 1] * normal.y;
+                //         if (vDotN < 0) {
+                //             velArr[velBase + 0] -= vDotN * normal.x;
+                //             velArr[velBase + 1] -= vDotN * normal.y;
+                //         }
+                //     }
+                // }
+
+                // // Optionally, color feedback (keep this if you want visual feedback)
+                // const colorSlice = view.getSlice(mainMeta, DESCRIPTORS.Color);
+                // if (colorSlice) {
+                //     const { arr, base } = colorSlice;
+                //     arr[base + 0] = 0;
+                // }
             },
             false
         );
@@ -156,9 +179,6 @@ export class PlayerSystem extends ECSUpdateSystem {
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
-        // cache the view for this update cycle
-        this.currentView = view;
-
         view.forEachChunkWith(
             [
                 Component.Player,

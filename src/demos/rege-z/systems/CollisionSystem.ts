@@ -246,6 +246,7 @@ export class CollisionSystem extends ECSUpdateSystem {
 
         return {
             otherMeta: target.meta,
+            otherAABB: targAABB,
             overlap,
             normal,
             depth,
@@ -352,6 +353,7 @@ export class CollisionSystem extends ECSUpdateSystem {
 
     private emitCollisionEvent(
         mainEntity: CollisionEntity,
+        view: View,
         cmd: CommandBuffer,
         dt: number
     ) {
@@ -366,22 +368,29 @@ export class CollisionSystem extends ECSUpdateSystem {
                     return b.ndv - a.ndv;
                 });
 
-                const mainMeta: EntityMeta = mainEntity.meta;
+                const mainMeta = mainEntity.meta;
+                const mainAABB = mainEntity.aabb;
                 const primary = contacts[0];
                 const secondary = contacts[1];
                 const tertiary = contacts[2];
 
                 // emits the event type
-                this.store.emit<CollisionEvent>({
-                    type: eventType,
-                    data: {
-                        cmd,
-                        mainMeta,
-                        primary,
-                        secondary,
-                        tertiary,
+                this.store.emit<CollisionEvent>(
+                    {
+                        type: eventType,
+                        data: {
+                            view,
+                            cmd,
+                            dt,
+                            mainMeta,
+                            mainAABB,
+                            primary,
+                            secondary,
+                            tertiary,
+                        },
                     },
-                });
+                    false
+                );
             });
         }
     }
@@ -485,7 +494,7 @@ export class CollisionSystem extends ECSUpdateSystem {
                             }
                         }
 
-                        this.emitCollisionEvent(mainEntity, cmd, dt);
+                        this.emitCollisionEvent(mainEntity, view, cmd, dt);
                     }
                 }
             );
