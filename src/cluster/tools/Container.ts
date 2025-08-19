@@ -50,7 +50,7 @@ export class Container<T> {
     forEach(fn: (child: T | Container<T>) => void) {
         this.children.forEach((child) => {
             if (child instanceof Container) {
-                (child as Container<T>).forEach(fn);
+                child.forEach(fn);
             } else {
                 fn(child);
             }

@@ -20,8 +20,11 @@ export type CollisionContact = {
 export interface CollisionEvent extends StoreEvent {
     type: string;
     data: {
+        dt?: number;
         cmd: CommandBuffer;
         mainMeta: EntityMeta;
+        mainPos?: Float32Array;
+        mainVel?: Float32Array;
         primary?: CollisionContact;
         secondary?: CollisionContact;
         tertiary?: CollisionContact;

@@ -315,9 +315,45 @@ export class CollisionSystem extends ECSUpdateSystem {
         );
     }
 
+    // private emitCollisionEvent(
+    //     mainEntity: CollisionEntity,
+    //     cmd: CommandBuffer
+    // ) {
+    //     if (this.collisionMap.size > 0) {
+    //         // Sort contacts for each event type by priority (collision ranking)
+    //         this.collisionMap.forEach((contacts, eventType) => {
+    //             contacts.sort((a, b) => {
+    //                 if (Math.abs(b.depth - a.depth) > 0.001)
+    //                     return b.depth - a.depth;
+    //                 if (Math.abs(b.area - a.area) > 0.001)
+    //                     return b.area - a.area;
+    //                 return b.ndv - a.ndv;
+    //             });
+
+    //             const mainMeta: EntityMeta = mainEntity.meta;
+    //             const primary = contacts[0];
+    //             const secondary = contacts[1];
+    //             const tertiary = contacts[2];
+
+    //             // emits the event type
+    //             this.store.emit<CollisionEvent>({
+    //                 type: eventType,
+    //                 data: {
+    //                     cmd,
+    //                     mainMeta,
+    //                     primary,
+    //                     secondary,
+    //                     tertiary,
+    //                 },
+    //             });
+    //         });
+    //     }
+    // }
+
     private emitCollisionEvent(
         mainEntity: CollisionEntity,
-        cmd: CommandBuffer
+        cmd: CommandBuffer,
+        dt: number
     ) {
         if (this.collisionMap.size > 0) {
             // Sort contacts for each event type by priority (collision ranking)
@@ -449,7 +485,7 @@ export class CollisionSystem extends ECSUpdateSystem {
                             }
                         }
 
-                        this.emitCollisionEvent(mainEntity, cmd);
+                        this.emitCollisionEvent(mainEntity, cmd, dt);
                     }
                 }
             );

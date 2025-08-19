@@ -209,7 +209,7 @@ export class Cmath {
     /**
      * easing functions collection
      */
-    static ease = Ease;
+    static readonly ease = Ease;
 }
 
 export default Cmath;

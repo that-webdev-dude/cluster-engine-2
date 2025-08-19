@@ -25,15 +25,18 @@ export class PlayerSystem extends ECSUpdateSystem {
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
+    }
 
-        store.on<CollisionEvent>(
+    prerun(view: View): void {
+        this.store.on<CollisionEvent>(
             "player-zombie-collision",
             (e) => {
                 console.log("zombie collision");
             },
             false
         );
-        store.on<CollisionEvent>(
+
+        this.store.on<CollisionEvent>(
             "player-wall-collision",
             (e) => {
                 const { mainMeta, primary, secondary, tertiary } = e.data;
@@ -91,7 +94,67 @@ export class PlayerSystem extends ECSUpdateSystem {
             },
             false
         );
+
+        // this.store.on<CollisionEvent>(
+        //     "player-wall-collision",
+        //     (e) => {
+        //         const { mainMeta, primary, secondary, tertiary } = e.data;
+        //         if (!primary) return;
+
+        //         // Mark that we're colliding with a wall
+        //         this.isCollidingWithWall = true;
+
+        //         // Store collision normals for input blocking
+        //         this.collisionNormals = [];
+        //         if (primary) this.collisionNormals.push(primary.normal);
+        //         if (secondary) this.collisionNormals.push(secondary.normal);
+        //         if (tertiary) this.collisionNormals.push(tertiary.normal);
+
+        //         // Move the player out of collision using the MTV
+        //         const posSlice = this.currentView?.getSlice(
+        //             mainMeta,
+        //             DESCRIPTORS.Position
+        //         );
+        //         if (posSlice) {
+        //             const { arr, base } = posSlice;
+        //             arr[base + 0] += primary.mtv.x;
+        //             arr[base + 1] += primary.mtv.y;
+        //         }
+
+        //         // Handle velocity correction for sliding with all contacts to prevent jitter
+        //         const velSlice = this.currentView?.getSlice(
+        //             mainMeta,
+        //             DESCRIPTORS.Velocity
+        //         );
+        //         if (velSlice) {
+        //             const { arr: velArr, base: velBase } = velSlice;
+
+        //             // Apply velocity correction for all normals to prevent jitter
+        //             for (const normal of this.collisionNormals) {
+        //                 const vDotN =
+        //                     velArr[velBase + 0] * normal.x +
+        //                     velArr[velBase + 1] * normal.y;
+        //                 if (vDotN < 0) {
+        //                     velArr[velBase + 0] -= vDotN * normal.x;
+        //                     velArr[velBase + 1] -= vDotN * normal.y;
+        //                 }
+        //             }
+        //         }
+
+        //         // Optionally, color feedback (keep this if you want visual feedback)
+        //         const colorSlice = this.currentView?.getSlice(
+        //             mainMeta,
+        //             DESCRIPTORS.Color
+        //         );
+        //         if (colorSlice) {
+        //             const { arr, base } = colorSlice;
+        //             arr[base + 0] = 0;
+        //         }
+        //     },
+        //     false
+        // );
     }
+
     update(view: View, cmd: CommandBuffer, dt: number) {
         // cache the view for this update cycle
         this.currentView = view;
