@@ -4,7 +4,6 @@ import {
     Chunk,
     View,
     Store,
-    Vector,
     Entity,
     UniformGrid,
 } from "../../../cluster";
@@ -12,7 +11,7 @@ import { Component } from "../components";
 import { CollisionEvent, CollisionContact } from "../events";
 import { ComponentType, EntityMeta } from "../../../cluster/types";
 import { BigSparseSet } from "../../../cluster/tools/SparseSet";
-import { AABB } from "../../../cluster/tools/Partitioner";
+import { AABB, AABBTools } from "./AABB";
 
 export interface CollisionPairs {
     main: ComponentType;
@@ -55,7 +54,6 @@ export class CollisionSystem extends ECSUpdateSystem {
         private readonly config?: CollisionPairs[]
     ) {
         super(store);
-
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
     }
@@ -125,12 +123,7 @@ export class CollisionSystem extends ECSUpdateSystem {
         const hw = w * 0.5;
         const hh = h * 0.5;
 
-        const aabb: AABB = {
-            minX: x - hw,
-            minY: y - hh,
-            maxX: x + hw,
-            maxY: y + hh,
-        };
+        const aabb: AABB = AABBTools.create(x, y, w, h);
 
         const entityID = Entity.createMetaID(meta);
 
@@ -208,26 +201,6 @@ export class CollisionSystem extends ECSUpdateSystem {
         const mainAABB = main.aabb;
         const targAABB = target.aabb;
 
-        const overlapX =
-            Math.min(mainAABB.maxX, targAABB.maxX) -
-            Math.max(mainAABB.minX, targAABB.minX);
-        const overlapY =
-            Math.min(mainAABB.maxY, targAABB.maxY) -
-            Math.max(mainAABB.minY, targAABB.minY);
-
-        const useX = Math.abs(overlapX) < Math.abs(overlapY);
-        const overlap = new Vector(overlapX, overlapY);
-        const depth = useX ? overlapX : overlapY;
-        const area = overlapX * overlapY;
-
-        // collision normal
-        const normal = useX
-            ? new Vector(Math.sign(main.x - target.x), 0)
-            : new Vector(0, Math.sign(main.y - target.y));
-
-        // MTV to push 'main' out of 'target'
-        const mtv = new Vector(normal.x * depth, normal.y * depth);
-
         // Velocity along normal: prefer explicit Velocity; else derive from PreviousPosition
         let vx = 0,
             vy = 0;
@@ -242,18 +215,19 @@ export class CollisionSystem extends ECSUpdateSystem {
             vx = (main.x - prev[row * 2 + 0]) / dt;
             vy = (main.y - prev[row * 2 + 1]) / dt;
         }
-        const ndv = normal.x * vx + normal.y * vy;
+
+        const collisionAttributes = AABBTools.getCollisionAttributes(
+            mainAABB,
+            targAABB,
+            { x: vx, y: vy } // pass the targ vels for relative velocity computations
+        );
+
+        if (!collisionAttributes) throw new Error("the two aabb don't overlap");
 
         return {
             otherMeta: target.meta,
             otherAABB: targAABB,
-            overlap,
-            normal,
-            depth,
-            mtv,
-            ndv,
-            area,
-            axis: useX ? "x" : "y",
+            ...collisionAttributes,
         };
     }
 
@@ -315,41 +289,6 @@ export class CollisionSystem extends ECSUpdateSystem {
             mainAABB.maxY > targAABB.minY
         );
     }
-
-    // private emitCollisionEvent(
-    //     mainEntity: CollisionEntity,
-    //     cmd: CommandBuffer
-    // ) {
-    //     if (this.collisionMap.size > 0) {
-    //         // Sort contacts for each event type by priority (collision ranking)
-    //         this.collisionMap.forEach((contacts, eventType) => {
-    //             contacts.sort((a, b) => {
-    //                 if (Math.abs(b.depth - a.depth) > 0.001)
-    //                     return b.depth - a.depth;
-    //                 if (Math.abs(b.area - a.area) > 0.001)
-    //                     return b.area - a.area;
-    //                 return b.ndv - a.ndv;
-    //             });
-
-    //             const mainMeta: EntityMeta = mainEntity.meta;
-    //             const primary = contacts[0];
-    //             const secondary = contacts[1];
-    //             const tertiary = contacts[2];
-
-    //             // emits the event type
-    //             this.store.emit<CollisionEvent>({
-    //                 type: eventType,
-    //                 data: {
-    //                     cmd,
-    //                     mainMeta,
-    //                     primary,
-    //                     secondary,
-    //                     tertiary,
-    //                 },
-    //             });
-    //         });
-    //     }
-    // }
 
     private emitCollisionEvent(
         mainEntity: CollisionEntity,

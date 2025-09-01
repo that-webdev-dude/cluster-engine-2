@@ -8,9 +8,6 @@ import {
 import { CollisionEvent } from "../events";
 import { Component, DESCRIPTORS } from "../components";
 
-import { moveAndSlide } from "../../../cluster/tools/aabb";
-import { AABB } from "../../../cluster/tools/Partitioner";
-
 export class PlayerSystem extends ECSUpdateSystem {
     private readonly worldW: number = 0;
     private readonly worldH: number = 0;
@@ -18,8 +15,8 @@ export class PlayerSystem extends ECSUpdateSystem {
     private readonly displayH: number = 0;
 
     // private currentView: View | undefined = undefined;
-    private isCollidingWithWall: boolean = false;
-    private collisionNormals: Array<{ x: number; y: number }> = [];
+    // private isCollidingWithWall: boolean = false;
+    // private collisionNormals: Array<{ x: number; y: number }> = [];
 
     constructor(readonly store: Store) {
         super(store);
@@ -42,140 +39,45 @@ export class PlayerSystem extends ECSUpdateSystem {
         this.store.on<CollisionEvent>(
             "player-wall-collision",
             (e) => {
-                const {
-                    mainMeta,
-                    mainAABB,
-                    view,
-                    dt,
-                    primary,
-                    secondary,
-                    tertiary,
-                } = e.data;
+                const { mainMeta, view, primary, secondary, tertiary } = e.data;
                 if (!primary || !view) return;
 
-                let positionAABB = mainAABB;
+                // Move the player out of collision using the MTV
+                const posSlice = view.getSlice(mainMeta, DESCRIPTORS.Position);
+                if (posSlice) {
+                    const { arr, base } = posSlice;
+                    arr[base + 0] += primary.mtv.x;
+                    arr[base + 1] += primary.mtv.y;
+                }
 
-                let velocity = {
-                    x: 0,
-                    y: 0,
-                };
+                // Prepare contacts (dedupe by axis)
+                const contacts = [primary];
+                if (secondary) contacts.push(secondary);
+                if (tertiary) contacts.push(tertiary);
+
                 const velSlice = view.getSlice(mainMeta, DESCRIPTORS.Velocity);
                 if (velSlice) {
                     const { arr, base } = velSlice;
-                    velocity.x = arr[base + 0];
-                    velocity.y = arr[base + 1];
+                    let vx = arr[base + 0];
+                    let vy = arr[base + 1];
+
+                    for (const c of contacts) {
+                        const nx = c.normal.x;
+                        const ny = c.normal.y;
+                        const ndv = vx * nx + vy * ny; // velocity along normal (after previous projections)
+                        if (ndv > 0) {
+                            // subtract only if moving into the surface
+                            vx -= ndv * nx;
+                            vy -= ndv * ny;
+                        }
+                    }
+
+                    arr[base + 0] = 0;
+                    arr[base + 1] = 0;
                 }
-
-                let primAABB = primary.otherAABB;
-                let secAABB = secondary?.otherAABB;
-                let terAABB = tertiary?.otherAABB;
-
-                const obstacles = [primAABB];
-
-                moveAndSlide(positionAABB, velocity, dt, obstacles);
-
-                // // Mark that we're colliding with a wall
-                // this.isCollidingWithWall = true;
-
-                // // Store collision normals for input blocking
-                // this.collisionNormals = [];
-                // if (primary) this.collisionNormals.push(primary.normal);
-                // if (secondary) this.collisionNormals.push(secondary.normal);
-                // if (tertiary) this.collisionNormals.push(tertiary.normal);
-
-                // // Move the player out of collision using the MTV
-                // const posSlice = view.getSlice(mainMeta, DESCRIPTORS.Position);
-                // if (posSlice) {
-                //     const { arr, base } = posSlice;
-                //     arr[base + 0] += primary.mtv.x;
-                //     arr[base + 1] += primary.mtv.y;
-                // }
-
-                // // Handle velocity correction for sliding with all contacts to prevent jitter
-                // const velSlice = view.getSlice(mainMeta, DESCRIPTORS.Velocity);
-                // if (velSlice) {
-                //     const { arr: velArr, base: velBase } = velSlice;
-
-                //     // Apply velocity correction for all normals to prevent jitter
-                //     for (const normal of this.collisionNormals) {
-                //         const vDotN =
-                //             velArr[velBase + 0] * normal.x +
-                //             velArr[velBase + 1] * normal.y;
-                //         if (vDotN < 0) {
-                //             velArr[velBase + 0] -= vDotN * normal.x;
-                //             velArr[velBase + 1] -= vDotN * normal.y;
-                //         }
-                //     }
-                // }
-
-                // // Optionally, color feedback (keep this if you want visual feedback)
-                // const colorSlice = view.getSlice(mainMeta, DESCRIPTORS.Color);
-                // if (colorSlice) {
-                //     const { arr, base } = colorSlice;
-                //     arr[base + 0] = 0;
-                // }
             },
             false
         );
-
-        // this.store.on<CollisionEvent>(
-        //     "player-wall-collision",
-        //     (e) => {
-        //         const { mainMeta, primary, secondary, tertiary } = e.data;
-        //         if (!primary) return;
-
-        //         // Mark that we're colliding with a wall
-        //         this.isCollidingWithWall = true;
-
-        //         // Store collision normals for input blocking
-        //         this.collisionNormals = [];
-        //         if (primary) this.collisionNormals.push(primary.normal);
-        //         if (secondary) this.collisionNormals.push(secondary.normal);
-        //         if (tertiary) this.collisionNormals.push(tertiary.normal);
-
-        //         // Move the player out of collision using the MTV
-        //         const posSlice = this.currentView?.getSlice(
-        //             mainMeta,
-        //             DESCRIPTORS.Position
-        //         );
-        //         if (posSlice) {
-        //             const { arr, base } = posSlice;
-        //             arr[base + 0] += primary.mtv.x;
-        //             arr[base + 1] += primary.mtv.y;
-        //         }
-
-        //         // Handle velocity correction for sliding with all contacts to prevent jitter
-        //         const velSlice = this.currentView?.getSlice(
-        //             mainMeta,
-        //             DESCRIPTORS.Velocity
-        //         );
-        //         if (velSlice) {
-        //             const { arr: velArr, base: velBase } = velSlice;
-
-        //             // Apply velocity correction for all normals to prevent jitter
-        //             for (const normal of this.collisionNormals) {
-        //                 const vDotN =
-        //                     velArr[velBase + 0] * normal.x +
-        //                     velArr[velBase + 1] * normal.y;
-        //                 if (vDotN < 0) {
-        //                     velArr[velBase + 0] -= vDotN * normal.x;
-        //                     velArr[velBase + 1] -= vDotN * normal.y;
-        //                 }
-        //             }
-        //         }
-
-        //         // Optionally, color feedback (keep this if you want visual feedback)
-        //         const colorSlice = this.currentView?.getSlice(
-        //             mainMeta,
-        //             DESCRIPTORS.Color
-        //         );
-        //         if (colorSlice) {
-        //             const { arr, base } = colorSlice;
-        //             arr[base + 0] = 0;
-        //         }
-        //     },
-        //     false
-        // );
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
@@ -212,33 +114,29 @@ export class PlayerSystem extends ECSUpdateSystem {
                     let finalInputX = inputX;
                     let finalInputY = inputY;
 
-                    if (this.isCollidingWithWall) {
-                        // Check if input would move into any collision normal
-                        for (const normal of this.collisionNormals) {
-                            const inputDotNormal =
-                                inputX * normal.x + inputY * normal.y;
-                            if (inputDotNormal < 0) {
-                                // Input is moving into the wall, block it
-                                if (Math.abs(normal.x) > Math.abs(normal.y)) {
-                                    // Wall is more horizontal, block X input
-                                    finalInputX = 0;
-                                } else {
-                                    // Wall is more vertical, block Y input
-                                    finalInputY = 0;
-                                }
-                            }
-                        }
-                    }
+                    // if (
+                    //     this.isCollidingWithWall &&
+                    //     this.collisionNormals.length
+                    // ) {
+                    //     for (const normal of this.collisionNormals) {
+                    //         const dot = inputX * normal.x + inputY * normal.y;
+                    //         if (dot > 0) {
+                    //             // attempting to move further into wall; remove normal component
+                    //             finalInputX -= dot * normal.x;
+                    //             finalInputY -= dot * normal.y;
+                    //         }
+                    //     }
+                    // }
 
                     // Update velocity based on filtered input
                     vel[i * 2 + 0] = finalInputX * 200;
                     vel[i * 2 + 1] = finalInputY * 200;
 
                     // Reset collision state if we're not moving into walls
-                    if (finalInputX === 0 && finalInputY === 0) {
-                        this.isCollidingWithWall = false;
-                        this.collisionNormals = [];
-                    }
+                    // if (finalInputX === 0 && finalInputY === 0) {
+                    //     this.isCollidingWithWall = false;
+                    //     this.collisionNormals = [];
+                    // }
 
                     // adjust the player's facing direction based on input
                     // 1. Center camera on player

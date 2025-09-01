@@ -120,7 +120,6 @@ export class SpriteRendererSystem extends ECSRenderSystem {
                         posX =
                             prevPos[i * 2 + 0] +
                             (currPos[i * 2 + 0] - prevPos[i * 2 + 0]) * alpha;
-
                         posY =
                             prevPos[i * 2 + 1] +
                             (currPos[i * 2 + 1] - prevPos[i * 2 + 1]) * alpha;
