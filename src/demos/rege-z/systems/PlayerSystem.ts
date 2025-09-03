@@ -31,7 +31,7 @@ export class PlayerSystem extends ECSUpdateSystem {
         this.store.on<CollisionEvent>(
             "player-zombie-collision",
             (e) => {
-                console.log("zombie collision");
+                // console.log("zombie collision");
             },
             false
         );

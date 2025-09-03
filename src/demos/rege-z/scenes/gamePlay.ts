@@ -25,9 +25,9 @@ export function createGamePlay() {
 
     scene.createEntity(weaponArchetype, getWeaponComponents());
 
-    for (let i = 0; i < 10; i++) {
-        scene.createEntity(zombieArchetype, getZombieComponents());
-    }
+    // for (let i = 0; i < 10; i++) {
+    //     scene.createEntity(zombieArchetype, getZombieComponents());
+    // }
 
     scene.createEntity(cameraArchetype, getCameraComponents());
 

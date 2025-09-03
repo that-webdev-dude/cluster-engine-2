@@ -240,8 +240,10 @@ export class CollisionSystem extends ECSUpdateSystem {
         if (this.collisionActiveRect !== undefined) {
             const { aabb } = entity;
 
-            const aX = this.collisionActiveRect.position[0];
-            const aY = this.collisionActiveRect.position[1];
+            const aX =
+                this.collisionActiveRect.position[0] - this.displayW * 0.5;
+            const aY =
+                this.collisionActiveRect.position[1] - this.displayH * 0.5;
             const aW = this.collisionActiveRect.size[0];
             const aH = this.collisionActiveRect.size[1];
 

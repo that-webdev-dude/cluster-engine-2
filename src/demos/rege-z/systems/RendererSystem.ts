@@ -6,6 +6,7 @@ import {
     Display,
     View,
     Chunk,
+    Store,
     SpriteData,
     SpritePipeline,
     ECSRenderSystem,
@@ -25,6 +26,34 @@ export class SpriteRendererSystem extends ECSRenderSystem {
     private readonly uvRects = new Float32Array(Chunk.DEFAULT_CAPACITY * 4);
 
     private cameraPos: [number, number] = [0, 0];
+
+    constructor(store: Store) {
+        super(store);
+
+        // DEBUG CANVAS OVERLAY
+        const dbCanvas = document.createElement("canvas");
+        dbCanvas.width = this.renderer.getCanvas().width;
+        dbCanvas.height = this.renderer.getCanvas().height;
+        dbCanvas.style.zIndex = "9999";
+        document.querySelector("#app")?.appendChild(dbCanvas);
+
+        const dbContext = dbCanvas.getContext("2d");
+        const cx = Display.getInstance().width / 2;
+        const cy = Display.getInstance().height / 2;
+        if (dbContext) {
+            // draw a cross
+            dbContext.strokeStyle = "red";
+            dbContext.lineWidth = 1;
+
+            dbContext.beginPath();
+            dbContext.moveTo(cx - 4, cy);
+            dbContext.lineTo(cx + 4, cy);
+            dbContext.moveTo(cx, cy - 4);
+            dbContext.lineTo(cx, cy + 4);
+            dbContext.stroke();
+        }
+        // DEBUG CANVAS OVERLAY
+    }
 
     render(view: View, alpha: number) {
         const gl = this.renderer.gl;
@@ -46,6 +75,7 @@ export class SpriteRendererSystem extends ECSRenderSystem {
         view.forEachChunkWith([Component.Camera], (chunk) => {
             const cur = chunk.views.Position;
             const prev = chunk.views.PreviousPosition;
+            const size = chunk.views.Size;
 
             if (!prev) {
                 // no PreviousPosition, just use current
@@ -58,8 +88,9 @@ export class SpriteRendererSystem extends ECSRenderSystem {
             const interpolatedX = prev[0] + (cur[0] - prev[0]) * alpha;
             const interpolatedY = prev[1] + (cur[1] - prev[1]) * alpha;
 
-            this.cameraPos[0] = Math.floor(interpolatedX);
-            this.cameraPos[1] = Math.floor(interpolatedY);
+            // should I now center the camera?
+            this.cameraPos[0] = Math.round(interpolatedX - size[0] * 0.5);
+            this.cameraPos[1] = Math.round(interpolatedY - size[1] * 0.5);
         });
 
         // (2) draw all entities with a Sprite component

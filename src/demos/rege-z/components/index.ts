@@ -12,6 +12,7 @@ export enum Component {
     Lives,
     Player,
     Bullet,
+    // Camera,
     Camera,
     Sprite,
     Animation,
@@ -116,12 +117,25 @@ const DESCRIPTORS = {
         buffer: Uint8Array,
         default: [1], // means "is Bullet"
     },
+    // Camera: {
+    //     type: Component.Camera,
+    //     name: "Camera",
+    //     count: 3,
+    //     buffer: Uint8Array,
+    //     default: [1, 0, 0], // enabled? - shakeOffsetX - shakeOffsetY
+    // },
     Camera: {
         type: Component.Camera,
         name: "Camera",
-        count: 3,
-        buffer: Uint8Array,
-        default: [1, 0, 0], // enabled? - shakeOffsetX - shakeOffsetY
+        count: 7,
+        buffer: Float32Array,
+        // prettier-ignore
+        default: [
+            0, 0, // vx, vy
+            0, 0, // tw, th,
+            0, 0, // omega
+            0,    // offset
+        ],
     },
     Sprite: {
         type: Component.Sprite,

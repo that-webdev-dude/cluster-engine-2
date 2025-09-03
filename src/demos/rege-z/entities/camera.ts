@@ -5,22 +5,28 @@ import { ComponentValueMap } from "../../../cluster/types";
 
 export const cameraSchema = Archetype.register(
     DESCRIPTORS.Camera,
-    DESCRIPTORS.PreviousPosition,
     DESCRIPTORS.Position,
     DESCRIPTORS.Size,
-    DESCRIPTORS.Speed
+    DESCRIPTORS.PreviousPosition
 );
 
 export function getCameraComponents(): ComponentValueMap {
-    const displayW = store.get("displayW");
-    const displayH = store.get("displayH");
+    const dw = store.get("displayW");
+    const dh = store.get("displayH");
+    const ww = store.get("worldW");
+    const wh = store.get("worldH");
 
     return {
-        [Component.Camera]: [1, 0, 0],
-        [Component.PreviousPosition]: [0, 0],
-        [Component.Position]: [0, 0],
-        [Component.Size]: [displayW, displayH],
-        [Component.Speed]: [100],
+        // prettier-ignore
+        [Component.Camera]: [
+            0, 0,       // vx, vy,
+            0, 0,       // tw, th,
+            6.5, 5.0,   // omega
+            0,          // offset
+        ],
+        [Component.PreviousPosition]: [ww / 2, wh / 2],
+        [Component.Position]: [ww / 2, wh / 2],
+        [Component.Size]: [dw, dh],
     } as ComponentValueMap;
 }
 

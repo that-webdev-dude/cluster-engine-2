@@ -9,17 +9,12 @@ import { Component, DESCRIPTORS } from "../components";
 import { EntityMeta, Buffer } from "../../../cluster/types";
 
 export class CameraSystem extends ECSUpdateSystem {
-    private shakeTime: number = 0;
-    private shakeSeedY: number = 0;
-    private shakeSeedX: number = 0;
-    private shakeElapsed: number = 0;
-    private readonly shakeDuration = 0.5;
-    private readonly maxShakeIntensity = 2;
-
     private basePosition: [number, number] = [0, 0];
     private subjectPosition: Buffer | undefined = undefined;
     private readonly worldW: number;
     private readonly worldH: number;
+    private readonly displayW: number;
+    private readonly displayH: number;
 
     constructor(
         readonly store: Store,
@@ -29,97 +24,71 @@ export class CameraSystem extends ECSUpdateSystem {
 
         this.worldW = store.get("worldW");
         this.worldH = store.get("worldH");
+        this.displayW = store.get("displayW");
+        this.displayH = store.get("displayH");
     }
 
-    private startShake(pos: Float32Array) {
-        this.shakeTime = this.shakeDuration;
-        this.shakeElapsed = 0;
-        this.shakeSeedX = Math.random() * 1000;
-        this.shakeSeedY = Math.random() * 1000;
-        this.basePosition[0] = pos[0];
-        this.basePosition[1] = pos[1];
-    }
-
-    private smoothNoiseX(t: number): number {
-        return Cmath.randf(-this.maxShakeIntensity, this.maxShakeIntensity);
-    }
-
-    private smoothNoiseY(t: number): number {
-        return Cmath.randf(-this.maxShakeIntensity, this.maxShakeIntensity);
-    }
-
-    private easeOutExpo(t: number): number {
-        return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-    }
-
-    update(view: View, cmd: CommandBuffer, dt: number) {
+    prerun(view: View): void {
         if (this.subject && !this.subjectPosition) {
             const slice = view.getSlice(this.subject, DESCRIPTORS.Position);
             if (slice !== undefined) {
                 this.subjectPosition = slice.arr;
                 return;
             }
-
-            this.subjectPosition = new Float32Array(2);
         }
+    }
 
-        view.forEachChunkWith(
-            [
-                Component.Camera,
-                Component.PreviousPosition,
-                Component.Position,
-                Component.Size,
-            ],
-            (chunk) => {
-                const pos = chunk.views.Position;
-                const prev = chunk.views.PreviousPosition;
-                const size = chunk.views.Size;
+    update(view: View, cmd: CommandBuffer, dt: number) {
+        if (this.subject && !this.subjectPosition) return; // skip the update if there's no subject
 
-                prev[0] = pos[0];
-                prev[1] = pos[1];
+        view.forEachChunkWith([Component.Camera], (chunk) => {
+            const camera = chunk.views.Camera;
+            const prev = chunk.views.PreviousPosition;
+            const pos = chunk.views.Position;
 
-                // camera pan
-                // const kx = Keyboard.x();
-                // const ky = Keyboard.y();
-                // this.basePosition[0] -= kx * speed * dt;
-                // this.basePosition[1] -= ky * speed * dt;
+            // prettier-ignore
+            const [
+                vx, vy,
+                tw, ty, 
+                ox, oy,
+                offset
+            ] = camera;
 
-                // Clamp the camera position to the world bounds
-                this.basePosition[0] = 0;
-                this.basePosition[1] = 0;
-                if (this.subjectPosition) {
-                    this.basePosition[0] = Cmath.clamp(
-                        this.subjectPosition[0] - size[0] / 2,
-                        0,
-                        this.worldW - size[0]
-                    );
-                    this.basePosition[1] = Cmath.clamp(
-                        this.subjectPosition[1] - size[1] / 2,
-                        0,
-                        this.worldH - size[1]
-                    );
-                }
+            // compute acceleration
+            const ax =
+                -2 * ox * vx - ox * ox * (pos[0] - this.subjectPosition![0]);
+            const ay =
+                -2 * oy * vy - oy * oy * (pos[1] - this.subjectPosition![1]);
 
-                pos[0] = this.basePosition[0];
-                pos[1] = this.basePosition[1];
+            // backup previous position
+            prev[0] = pos[0];
+            prev[1] = pos[1];
 
-                if (this.shakeTime > 0) {
-                    this.shakeTime -= dt;
-                    this.shakeElapsed += dt;
+            // integrate velocity back into the component
+            camera[0] = vx + ax * dt;
+            camera[1] = vy + ay * dt;
 
-                    const progress = this.shakeElapsed / this.shakeDuration;
-                    const decay = this.easeOutExpo(1 - progress); // smoother falloff
+            // now advance position using the UPDATED velocities
+            pos[0] += camera[0] * dt;
+            pos[1] += camera[1] * dt;
 
-                    const t = this.shakeElapsed;
-                    const dx =
-                        this.smoothNoiseX(t) * this.maxShakeIntensity * decay;
-                    const dy =
-                        this.smoothNoiseY(t) * this.maxShakeIntensity * decay;
+            const halfW = this.displayW * 0.5;
+            const halfH = this.displayH * 0.5;
 
-                    pos[0] = this.basePosition[0] - dx;
-                    pos[1] = this.basePosition[1] - dy;
-                }
+            // Handle worlds smaller than the viewport (avoid inverted bounds).
+            if (this.worldW <= this.displayW) {
+                pos[0] = this.worldW * 0.5; // lock center
+                camera[0] = 0; // zero x-velocity so it doesn't fight the clamp
+            } else {
+                pos[0] = Cmath.clamp(pos[0], halfW, this.worldW - halfW);
             }
-        );
+
+            if (this.worldH <= this.displayH) {
+                pos[1] = this.worldH * 0.5;
+                camera[1] = 0;
+            } else {
+                pos[1] = Cmath.clamp(pos[1], halfH, this.worldH - halfH);
+            }
+        });
     }
 }
