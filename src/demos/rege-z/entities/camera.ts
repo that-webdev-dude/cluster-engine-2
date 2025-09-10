@@ -20,9 +20,10 @@ export function getCameraComponents(): ComponentValueMap {
         // prettier-ignore
         [Component.Camera]: [
             0, 0,       // vx, vy,
-            0, 0,       // tw, th,
-            6.5, 5.0,   // omega
-            0,          // offset
+            6, 4,     // omega
+            0, 0,       // look ahead x and y
+            128,         // look ahead maxOffset
+            0.1        // look ahead decay
         ],
         [Component.PreviousPosition]: [ww / 2, wh / 2],
         [Component.Position]: [ww / 2, wh / 2],

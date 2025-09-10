@@ -31,27 +31,30 @@ export class SpriteRendererSystem extends ECSRenderSystem {
         super(store);
 
         // DEBUG CANVAS OVERLAY
-        const dbCanvas = document.createElement("canvas");
-        dbCanvas.width = this.renderer.getCanvas().width;
-        dbCanvas.height = this.renderer.getCanvas().height;
-        dbCanvas.style.zIndex = "9999";
-        document.querySelector("#app")?.appendChild(dbCanvas);
+        // const dbCanvas = document.createElement("canvas");
+        // dbCanvas.width = Display.getInstance().cssWidth;
+        // dbCanvas.height = Display.getInstance().cssHeight;
+        // dbCanvas.style.zIndex = "9999";
+        // dbCanvas.style.border = "4px solid red";
+        // dbCanvas.style.pointerEvents = "none";
+        // document.querySelector("#app")?.appendChild(dbCanvas);
 
-        const dbContext = dbCanvas.getContext("2d");
-        const cx = Display.getInstance().width / 2;
-        const cy = Display.getInstance().height / 2;
-        if (dbContext) {
-            // draw a cross
-            dbContext.strokeStyle = "red";
-            dbContext.lineWidth = 1;
+        // const dbContext = dbCanvas.getContext("2d");
+        // const cx = dbCanvas.width / 2;
+        // const cy = dbCanvas.height / 2;
 
-            dbContext.beginPath();
-            dbContext.moveTo(cx - 4, cy);
-            dbContext.lineTo(cx + 4, cy);
-            dbContext.moveTo(cx, cy - 4);
-            dbContext.lineTo(cx, cy + 4);
-            dbContext.stroke();
-        }
+        // if (dbContext) {
+        //     // draw a cross
+        //     dbContext.strokeStyle = "red";
+        //     dbContext.lineWidth = 1;
+
+        //     dbContext.beginPath();
+        //     dbContext.moveTo(cx - 4, cy);
+        //     dbContext.lineTo(cx + 4, cy);
+        //     dbContext.moveTo(cx, cy - 4);
+        //     dbContext.lineTo(cx, cy + 4);
+        //     dbContext.stroke();
+        // }
         // DEBUG CANVAS OVERLAY
     }
 
