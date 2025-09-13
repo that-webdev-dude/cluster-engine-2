@@ -58,6 +58,7 @@ export class CameraSystem extends ECSUpdateSystem {
         this.dbCanvas = dbCanvas;
     }
 
+    // TODO: can be renamed to get subject slice
     private getSubjectProperty(
         view: View,
         desc: ComponentDescriptor
