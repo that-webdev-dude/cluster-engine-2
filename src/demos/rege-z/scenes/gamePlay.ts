@@ -36,9 +36,9 @@ export function createGamePlay() {
     scene.useECSSystem("update", new PlayerSystem(store));
     scene.useECSSystem("update", new WeaponSystem(store, playerMeta));
     scene.useECSSystem("update", new ZombieSystem(store, playerMeta));
-    scene.useECSSystem("update", new MotionSystem(store));
     scene.useECSSystem("update", new AnimationSystem(store));
     scene.useECSSystem("update", new CameraSystem(store, playerMeta));
+    scene.useECSSystem("update", new MotionSystem(store));
     scene.useECSSystem(
         "update",
         new CollisionSystem(store, [

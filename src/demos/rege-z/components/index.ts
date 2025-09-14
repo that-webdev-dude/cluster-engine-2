@@ -12,6 +12,7 @@ export enum Component {
     Lives,
     Player,
     Bullet,
+    Grounded,
     // Camera,
     Camera,
     Sprite,
@@ -116,6 +117,13 @@ const DESCRIPTORS = {
         count: 1,
         buffer: Uint8Array,
         default: [1], // means "is Bullet"
+    },
+    Grounded: {
+        type: Component.Grounded,
+        name: "Grounded",
+        count: 0,
+        buffer: Uint8Array,
+        default: [0], // 0 is not anchored to the ground - 1 is anchored to the ground
     },
     Camera: {
         type: Component.Camera,

@@ -5,16 +5,27 @@ import {
     View,
     Store,
 } from "../../../cluster";
-import { Component, DESCRIPTORS } from "../components";
 import {
     EntityMeta,
     Buffer,
     ComponentDescriptor,
 } from "../../../cluster/types";
+import { Component, DESCRIPTORS } from "../components";
+
+enum CameraIndex {
+    VELOCITY_X = 0,
+    VELOCITY_Y = 1,
+    SPRING_FRQ_X = 2, // THIS GOES IN SETTINGS
+    SPRING_FRQ_Y = 3, // THIS GOES IN SETTINGS
+    LOOK_AHEAD_X = 4, // THIS GOES IN SETTINGS
+    LOOK_AHEAD_Y = 5, // THIS GOES IN SETTINGS
+}
 
 export class CameraSystem extends ECSUpdateSystem {
     private subjectPosition: Buffer | undefined = undefined;
     private subjectVelocity: Buffer | undefined = undefined;
+    private subjectAirborne: Buffer | undefined = undefined;
+
     private readonly worldW: number;
     private readonly worldH: number;
     private readonly displayW: number;
@@ -31,6 +42,10 @@ export class CameraSystem extends ECSUpdateSystem {
     private readonly lookAheadGainPerSec: number = 0.2; // Controls how far ahead the camera looks based on player velocity. Typical values: 0.2–0.35 (seconds)
     private readonly lookAheadMaxOffset: number = 96; // Hard limit for how far the camera can look ahead (per axis or shared). Typical values: 64–128 px (2–4 tiles)
     private readonly lookAheadTau: number = 0.08; // Smoothing factor using EMA (exponential moving average). Typical values: 0.08–0.15 seconds
+    private readonly lookAheadDeadBandEnter = 8; // px/s to disable
+    private readonly lookAheadDeadBandExit = 10; // px/s to re‑enable
+    private lookAheadXActive = false;
+    private lookAheadYActive = false;
 
     // debug
     private readonly dbContext: CanvasRenderingContext2D | null;
@@ -59,7 +74,7 @@ export class CameraSystem extends ECSUpdateSystem {
     }
 
     // TODO: can be renamed to get subject slice
-    private getSubjectProperty(
+    private getSubjectWSlice(
         view: View,
         desc: ComponentDescriptor
     ): Buffer | undefined {
@@ -73,26 +88,32 @@ export class CameraSystem extends ECSUpdateSystem {
     }
 
     public prerun(view: View): void {
-        this.subjectPosition = this.getSubjectProperty(
+        this.subjectPosition = this.getSubjectWSlice(
             view,
             DESCRIPTORS.Position
         );
-        this.subjectVelocity = this.getSubjectProperty(
+        this.subjectVelocity = this.getSubjectWSlice(
             view,
             DESCRIPTORS.Velocity
         );
+        // this.subjectAirborne = this.getSubjectWSlice(
+        //     view,
+        //     DESCRIPTORS.Airborne / Jumping
+        // );
     }
 
-    public updateDeadZonePosition(pos: Buffer) {
+    public updateDeadZonePosition(
+        pos: Buffer,
+        halfW: number,
+        halfH: number,
+        deadZoneHalfW: number,
+        deadZoneHalfH: number
+    ) {
         if (!this.subjectPosition) return;
 
         const [subjectPositionX, subjectPositionY] = this.subjectPosition;
         const deadZoneDesiredX = subjectPositionX - pos[0];
         const deadZoneDesiredY = subjectPositionY - pos[1];
-        const deadZoneW = this.displayW * this.deadZoneWPerc;
-        const deadZoneH = this.displayH * this.deadZoneHPerc;
-        const deadZoneHalfW = deadZoneW * 0.5;
-        const deadZoneHalfH = deadZoneH * 0.5;
         this.deadZoneX = 0;
         this.deadZoneY = 0;
         if (
@@ -109,11 +130,38 @@ export class CameraSystem extends ECSUpdateSystem {
                 subjectPositionY -
                 Cmath.clamp(deadZoneDesiredY, -deadZoneHalfH, deadZoneHalfH);
         }
+
+        // After computing deadZoneX/Y:
+        this.deadZoneX = Cmath.clamp(
+            this.deadZoneX,
+            halfW,
+            this.worldW - halfW
+        );
+        this.deadZoneY = Cmath.clamp(
+            this.deadZoneY,
+            halfH,
+            this.worldH - halfH
+        );
     }
 
     public update(view: View, cmd: CommandBuffer, dt: number) {
         if (this.subject && (!this.subjectPosition || !this.subjectVelocity))
             return;
+
+        // Precompute reachable camera center bounds
+        const halfW = this.displayW * 0.5;
+        const halfH = this.displayH * 0.5;
+        const worldW = this.worldW;
+        const worldH = this.worldH;
+        const minX = halfW;
+        const maxX = worldW - halfW;
+        const minY = halfH;
+        const maxY = worldH - halfH;
+        // per camera constants
+        const deadZoneW = this.displayW * this.deadZoneWPerc;
+        const deadZoneH = this.displayH * this.deadZoneHPerc;
+        const deadZoneHalfW = deadZoneW * 0.5;
+        const deadZoneHalfH = deadZoneH * 0.5;
 
         view.forEachChunkWith([Component.Camera], (chunk) => {
             const camera = chunk.views.Camera;
@@ -134,94 +182,111 @@ export class CameraSystem extends ECSUpdateSystem {
             const [subjectVelocityX, subjectVelocityY] = this.subjectVelocity!;
 
             // look ahead offsets
-            const vx_s =
-                Math.abs(subjectVelocityX) > 0 && dt > 0
-                    ? subjectVelocityX / dt // if vel is px/frame
-                    : subjectVelocityX;
-            const vy_s =
-                Math.abs(subjectVelocityY) > 0 && dt > 0
-                    ? subjectVelocityY / dt // if vel is px/frame
-                    : subjectVelocityY;
-            let rawLookAheadX = Cmath.clamp(
-                this.lookAheadGainPerSec * vx_s,
-                -this.lookAheadMaxOffset,
-                this.lookAheadMaxOffset
-            );
-            let rawLookAheadY = Cmath.clamp(
-                this.lookAheadGainPerSec * vy_s,
-                -this.lookAheadMaxOffset,
-                this.lookAheadMaxOffset
-            );
+            const vx_s = subjectVelocityX;
+            const vy_s = subjectVelocityY;
 
-            if (Math.abs(vx_s) <= this.lookAheadVelocityDeadBand)
-                rawLookAheadX = 0;
-            if (Math.abs(vy_s) <= this.lookAheadVelocityDeadBand)
-                rawLookAheadY = 0;
+            if (
+                !this.lookAheadXActive &&
+                Math.abs(vx_s) > this.lookAheadDeadBandExit
+            ) {
+                this.lookAheadXActive = true;
+            }
+            if (
+                this.lookAheadXActive &&
+                Math.abs(vx_s) < this.lookAheadDeadBandEnter
+            ) {
+                this.lookAheadXActive = false;
+            }
+            let rawLookAheadX = this.lookAheadXActive
+                ? Cmath.clamp(
+                      this.lookAheadGainPerSec * vx_s,
+                      -this.lookAheadMaxOffset,
+                      this.lookAheadMaxOffset
+                  )
+                : 0;
 
-            const deltaTime = Math.min(dt, 1 / 30);
-            const alpha = 1 - Math.exp(-deltaTime / this.lookAheadTau);
+            if (
+                !this.lookAheadYActive &&
+                Math.abs(vy_s) > this.lookAheadDeadBandExit
+            ) {
+                this.lookAheadYActive = true;
+            }
+            if (
+                this.lookAheadYActive &&
+                Math.abs(vy_s) < this.lookAheadDeadBandEnter
+            ) {
+                this.lookAheadYActive = false;
+            }
+            let rawLookAheadY = this.lookAheadYActive
+                ? Cmath.clamp(
+                      this.lookAheadGainPerSec * vy_s,
+                      -this.lookAheadMaxOffset,
+                      this.lookAheadMaxOffset
+                  )
+                : 0;
+
+            // lookahead should be disabled if subject is airborne
+            const isAirborne = this.subjectAirborne ?? false;
+            if (isAirborne) lookAheadY *= 0.0;
+
+            const alpha = 1 - Math.exp(-dt / this.lookAheadTau);
             lookAheadX += alpha * (rawLookAheadX - lookAheadX);
             lookAheadY += alpha * (rawLookAheadY - lookAheadY);
 
-            camera[4] = lookAheadX;
-            camera[5] = lookAheadY;
+            camera[CameraIndex.LOOK_AHEAD_X] = lookAheadX;
+            camera[CameraIndex.LOOK_AHEAD_Y] = lookAheadY;
 
             // Many platformers disable or reduce look‑ahead in Y while jumping/falling to avoid seasickness. Keep X always on; set lookAheadY = 0 initially
             // Dash: temporarily raise L (e.g., +50%) and/or k for 250–350 ms from dash start so the camera leads more
             // Aiming: if you have an aim vector or mouse, bias look‑ahead toward aim direction, but clamp with the same L
 
-            this.updateDeadZonePosition(pos);
+            this.updateDeadZonePosition(
+                pos,
+                halfW,
+                halfH,
+                deadZoneHalfW,
+                deadZoneHalfH
+            );
 
             // add the look ahead to the dead zone
             this.deadZoneX += lookAheadX;
             this.deadZoneY += lookAheadY;
 
-            // spring: compute acceleration (accounts for a soft dead zone)
+            // …after updateDeadZonePosition(pos):
+            let targetX = this.deadZoneX + lookAheadX;
+            let targetY = this.deadZoneY + lookAheadY;
+            // Clamp the target to reachable area
+            targetX = Cmath.clamp(targetX, minX, maxX);
+            targetY = Cmath.clamp(targetY, minY, maxY);
+
+            // Spring acceleration uses the clamped target
             const cameraAccX =
                 -2 * springFreqX * cameraVelX -
-                springFreqX * springFreqX * (pos[0] - this.deadZoneX);
+                springFreqX * springFreqX * (pos[0] - targetX);
             const cameraAccY =
                 -2 * springFreqY * cameraVelY -
-                springFreqY * springFreqY * (pos[1] - this.deadZoneY);
+                springFreqY * springFreqY * (pos[1] - targetY);
 
-            // integrate velocity back into the component
-            camera[0] = cameraVelX + cameraAccX * dt;
-            camera[1] = cameraVelY + cameraAccY * dt;
+            // integrate velocity and position
+            cameraVelX += cameraAccX * dt;
+            cameraVelY += cameraAccY * dt;
+            pos[0] += cameraVelX * dt;
+            pos[1] += cameraVelY * dt;
 
-            // now advance position using the UPDATED velocities
-            pos[0] += camera[0] * dt;
-            pos[1] += camera[1] * dt;
+            // Clamp the position and zero velocity if clamped
+            const prevX = pos[0];
+            const prevY = pos[1];
+            pos[0] = Cmath.clamp(pos[0], minX, maxX);
+            pos[1] = Cmath.clamp(pos[1], minY, maxY);
+            if (pos[0] !== prevX) cameraVelX = 0;
+            if (pos[1] !== prevY) cameraVelY = 0;
 
-            const displayHalfW = this.displayW * 0.5;
-            const displayHalfH = this.displayH * 0.5;
-
-            // Handle worlds smaller than the viewport (avoid inverted bounds).
-            if (this.worldW <= this.displayW) {
-                pos[0] = this.worldW * 0.5; // lock center
-                camera[0] = 0; // zero x-velocity so it doesn't fight the clamp
-            } else {
-                pos[0] = Cmath.clamp(
-                    pos[0],
-                    displayHalfW,
-                    this.worldW - displayHalfW
-                );
-            }
-
-            if (this.worldH <= this.displayH) {
-                pos[1] = this.worldH * 0.5;
-                camera[1] = 0;
-            } else {
-                pos[1] = Cmath.clamp(
-                    pos[1],
-                    displayHalfH,
-                    this.worldH - displayHalfH
-                );
-            }
+            // write back updated velocity
+            camera[CameraIndex.VELOCITY_X] = cameraVelX;
+            camera[CameraIndex.VELOCITY_Y] = cameraVelY;
 
             // visual debug dead zone
             if (this.dbContext) {
-                const deadZoneW = this.displayW * this.deadZoneWPerc;
-                const deadZoneH = this.displayH * this.deadZoneHPerc;
                 const cw = this.dbCanvas.width; // use the canvas' actual size
                 const ch = this.dbCanvas.height;
 
