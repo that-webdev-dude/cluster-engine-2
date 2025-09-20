@@ -115,9 +115,10 @@ export class CollisionSystem extends ECSUpdateSystem {
             row: row,
         };
 
-        let base = row * 2;
+        let base = row * 4;
         const x = chunk.views.Position[base + 0];
         const y = chunk.views.Position[base + 1];
+        base = 2;
         const w = Math.abs(chunk.views.Size[base + 0]);
         const h = Math.abs(chunk.views.Size[base + 1]);
         const hw = w * 0.5;
@@ -205,15 +206,17 @@ export class CollisionSystem extends ECSUpdateSystem {
         let vx = 0,
             vy = 0;
         const mv = (chunk.views as any).Velocity as Float32Array | undefined;
-        const prev = (chunk.views as any).PreviousPosition as
-            | Float32Array
-            | undefined;
+        // const prev = (chunk.views as any).PreviousPosition as
+        //     | Float32Array
+        //     | undefined;
+        const prev = (chunk.views as any).Position as Float32Array | undefined;
+
         if (mv) {
             vx = mv[row * 2 + 0];
             vy = mv[row * 2 + 1];
         } else if (prev && dt > 0) {
-            vx = (main.x - prev[row * 2 + 0]) / dt;
-            vy = (main.y - prev[row * 2 + 1]) / dt;
+            vx = (main.x - prev[row * 4 + 2]) / dt;
+            vy = (main.y - prev[row * 4 + 3]) / dt;
         }
 
         const collisionAttributes = AABBTools.getCollisionAttributes(
@@ -341,9 +344,10 @@ export class CollisionSystem extends ECSUpdateSystem {
             [Component.AABB, Component.Position, Component.Size],
             (chunk, chunkId) => {
                 for (let i = 0; i < chunk.count; i++) {
-                    let base = i * 2;
+                    let base = i * 4;
                     const x = chunk.views.Position[base + 0];
                     const y = chunk.views.Position[base + 1];
+                    base = i * 2;
                     const w = Math.abs(chunk.views.Size[base + 0]);
                     const h = Math.abs(chunk.views.Size[base + 1]);
                     const hw = w * 0.5;

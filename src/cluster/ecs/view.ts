@@ -1,11 +1,13 @@
-import type { ComponentDescriptor } from "../types";
-import type { ComponentValue } from "../types";
-import type { ComponentType } from "../types";
-import type { EntityMeta } from "../types";
-import type { Buffer } from "../types";
 import type { Chunk } from "./chunk";
 import type { Storage } from "./storage";
 import type { Signature } from "./archetype";
+import type {
+    ComponentDescriptor,
+    ComponentValue,
+    ComponentType,
+    EntityMeta,
+    Buffer,
+} from "../types";
 import { Archetype } from "./archetype";
 import { DEBUG } from "../tools";
 
@@ -86,4 +88,40 @@ export class View {
             }
         }
     }
+}
+
+type FieldAccess<D extends ComponentDescriptor> = {
+    /** Read: f(i) -> number;  Write: f(i, value) -> void */
+    [K in D["fields"][number]]: (i: number, value?: number) => number | void;
+};
+
+export type SoAView<D extends ComponentDescriptor> = FieldAccess<D> & {
+    /** Bind the underlying typed array view for this chunk */
+    bind(view: InstanceType<D["buffer"]>): SoAView<D>;
+};
+
+export function SoAViewFactory<D extends ComponentDescriptor>(desc: D) {
+    type ViewT = InstanceType<D["buffer"]>;
+    let view: ViewT | null = null;
+    const stride = desc.count;
+
+    const api: any = {
+        bind(v: ViewT) {
+            view = v;
+            return api;
+        },
+    };
+
+    // Generate per-field accessors: f(i) -> read, f(i, v) -> write
+    for (let f = 0; f < desc.fields.length; f++) {
+        const fname = desc.fields[f];
+        api[fname] = (i: number, v?: number) => {
+            if (!view) throw new Error("SoAView: no view bound");
+            const idx = i * stride + f;
+            if (v === undefined) return view[idx];
+            view[idx] = v;
+        };
+    }
+
+    return api as SoAView<D>;
 }

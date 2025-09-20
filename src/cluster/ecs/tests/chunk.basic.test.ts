@@ -10,9 +10,20 @@ export enum Component {
 const schema = Archetype.register({
     type: Component.Position,
     name: "Position",
-    count: 2,
+    count: 8,
     buffer: Float32Array,
-    default: [0, 0],
+    default: [0, 0, 0, 0, 0, 0, 0, 0], // currX, currY, prevX, prevY, minx, minY, maxX, maxY
+    // prettier-ignore
+    fields: [
+        "x",
+        "y",
+        "prevX",
+        "prevY",
+        "minX",
+        "minY",
+        "maxX",
+        "maxY"
+    ],
 });
 
 describe("ChunkV2 ▶ basic functionality", () => {

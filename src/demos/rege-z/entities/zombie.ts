@@ -8,7 +8,6 @@ const worldH = store.get("worldH");
 
 export const zombieSchema = Archetype.register(
     DESCRIPTORS.Zombie,
-    DESCRIPTORS.PreviousPosition,
     DESCRIPTORS.Position,
     DESCRIPTORS.Velocity,
     DESCRIPTORS.Offset,
@@ -30,8 +29,7 @@ export function getZombieComponents(): ComponentValueMap {
 
     return {
         [Component.Zombie]: [1],
-        [Component.PreviousPosition]: [x, y],
-        [Component.Position]: [x, y],
+        [Component.Position]: [x, y, x, y, 0, 0, 0, 0],
         [Component.Velocity]: [0, 0],
         [Component.Offset]: [0, 0],
         [Component.Angle]: [0],

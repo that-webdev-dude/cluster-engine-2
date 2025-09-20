@@ -23,6 +23,11 @@ const DESCRIPTORS = {
         count: 2,
         buffer: Float32Array,
         default: [0, 0],
+        // prettier-ignore
+        fields: [
+            "x",
+            "y"
+        ],
     },
     Position: {
         type: Component.Position,
@@ -30,6 +35,11 @@ const DESCRIPTORS = {
         count: 2,
         buffer: Float32Array,
         default: [0, 0],
+        // prettier-ignore
+        fields: [
+            "x",
+            "y"
+        ],
     },
     Offset: {
         type: Component.Offset,
@@ -37,13 +47,22 @@ const DESCRIPTORS = {
         count: 2,
         buffer: Float32Array,
         default: [0, 0],
+        // prettier-ignore
+        fields: [
+            "x",
+            "y"
+        ],
     },
     Angle: {
         type: Component.Angle,
         name: "Angle",
         count: 1,
         buffer: Float32Array,
-        default: [0], // in radians
+        default: [0],
+        // prettier-ignore
+        fields: [
+            "radians"
+        ],
     },
     Pivot: {
         type: Component.Pivot,
@@ -51,6 +70,11 @@ const DESCRIPTORS = {
         count: 2,
         buffer: Float32Array,
         default: [0, 0],
+        // prettier-ignore
+        fields: [
+            "x",
+            "y"
+        ],
     },
     Size: {
         type: Component.Size,
@@ -58,6 +82,11 @@ const DESCRIPTORS = {
         count: 2,
         buffer: Float32Array,
         default: [1, 1],
+        // prettier-ignore
+        fields: [
+            "width",
+            "height"
+        ],
     },
     Color: {
         type: Component.Color,
@@ -65,6 +94,13 @@ const DESCRIPTORS = {
         count: 4,
         buffer: Uint8Array,
         default: [255, 255, 255, 255],
+        // prettier-ignore
+        fields: [
+            "r",
+            "g",
+            "b",
+            "a"
+        ],
     },
     Speed: {
         type: Component.Speed,
@@ -72,6 +108,10 @@ const DESCRIPTORS = {
         count: 1,
         buffer: Float32Array,
         default: [0],
+        // prettier-ignore
+        fields: [
+            "value"
+        ],
     },
     Velocity: {
         type: Component.Velocity,
@@ -79,49 +119,79 @@ const DESCRIPTORS = {
         count: 2,
         buffer: Float32Array,
         default: [0, 0],
+        // prettier-ignore
+        fields: [
+            "x",
+            "y"
+        ],
     },
     Health: {
         type: Component.Health,
         name: "Health",
         count: 1,
         buffer: Uint32Array,
-        default: [0], // is a number
+        default: [0],
+        // prettier-ignore
+        fields: [
+            "value"
+        ],
     },
     Lives: {
         type: Component.Lives,
         name: "Lives",
         count: 1,
         buffer: Uint32Array,
-        default: [0], // is a number
+        default: [0],
+        // prettier-ignore
+        fields: [
+            "value"
+        ],
     },
-    // tags
     Player: {
         type: Component.Player,
         name: "Player",
         count: 1,
         buffer: Uint8Array,
-        default: [1], // means "is Player"
+        default: [1],
+        // prettier-ignore
+        fields: [
+            "enabled"
+        ],
     },
     Bullet: {
         type: Component.Bullet,
         name: "Bullet",
         count: 1,
         buffer: Uint8Array,
-        default: [1], // means "is Bullet"
+        default: [1],
+        // prettier-ignore
+        fields: [
+            "enabled"
+        ],
     },
     Meteor: {
         type: Component.Meteor,
         name: "Meteor",
         count: 1,
         buffer: Uint8Array,
-        default: [1], // means "is Meteor"
+        default: [1],
+        // prettier-ignore
+        fields: [
+            "enabled"
+        ],
     },
     Camera: {
         type: Component.Camera,
         name: "Camera",
         count: 3,
         buffer: Uint8Array,
-        default: [1, 0, 0], // enabled? - shakeOffsetX - shakeOffsetY
+        default: [1, 0, 0],
+        // prettier-ignore
+        fields: [
+            "enabled",
+            "shakeOffsetX",
+            "shakeOffsetY"
+        ],
     },
 };
 

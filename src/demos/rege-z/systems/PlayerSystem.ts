@@ -6,7 +6,15 @@ import {
     ECSUpdateSystem,
 } from "../../../cluster";
 import { CollisionEvent } from "../events";
-import { Component, DESCRIPTORS } from "../components";
+import {
+    Component,
+    DESCRIPTORS,
+    PositionIndex,
+    VelocityIndex,
+    AnimationIndex,
+    ColorIndex,
+    SizeIndex,
+} from "../components";
 
 export class PlayerSystem extends ECSUpdateSystem {
     private readonly worldW: number = 0;
@@ -14,13 +22,8 @@ export class PlayerSystem extends ECSUpdateSystem {
     private readonly displayW: number = 0;
     private readonly displayH: number = 0;
 
-    // private currentView: View | undefined = undefined;
-    // private isCollidingWithWall: boolean = false;
-    // private collisionNormals: Array<{ x: number; y: number }> = [];
-
     constructor(readonly store: Store) {
         super(store);
-
         this.worldW = store.get("worldW");
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
@@ -31,7 +34,7 @@ export class PlayerSystem extends ECSUpdateSystem {
         this.store.on<CollisionEvent>(
             "player-zombie-collision",
             (e) => {
-                // console.log("zombie collision");
+                // ... do something when the player collides with a zombie
             },
             false
         );
@@ -46,8 +49,8 @@ export class PlayerSystem extends ECSUpdateSystem {
                 const posSlice = view.getSlice(mainMeta, DESCRIPTORS.Position);
                 if (posSlice) {
                     const { arr, base } = posSlice;
-                    arr[base + 0] += primary.mtv.x;
-                    arr[base + 1] += primary.mtv.y;
+                    arr[base + PositionIndex.X] += primary.mtv.x;
+                    arr[base + PositionIndex.Y] += primary.mtv.y;
                 }
 
                 // Prepare contacts (dedupe by axis)
@@ -58,8 +61,8 @@ export class PlayerSystem extends ECSUpdateSystem {
                 const velSlice = view.getSlice(mainMeta, DESCRIPTORS.Velocity);
                 if (velSlice) {
                     const { arr, base } = velSlice;
-                    let vx = arr[base + 0];
-                    let vy = arr[base + 1];
+                    let vx = arr[base + VelocityIndex.X];
+                    let vy = arr[base + VelocityIndex.Y];
 
                     for (const c of contacts) {
                         const nx = c.normal.x;
@@ -72,8 +75,8 @@ export class PlayerSystem extends ECSUpdateSystem {
                         }
                     }
 
-                    arr[base + 0] = 0;
-                    arr[base + 1] = 0;
+                    arr[base + VelocityIndex.X] = 0;
+                    arr[base + VelocityIndex.Y] = 0;
                 }
             },
             false
@@ -84,8 +87,9 @@ export class PlayerSystem extends ECSUpdateSystem {
         view.forEachChunkWith(
             [
                 Component.Player,
-                Component.Velocity,
                 Component.Size,
+                Component.Color,
+                Component.Velocity,
                 Component.Animation,
             ],
             (chunk) => {
@@ -102,10 +106,11 @@ export class PlayerSystem extends ECSUpdateSystem {
                     const col = chunk.views.Color;
 
                     // reset the color each frame
-                    col[i * 4 + 0] = 255; // R
-                    col[i * 4 + 1] = 255; // G
-                    col[i * 4 + 2] = 255; // B
-                    col[i * 4 + 3] = 255; // A
+                    const colBase = i * DESCRIPTORS.Color.count;
+                    col[colBase + ColorIndex.R] = 255; // R
+                    col[colBase + ColorIndex.G] = 255; // G
+                    col[colBase + ColorIndex.B] = 255; // B
+                    col[colBase + ColorIndex.A] = 255; // A
 
                     const inputX = Input.Keyboard.x();
                     const inputY = Input.Keyboard.y();
@@ -114,73 +119,61 @@ export class PlayerSystem extends ECSUpdateSystem {
                     let finalInputX = inputX;
                     let finalInputY = inputY;
 
-                    // if (
-                    //     this.isCollidingWithWall &&
-                    //     this.collisionNormals.length
-                    // ) {
-                    //     for (const normal of this.collisionNormals) {
-                    //         const dot = inputX * normal.x + inputY * normal.y;
-                    //         if (dot > 0) {
-                    //             // attempting to move further into wall; remove normal component
-                    //             finalInputX -= dot * normal.x;
-                    //             finalInputY -= dot * normal.y;
-                    //         }
-                    //     }
-                    // }
-
                     // Update velocity based on filtered input
-                    vel[i * 2 + 0] = finalInputX * 200;
-                    vel[i * 2 + 1] = finalInputY * 200;
-
-                    // Reset collision state if we're not moving into walls
-                    // if (finalInputX === 0 && finalInputY === 0) {
-                    //     this.isCollidingWithWall = false;
-                    //     this.collisionNormals = [];
-                    // }
+                    const velBase = i * DESCRIPTORS.Velocity.count;
+                    vel[velBase + VelocityIndex.X] = finalInputX * 200;
+                    vel[velBase + VelocityIndex.Y] = finalInputY * 200;
 
                     // adjust the player's facing direction based on input
                     // 1. Center camera on player
-                    let camX = pos[0] - this.displayW / 2;
+                    let camX = pos[PositionIndex.X] - this.displayW / 2;
                     // 2. Clamp camera to world bounds
                     camX = Math.max(
                         0,
                         Math.min(camX, this.worldW - this.displayW)
                     );
                     // 3. Convert player's world position to screen position
-                    const scrX = pos[0] - camX;
+                    const scrX = pos[PositionIndex.X] - camX;
 
                     const mx = Input.Mouse.virtualPosition.x;
 
+                    const scaleBase = i * DESCRIPTORS.Size.count;
                     if (mx - scrX > 0) {
-                        scale[i * 2 + 0] = Math.abs(scale[i * 2 + 0]);
+                        scale[scaleBase + SizeIndex.WIDTH] = Math.abs(
+                            scale[scaleBase + SizeIndex.WIDTH]
+                        );
                     } else if (mx - scrX < 0) {
-                        scale[i * 2 + 0] = -Math.abs(scale[i * 2 + 0]);
+                        scale[scaleBase + SizeIndex.WIDTH] = -Math.abs(
+                            scale[scaleBase + SizeIndex.WIDTH]
+                        );
                     }
 
+                    const animBase = i * DESCRIPTORS.Animation.count;
                     let isWalking = finalInputX !== 0 || finalInputY !== 0;
-                    let currentStart = animation[i * 6 + 0];
-                    let currentEnd = animation[i * 6 + 1];
+                    let currentStart =
+                        animation[animBase + AnimationIndex.START];
+                    let currentEnd = animation[animBase + AnimationIndex.END];
 
                     // walking animation: frames 0–3
                     if (isWalking && (currentStart !== 0 || currentEnd !== 3)) {
-                        animation[i * 6 + 0] = 0;
-                        animation[i * 6 + 1] = 3;
-                        animation[i * 6 + 2] = 0;
-                        animation[i * 6 + 3] = 0.1;
-                        animation[i * 6 + 4] = 0;
-                        animation[i * 6 + 5] = 1;
+                        animation[animBase + AnimationIndex.START] = 0;
+                        animation[animBase + AnimationIndex.END] = 3;
+                        animation[animBase + AnimationIndex.CURRENT] = 0;
+                        animation[animBase + AnimationIndex.TIME] = 0.1;
+                        animation[animBase + AnimationIndex.ELAPSED] = 0;
+                        animation[animBase + AnimationIndex.PLAYING] = 1;
                     }
                     // idle animation: frames 4–5
                     else if (
                         !isWalking &&
                         (currentStart !== 4 || currentEnd !== 5)
                     ) {
-                        animation[i * 6 + 0] = 4;
-                        animation[i * 6 + 1] = 5;
-                        animation[i * 6 + 2] = 4;
-                        animation[i * 6 + 3] = 0.2;
-                        animation[i * 6 + 4] = 0;
-                        animation[i * 6 + 5] = 1;
+                        animation[animBase + AnimationIndex.START] = 4;
+                        animation[animBase + AnimationIndex.END] = 5;
+                        animation[animBase + AnimationIndex.CURRENT] = 4;
+                        animation[animBase + AnimationIndex.TIME] = 0.2;
+                        animation[animBase + AnimationIndex.ELAPSED] = 0;
+                        animation[animBase + AnimationIndex.PLAYING] = 1;
                     }
 
                     // Later, you could introduce a CurrentAnimation component that stores an enum (e.g. IDLE = 0, WALK = 1, etc.) and skip all this index-checking logic, which makes the code easier to manage.

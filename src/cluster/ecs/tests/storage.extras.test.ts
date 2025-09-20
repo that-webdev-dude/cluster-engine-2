@@ -13,9 +13,20 @@ const DESCS = Archetype.register(
     {
         type: Component.Position,
         name: "Position",
-        count: 2,
+        count: 8,
         buffer: Float32Array,
-        default: [0, 0],
+        default: [0, 0, 0, 0, 0, 0, 0, 0],
+        // prettier-ignore
+        fields: [
+            "x",
+            "y",
+            "prevX",
+            "prevY",
+            "minX",
+            "minY",
+            "maxX",
+            "maxY"
+        ],
     },
     {
         type: Component.Velocity,
@@ -23,6 +34,11 @@ const DESCS = Archetype.register(
         count: 2,
         buffer: Float32Array,
         default: [1, 1],
+        // prettier-ignore
+        fields: [
+            "x",
+            "y"
+        ],
     },
     {
         type: Component.Health,
@@ -30,6 +46,10 @@ const DESCS = Archetype.register(
         count: 1,
         buffer: Uint32Array,
         default: [100],
+        // prettier-ignore
+        fields: [
+            "value"
+        ],
     }
 );
 
@@ -90,6 +110,10 @@ describe("StorageV2 ▶ edge and complex cases", () => {
             count: 1,
             buffer: Uint32Array,
             default: [100],
+            // prettier-ignore
+            fields: [
+                "value"
+            ],
         });
         const capped = Archetype.create("limited", schema, 2);
         const storageCapped = new Storage<typeof schema>(capped);

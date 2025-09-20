@@ -1,12 +1,11 @@
-import { Display } from "../../cluster";
-import { Game } from "../../cluster";
+// NOSONAR
+import { Display, Game } from "../../cluster";
 import { createGamePlay } from "./scenes/gamePlay";
 import store from "./stores/store";
 
 const width = store.get("displayW");
 const height = store.get("displayH");
 const parent = store.get("appId");
-
 const display = Display.getInstance({
     width,
     height,
@@ -20,7 +19,6 @@ const display = Display.getInstance({
 });
 
 const game = new Game(store, display);
-
 export function app() {
     game.setScene(createGamePlay());
     game.start();

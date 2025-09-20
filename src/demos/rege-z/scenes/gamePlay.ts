@@ -23,7 +23,7 @@ export function createGamePlay() {
 
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
 
-    scene.createEntity(weaponArchetype, getWeaponComponents());
+    // scene.createEntity(weaponArchetype, getWeaponComponents());
 
     // for (let i = 0; i < 10; i++) {
     //     scene.createEntity(zombieArchetype, getZombieComponents());

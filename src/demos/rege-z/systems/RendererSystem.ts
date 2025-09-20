@@ -1,7 +1,12 @@
 // src/renderer/GLRenderer.ts
-
 import { spritesheet } from "../assets";
-import { Component } from "../components";
+import {
+    Component,
+    DESCRIPTORS,
+    PositionIndex,
+    SizeIndex,
+    SpriteIndex,
+} from "../components";
 import {
     Display,
     View,
@@ -12,50 +17,25 @@ import {
     ECSRenderSystem,
 } from "../../../cluster";
 
+const chunkSize = Chunk.DEFAULT_CAPACITY;
+
 export class SpriteRendererSystem extends ECSRenderSystem {
     private readonly renderer = Display.getInstance().createGPURenderingLayer();
     private pipeline: SpritePipeline | null = null;
 
-    // per-instance SoA buffers, size = Chunk.DEFAULT_CAPACITY
-    private positions = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private readonly offsets = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private readonly pivots = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private readonly scales = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private readonly angles = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
-    private readonly colors = new Uint8Array(Chunk.DEFAULT_CAPACITY * 4);
-    private readonly uvRects = new Float32Array(Chunk.DEFAULT_CAPACITY * 4);
+    // per-instance SoA buffers, size = chunkSize
+    private readonly positions = new Float32Array(chunkSize * 2);
+    private readonly offsets = new Float32Array(chunkSize * 2);
+    private readonly pivots = new Float32Array(chunkSize * 2);
+    private readonly scales = new Float32Array(chunkSize * 2);
+    private readonly angles = new Float32Array(chunkSize * 1);
+    private readonly colors = new Uint8Array(chunkSize * 4);
+    private readonly uvRects = new Float32Array(chunkSize * 4);
 
     private cameraPos: [number, number] = [0, 0];
 
     constructor(store: Store) {
         super(store);
-
-        // DEBUG CANVAS OVERLAY
-        // const dbCanvas = document.createElement("canvas");
-        // dbCanvas.width = Display.getInstance().cssWidth;
-        // dbCanvas.height = Display.getInstance().cssHeight;
-        // dbCanvas.style.zIndex = "9999";
-        // dbCanvas.style.border = "4px solid red";
-        // dbCanvas.style.pointerEvents = "none";
-        // document.querySelector("#app")?.appendChild(dbCanvas);
-
-        // const dbContext = dbCanvas.getContext("2d");
-        // const cx = dbCanvas.width / 2;
-        // const cy = dbCanvas.height / 2;
-
-        // if (dbContext) {
-        //     // draw a cross
-        //     dbContext.strokeStyle = "red";
-        //     dbContext.lineWidth = 1;
-
-        //     dbContext.beginPath();
-        //     dbContext.moveTo(cx - 4, cy);
-        //     dbContext.lineTo(cx + 4, cy);
-        //     dbContext.moveTo(cx, cy - 4);
-        //     dbContext.lineTo(cx, cy + 4);
-        //     dbContext.stroke();
-        // }
-        // DEBUG CANVAS OVERLAY
     }
 
     render(view: View, alpha: number) {
@@ -76,24 +56,24 @@ export class SpriteRendererSystem extends ECSRenderSystem {
 
         // (1) update your camera if you have one
         view.forEachChunkWith([Component.Camera], (chunk) => {
-            const cur = chunk.views.Position;
-            const prev = chunk.views.PreviousPosition;
+            const pos = chunk.views.Position;
+            const off = chunk.views.Offset;
             const size = chunk.views.Size;
 
-            if (!prev) {
-                // no PreviousPosition, just use current
-                console.warn(
-                    "[SpriteRendererSystem]: No PreviousPosition found, using current position for camera"
-                );
-                prev[0] = cur[0];
-                prev[1] = cur[1];
-            }
-            const interpolatedX = prev[0] + (cur[0] - prev[0]) * alpha;
-            const interpolatedY = prev[1] + (cur[1] - prev[1]) * alpha;
+            const interpolatedX =
+                pos[PositionIndex.PREV_X] +
+                (pos[PositionIndex.X] - pos[PositionIndex.PREV_X]) * alpha;
+            const interpolatedY =
+                pos[PositionIndex.PREV_Y] +
+                (pos[PositionIndex.Y] - pos[PositionIndex.PREV_Y]) * alpha;
 
             // should I now center the camera?
-            this.cameraPos[0] = Math.round(interpolatedX - size[0] * 0.5);
-            this.cameraPos[1] = Math.round(interpolatedY - size[1] * 0.5);
+            this.cameraPos[PositionIndex.X] = Math.round(
+                interpolatedX - size[SizeIndex.WIDTH] * 0.5 + off[0]
+            );
+            this.cameraPos[PositionIndex.Y] = Math.round(
+                interpolatedY - size[SizeIndex.HEIGHT] * 0.5 + off[1]
+            );
         });
 
         // (2) draw all entities with a Sprite component
@@ -101,28 +81,42 @@ export class SpriteRendererSystem extends ECSRenderSystem {
             [
                 Component.Sprite,
                 Component.Position,
-                Component.Size,
                 Component.Color,
+                Component.Size,
             ],
             (chunk) => {
                 const count = chunk.count;
                 if (count === 0) return;
 
-                this.scales.set(chunk.views.Size.subarray(0, count * 2), 0);
-                this.colors.set(chunk.views.Color.subarray(0, count * 4), 0);
+                const sizeStride = DESCRIPTORS.Size.count;
+                this.scales.set(
+                    chunk.views.Size.subarray(0, count * sizeStride),
+                    0
+                );
+
+                const colorsStride = DESCRIPTORS.Color.count;
+                this.colors.set(
+                    chunk.views.Color.subarray(0, count * colorsStride),
+                    0
+                );
 
                 // copy over Angle (radians) instead of zeroes:
+                const angleStride = DESCRIPTORS.Angle.count;
                 if (chunk.views.Angle) {
                     // if you have PreviousAngle and want interpolation you can do that here
-                    this.angles.set(chunk.views.Angle.subarray(0, count), 0);
+                    this.angles.set(
+                        chunk.views.Angle.subarray(0, count * angleStride),
+                        0
+                    );
                 } else {
                     this.angles.fill(0, 0, count);
                 }
 
                 // copy Offset (if you intend to use it) or zero:
+                const offsetStride = DESCRIPTORS.Offset.count;
                 if (chunk.views.Offset) {
                     this.offsets.set(
-                        chunk.views.Offset.subarray(0, count * 2),
+                        chunk.views.Offset.subarray(0, count * offsetStride),
                         0
                     );
                 } else {
@@ -130,9 +124,10 @@ export class SpriteRendererSystem extends ECSRenderSystem {
                 }
 
                 // copy Pivot (so your rotation center isn’t always top-left)
+                const pivotStride = DESCRIPTORS.Pivot.count;
                 if (chunk.views.Pivot) {
                     this.pivots.set(
-                        chunk.views.Pivot.subarray(0, count * 2),
+                        chunk.views.Pivot.subarray(0, count * pivotStride),
                         0
                     );
                 } else {
@@ -144,31 +139,27 @@ export class SpriteRendererSystem extends ECSRenderSystem {
                 const img = spritesheetImg;
 
                 for (let i = 0; i < count; i++) {
-                    // let's interpolate the positions here
-                    // if you have PreviousPosition and want interpolation you can do that here
-                    const prevPos = chunk.views.PreviousPosition;
-                    const currPos = chunk.views.Position;
-                    let posX = 0;
-                    let posY = 0;
-                    if (prevPos) {
-                        posX =
-                            prevPos[i * 2 + 0] +
-                            (currPos[i * 2 + 0] - prevPos[i * 2 + 0]) * alpha;
-                        posY =
-                            prevPos[i * 2 + 1] +
-                            (currPos[i * 2 + 1] - prevPos[i * 2 + 1]) * alpha;
-                    } else {
-                        // no PreviousPosition, just use current
-                        posX = currPos[i * 2 + 0];
-                        posY = currPos[i * 2 + 1];
-                    }
-                    this.positions[i * 2 + 0] = Math.floor(posX);
-                    this.positions[i * 2 + 1] = Math.floor(posY);
+                    const pos = chunk.views.Position;
 
-                    const fx = s[i * 4 + 0];
-                    const fy = s[i * 4 + 1];
-                    const fw = s[i * 4 + 2];
-                    const fh = s[i * 4 + 3];
+                    const posBase = i * DESCRIPTORS.Position.count;
+                    let posX =
+                        pos[posBase + PositionIndex.PREV_X] +
+                        (pos[posBase + PositionIndex.X] -
+                            pos[posBase + PositionIndex.PREV_X]) *
+                            alpha;
+                    let posY =
+                        pos[posBase + PositionIndex.PREV_Y] +
+                        (pos[posBase + PositionIndex.Y] -
+                            pos[posBase + PositionIndex.PREV_Y]) *
+                            alpha;
+                    this.positions[i * 2 + PositionIndex.X] = Math.floor(posX);
+                    this.positions[i * 2 + PositionIndex.Y] = Math.floor(posY);
+
+                    const spriteBase = i * DESCRIPTORS.Sprite.count;
+                    const fx = s[spriteBase + SpriteIndex.FRAME_X];
+                    const fy = s[spriteBase + SpriteIndex.FRAME_Y];
+                    const fw = s[spriteBase + SpriteIndex.FRAME_WIDTH];
+                    const fh = s[spriteBase + SpriteIndex.FRAME_HEIGHT];
 
                     // normalize the uv's
                     const u0 = fx / img.width;

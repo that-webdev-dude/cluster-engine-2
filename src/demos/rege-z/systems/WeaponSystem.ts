@@ -1,11 +1,19 @@
-import { ECSUpdateSystem } from "../../../cluster";
-import { CommandBuffer } from "../../../cluster";
-import { Store } from "../../../cluster";
-import { Cmath } from "../../../cluster";
-import { Input } from "../../../cluster";
-import { View } from "../../../cluster";
+import {
+    ECSUpdateSystem,
+    CommandBuffer,
+    Store,
+    Cmath,
+    Input,
+    View,
+} from "../../../cluster";
 import { EntityMeta, Buffer } from "../../../cluster/types";
-import { Component, DESCRIPTORS } from "../components";
+import {
+    Component,
+    DESCRIPTORS,
+    PositionIndex,
+    AngleIndex,
+    WeaponIndex,
+} from "../components";
 
 const Mouse = Input.Mouse;
 
@@ -18,7 +26,6 @@ export class WeaponSystem extends ECSUpdateSystem {
 
     constructor(readonly store: Store, readonly owner?: EntityMeta) {
         super(store);
-
         this.worldW = store.get("worldW");
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
@@ -45,41 +52,44 @@ export class WeaponSystem extends ECSUpdateSystem {
         if (!this.ownerPosition)
             console.warn("[WeaponSustem]: this weapon has no owner");
 
-        view.forEachChunkWith([Component.Weapon, Component.Angle], (chunk) => {
-            // only one player is expected
-            if (chunk.count > 1) {
-                console.warn(
-                    `[WeaponSystem]: more than one player is not allowed`
-                );
+        view.forEachChunkWith(
+            [Component.Position, Component.Weapon, Component.Angle],
+            (chunk) => {
+                // only one player is expected
+                if (chunk.count > 1) {
+                    console.warn(
+                        `[WeaponSystem]: more than one player is not allowed`
+                    );
+                }
+
+                if (chunk.views.Weapon[WeaponIndex.ACTIVE] === 0) return;
+
+                const pos = chunk.views.Position;
+                if (this.ownerPosition) {
+                    pos[PositionIndex.X] = this.ownerPosition[0];
+                    pos[PositionIndex.Y] = this.ownerPosition[1];
+                }
+
+                // 1. Center camera on player
+                let camX = pos[PositionIndex.X] - this.displayW / 2;
+                // 2. Clamp camera to world bounds
+                camX = Math.max(0, Math.min(camX, this.worldW - this.displayW));
+                // 3. Convert player's world position to screen position
+                const scrX = pos[PositionIndex.X] - camX;
+
+                // 1. Center camera on player
+                let camY = pos[PositionIndex.Y] - this.displayH / 2;
+                // 2. Clamp camera to world bounds
+                camY = Math.max(0, Math.min(camY, this.worldH - this.displayH));
+                // 3. Convert player's world position to screen position
+                const scrY = pos[PositionIndex.Y] - camY;
+
+                const mx = Mouse.virtualPosition.x;
+                const my = Mouse.virtualPosition.y;
+
+                chunk.views.Angle[AngleIndex.RADIANS] =
+                    Cmath.angle(scrX, scrY, mx, my) + Math.PI / 2;
             }
-
-            if (chunk.views.Weapon[0] === 0) return;
-
-            const pos = chunk.views.Position;
-            if (this.ownerPosition) {
-                pos[0] = this.ownerPosition[0];
-                pos[1] = this.ownerPosition[1];
-            }
-
-            // 1. Center camera on player
-            let camX = pos[0] - this.displayW / 2;
-            // 2. Clamp camera to world bounds
-            camX = Math.max(0, Math.min(camX, this.worldW - this.displayW));
-            // 3. Convert player's world position to screen position
-            const scrX = pos[0] - camX;
-
-            // 1. Center camera on player
-            let camY = pos[1] - this.displayH / 2;
-            // 2. Clamp camera to world bounds
-            camY = Math.max(0, Math.min(camY, this.worldH - this.displayH));
-            // 3. Convert player's world position to screen position
-            const scrY = pos[1] - camY;
-
-            const mx = Mouse.virtualPosition.x;
-            const my = Mouse.virtualPosition.y;
-
-            chunk.views.Angle[0] =
-                Cmath.angle(scrX, scrY, mx, my) + Math.PI / 2;
-        });
+        );
     }
 }

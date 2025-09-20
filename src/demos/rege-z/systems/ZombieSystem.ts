@@ -1,4 +1,11 @@
-import { Component, DESCRIPTORS } from "../components";
+import {
+    Component,
+    DESCRIPTORS,
+    PositionIndex,
+    VelocityIndex,
+    SpeedIndex,
+    SizeIndex,
+} from "../components";
 import { View, Store, Vector } from "../../../cluster";
 import { EntityMeta, Buffer } from "../../../cluster/types";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
@@ -45,8 +52,8 @@ export class ZombieSystem extends ECSUpdateSystem {
 
             if (posSlice) {
                 const { arr, base } = posSlice;
-                arr[base + 0] += primary.mtv.x;
-                arr[base + 1] += primary.mtv.y;
+                arr[base + PositionIndex.X] += primary.mtv.x;
+                arr[base + PositionIndex.Y] += primary.mtv.y;
             }
         });
     }
@@ -74,15 +81,15 @@ export class ZombieSystem extends ECSUpdateSystem {
                     outVel.set(0, 0);
 
                     // compute the velocity vector based on target position
-                    let base = i * 2;
-                    const mx = chunk.views.Position[base + 0];
-                    const my = chunk.views.Position[base + 1];
+                    let base = i * DESCRIPTORS.Position.count;
+                    const mx = chunk.views.Position[base + PositionIndex.X];
+                    const my = chunk.views.Position[base + PositionIndex.Y];
 
                     const tx = this.targetPos![0];
                     const ty = this.targetPos![1];
 
-                    base = i * 1;
-                    const speed = chunk.views.Speed[base + 0];
+                    base = i * DESCRIPTORS.Speed.count;
+                    const speed = chunk.views.Speed[base + SpeedIndex.VALUE];
 
                     mainPos.set(mx, my);
                     targPos.set(tx, ty);
@@ -93,13 +100,13 @@ export class ZombieSystem extends ECSUpdateSystem {
                         .normalize()
                         .scale(speed);
 
-                    base = i * 2;
-                    chunk.views.Velocity[base + 0] = outVel.x;
-                    chunk.views.Velocity[base + 1] = outVel.y;
+                    base = i * DESCRIPTORS.Velocity.count;
+                    chunk.views.Velocity[base + VelocityIndex.X] = outVel.x;
+                    chunk.views.Velocity[base + VelocityIndex.Y] = outVel.y;
 
                     // adjust the scale component to face the target based on velocityX sign
                     if (outVel.x !== 0) {
-                        chunk.views.Size[base + 0] =
+                        chunk.views.Size[base + SizeIndex.WIDTH] =
                             (outVel.x / Math.abs(outVel.x)) * 32;
                     }
                 }

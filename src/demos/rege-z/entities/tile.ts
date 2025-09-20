@@ -1,6 +1,5 @@
 import { DESCRIPTORS, Component } from "../components";
-import { Archetype } from "../../../cluster";
-import type { ComponentValueMap } from "../../../cluster";
+import { Archetype, ComponentValueMap } from "../../../cluster";
 
 export const tileSchema = Archetype.register(
     DESCRIPTORS.Tile,
@@ -36,7 +35,7 @@ export function getTileComponents(
 ): ComponentValueMap {
     return {
         [Component.Tile]: [1],
-        [Component.Position]: [x, y],
+        [Component.Position]: [x, y, x, y, 0, 0, 0, 0],
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
@@ -51,7 +50,7 @@ export function getWallComponents(
 ): ComponentValueMap {
     return {
         [Component.Wall]: [1],
-        [Component.Position]: [x, y],
+        [Component.Position]: [x, y, x, y, 0, 0, 0, 0],
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
@@ -72,7 +71,7 @@ export function getFloorComponents(
 ): ComponentValueMap {
     return {
         [Component.Floor]: [1],
-        [Component.Position]: [x, y],
+        [Component.Position]: [x, y, x, y, 0, 0, 0, 0],
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
