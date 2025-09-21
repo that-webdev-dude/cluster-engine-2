@@ -51,18 +51,18 @@ export class MotionSystem extends ECSUpdateSystem {
                     }
 
                     // should I zero the velocity if position is clamped?
-                    // if (
-                    //     pos[pb + PositionIndex.X] === minX ||
-                    //     pos[pb + PositionIndex.X] === maxX
-                    // ) {
-                    //     vel[vb + VelocityIndex.X] = 0;
-                    // }
-                    // if (
-                    //     pos[pb + PositionIndex.Y] === minY ||
-                    //     pos[pb + PositionIndex.Y] === maxY
-                    // ) {
-                    //     vel[vb + VelocityIndex.Y] = 0;
-                    // }
+                    if (
+                        pos[pb + PositionIndex.X] === minX ||
+                        pos[pb + PositionIndex.X] === maxX
+                    ) {
+                        vel[vb + VelocityIndex.X] = 0;
+                    }
+                    if (
+                        pos[pb + PositionIndex.Y] === minY ||
+                        pos[pb + PositionIndex.Y] === maxY
+                    ) {
+                        vel[vb + VelocityIndex.Y] = 0;
+                    }
                 }
             }
         );

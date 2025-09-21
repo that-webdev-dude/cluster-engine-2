@@ -22,302 +22,40 @@ import {
     Buffer,
 } from "../../../cluster/types";
 
-// original camera system
-// export class CameraSystem extends ECSUpdateSystem {
-//     private subjectPosition: Buffer | undefined = undefined;
-//     private subjectVelocity: Buffer | undefined = undefined;
-//     private subjectAirborne: Buffer | undefined = undefined;
-
-//     private readonly worldW: number;
-//     private readonly worldH: number;
-//     private readonly displayW: number;
-//     private readonly displayH: number;
-
-//     // dead zone
-//     private deadZoneX: number = 0;
-//     private deadZoneY: number = 0;
-
-//     private lookAheadXActive = false;
-//     private lookAheadYActive = false;
-
-//     // debug
-//     private readonly dbContext: CanvasRenderingContext2D | null;
-//     private readonly dbCanvas: HTMLCanvasElement;
-
-//     constructor(
-//         readonly store: Store,
-//         readonly subject: EntityMeta | undefined = undefined
-//     ) {
-//         super(store);
-//         this.worldW = store.get("worldW");
-//         this.worldH = store.get("worldH");
-//         this.displayW = store.get("displayW");
-//         this.displayH = store.get("displayH");
-
-//         // visual debug canvas
-//         const dbCanvas = document.createElement("canvas");
-//         dbCanvas.width = this.displayW;
-//         dbCanvas.height = this.displayH;
-//         dbCanvas.style.zIndex = "9999";
-//         dbCanvas.style.border = "4px solid red";
-//         dbCanvas.style.pointerEvents = "none";
-//         document.querySelector("#app")?.appendChild(dbCanvas);
-//         this.dbContext = dbCanvas.getContext("2d");
-//         this.dbCanvas = dbCanvas;
-//     }
-
-//     private getSubjectWSlice(
-//         view: View,
-//         desc: ComponentDescriptor
-//     ): Buffer | undefined {
-//         if (this.subject) {
-//             const slice = view.getSlice(this.subject, desc);
-//             if (slice !== undefined) {
-//                 return slice.arr;
-//             }
-//         }
-//         return undefined;
-//     }
-
-//     public prerun(view: View): void {
-//         this.subjectPosition = this.getSubjectWSlice(
-//             view,
-//             DESCRIPTORS.Position
-//         );
-//         this.subjectVelocity = this.getSubjectWSlice(
-//             view,
-//             DESCRIPTORS.Velocity
-//         );
-//         // this.subjectAirborne = this.getSubjectWSlice(
-//         //     view,
-//         //     DESCRIPTORS.Airborne / Jumping
-//         // );
-//     }
-
-//     public updateDeadZonePosition(
-//         pos: Buffer,
-//         halfW: number,
-//         halfH: number,
-//         deadZoneHalfW: number,
-//         deadZoneHalfH: number
-//     ) {
-//         if (!this.subjectPosition) return;
-
-//         this.deadZoneX = 0;
-//         this.deadZoneY = 0;
-//         const [subjectPositionX, subjectPositionY] = this.subjectPosition;
-//         const deadZoneDesiredX = subjectPositionX - pos[PositionIndex.X];
-//         const deadZoneDesiredY = subjectPositionY - pos[PositionIndex.Y];
-//         if (
-//             Math.abs(deadZoneDesiredX) <= deadZoneHalfW &&
-//             Math.abs(deadZoneDesiredY) <= deadZoneHalfH
-//         ) {
-//             this.deadZoneX = pos[PositionIndex.X];
-//             this.deadZoneY = pos[PositionIndex.Y];
-//         } else {
-//             this.deadZoneX =
-//                 subjectPositionX -
-//                 Cmath.clamp(deadZoneDesiredX, -deadZoneHalfW, deadZoneHalfW);
-//             this.deadZoneY =
-//                 subjectPositionY -
-//                 Cmath.clamp(deadZoneDesiredY, -deadZoneHalfH, deadZoneHalfH);
-//         }
-
-//         // After computing deadZoneX/Y:
-//         this.deadZoneX = Cmath.clamp(
-//             this.deadZoneX,
-//             halfW,
-//             this.worldW - halfW
-//         );
-//         this.deadZoneY = Cmath.clamp(
-//             this.deadZoneY,
-//             halfH,
-//             this.worldH - halfH
-//         );
-//     }
-
-//     public update(view: View, cmd: CommandBuffer, dt: number) {
-//         if (this.subject && (!this.subjectPosition || !this.subjectVelocity))
-//             return;
-
-//         // Precompute reachable camera center bounds
-//         const halfW = this.displayW * 0.5;
-//         const halfH = this.displayH * 0.5;
-//         const worldW = this.worldW;
-//         const worldH = this.worldH;
-//         const minX = halfW;
-//         const maxX = worldW - halfW;
-//         const minY = halfH;
-//         const maxY = worldH - halfH;
-
-//         view.forEachChunkWith(
-//             [
-//                 Component.Camera,
-//                 Component.CameraSettings,
-//                 Component.Position,
-//                 Component.Velocity,
-//             ],
-//             (chunk) => {
-//                 const camera = chunk.views.Camera;
-//                 const settings = chunk.views.CameraSettings;
-//                 const pos = chunk.views.Position;
-//                 const vel = chunk.views.Velocity;
-
-//                 // Camera state
-//                 let springFreqX = camera[CameraIndex.SPRING_FREQ_X];
-//                 let springFreqY = camera[CameraIndex.SPRING_FREQ_Y];
-//                 let lookAheadX = camera[CameraIndex.LOOK_AHEAD_X];
-//                 let lookAheadY = camera[CameraIndex.LOOK_AHEAD_Y];
-
-//                 // Settings
-//                 const deadZoneWPerc =
-//                     settings[CameraSettingsIndex.DEAD_ZONE_W_PERC];
-//                 const deadZoneHPerc =
-//                     settings[CameraSettingsIndex.DEAD_ZONE_H_PERC];
-//                 const lookAheadGainPerSec =
-//                     settings[CameraSettingsIndex.LOOK_AHEAD_GAIN_PER_SEC];
-//                 const lookAheadMaxOffset =
-//                     settings[CameraSettingsIndex.LOOK_AHEAD_MAX_OFFSET];
-//                 const lookAheadTau =
-//                     settings[CameraSettingsIndex.LOOK_AHEAD_TAU];
-//                 const deadBandEnter =
-//                     settings[CameraSettingsIndex.DEAD_BAND_ENTER];
-//                 const deadBandExit =
-//                     settings[CameraSettingsIndex.DEAD_BAND_EXIT];
-//                 const airborneYScale =
-//                     settings[CameraSettingsIndex.AIRBORNE_Y_SCALE];
-//                 const flags = settings[CameraSettingsIndex.FLAGS] | 0;
-
-//                 // Dead-zone dims (px)
-//                 const deadZoneW = this.displayW * deadZoneWPerc;
-//                 const deadZoneH = this.displayH * deadZoneHPerc;
-//                 const deadZoneHalfW = deadZoneW * 0.5;
-//                 const deadZoneHalfH = deadZoneH * 0.5;
-
-//                 // Update dead-zone (projected into reachable space)
-//                 this.updateDeadZonePosition(
-//                     pos,
-//                     halfW,
-//                     halfH,
-//                     deadZoneHalfW,
-//                     deadZoneHalfH
-//                 );
-
-//                 // Subject velocity (px/s)
-//                 const vx_s = this.subjectVelocity![VelocityIndex.X];
-//                 const vy_s = this.subjectVelocity![VelocityIndex.Y];
-
-//                 // Hysteresis
-//                 if (!this.lookAheadXActive && Math.abs(vx_s) > deadBandExit)
-//                     this.lookAheadXActive = true;
-//                 if (this.lookAheadXActive && Math.abs(vx_s) < deadBandEnter)
-//                     this.lookAheadXActive = false;
-
-//                 if (!this.lookAheadYActive && Math.abs(vy_s) > deadBandExit)
-//                     this.lookAheadYActive = true;
-//                 if (this.lookAheadYActive && Math.abs(vy_s) < deadBandEnter)
-//                     this.lookAheadYActive = false;
-
-//                 let rawLookAheadX = this.lookAheadXActive
-//                     ? Cmath.clamp(
-//                           lookAheadGainPerSec * vx_s,
-//                           -lookAheadMaxOffset,
-//                           lookAheadMaxOffset
-//                       )
-//                     : 0;
-
-//                 let rawLookAheadY = this.lookAheadYActive
-//                     ? Cmath.clamp(
-//                           lookAheadGainPerSec * vy_s,
-//                           -lookAheadMaxOffset,
-//                           lookAheadMaxOffset
-//                       )
-//                     : 0;
-
-//                 // Flags + airborne handling
-//                 const yEnabled = (flags & CameraFlags.EnableYLookAhead) !== 0;
-//                 if (!yEnabled) rawLookAheadY = 0;
-
-//                 const airborneBuf = this.subjectAirborne;
-//                 const isAirborne = !!(airborneBuf && airborneBuf[0] !== 0);
-//                 if (isAirborne) rawLookAheadY *= airborneYScale;
-
-//                 // EMA smoothing using settings’ tau
-//                 const alpha = 1 - Math.exp(-dt / lookAheadTau);
-//                 lookAheadX += alpha * (rawLookAheadX - lookAheadX);
-//                 lookAheadY += alpha * (rawLookAheadY - lookAheadY);
-
-//                 // Persist smoothed state
-//                 camera[CameraIndex.LOOK_AHEAD_X] = lookAheadX;
-//                 camera[CameraIndex.LOOK_AHEAD_Y] = lookAheadY;
-
-//                 // Compose target and clamp to reachable area
-//                 let targetX = this.deadZoneX + lookAheadX;
-//                 let targetY = this.deadZoneY + lookAheadY;
-//                 targetX = Cmath.clamp(targetX, minX, maxX);
-//                 targetY = Cmath.clamp(targetY, minY, maxY);
-
-//                 // Spring acceleration toward clamped target
-//                 const accX =
-//                     -2 * springFreqX * vel[VelocityIndex.X] -
-//                     springFreqX *
-//                         springFreqX *
-//                         (pos[PositionIndex.X] - targetX);
-//                 const accY =
-//                     -2 * springFreqY * vel[VelocityIndex.Y] -
-//                     springFreqY *
-//                         springFreqY *
-//                         (pos[PositionIndex.Y] - targetY);
-
-//                 // Integrate camera velocity (MotionSystem will integrate Position)
-//                 vel[VelocityIndex.X] += accX * dt;
-//                 vel[VelocityIndex.Y] += accY * dt;
-
-//                 // Debug overlay (flag‑controlled)
-//                 if (this.dbContext && flags & CameraFlags.DebugOverlay) {
-//                     const cw = this.dbCanvas.width,
-//                         ch = this.dbCanvas.height;
-//                     this.dbContext.clearRect(0, 0, cw, ch);
-//                     this.dbContext.strokeStyle = "yellow";
-//                     const x = (cw - deadZoneW) * 0.5;
-//                     const y = (ch - deadZoneH) * 0.5;
-//                     this.dbContext.strokeRect(
-//                         Math.round(x),
-//                         Math.round(y),
-//                         deadZoneW,
-//                         deadZoneH
-//                     );
-//                 }
-//             }
-//         );
-//     }
-// }
-
-// here we have the camera settings values for now
+// Camera behavior settings - how smart the camera follows the player
 const cameraSettings = {
-    lookAheadOffsetX: 128,
-    lookAheadOffsetY: 64,
+    leadTime: 0.25, // How far ahead to look (in seconds)
+    baseDistance: 64, // Base offset distance from player (3 tiles)
+    // speedCurveK: 0.6, // Extra offset based on player speed
+    speedCurveK: 5, // Extra offset based on player speed
+    // dirSharpness: 10.0, // How quickly camera adjusts direction
+    dirSharpness: 400, // How quickly camera adjusts direction
+    enableSpeedEnter: 0.6, // Speed threshold to start looking ahead
+    enableSpeedExit: 0.4, // Speed threshold to stop looking ahead
+    // maxOffset: 128, // Maximum distance camera can be from player (~5 tiles)
+    maxOffset: 180, // Maximum distance camera can be from player (~5 tiles)
 };
 
 type ComponentSlice = { arr: Buffer; base: number };
 
+// Smart camera that smoothly follows a player with look-ahead prediction
 export class CameraSystem extends ECSUpdateSystem {
+    // Player position and movement data
     private subjectPosition: ComponentSlice | undefined = undefined;
     private subjectVelocity: ComponentSlice | undefined = undefined;
 
-    // Add interpolation properties
-    private currentOffsetX: number = 0;
-    private currentOffsetY: number = 0;
-    private targetOffsetX: number = 0;
-    private targetOffsetY: number = 0;
-    private readonly interpolationSpeed: number = 2.5; // Adjust this to control smoothness
-
+    // World and screen dimensions
     private readonly worldW: number;
     private readonly worldH: number;
     private readonly displayW: number;
     private readonly displayH: number;
 
-    // debug
+    // Camera state - tracks where it's looking and if look-ahead is active
+    private lookDirX: number = 1; // current look direction (normalized)
+    private lookDirY: number = 0;
+    private lookActive = 0 as 0 | 1; // hysteresis flag - prevents jittery switching
+
+    // Debug visualization - shows camera behavior with colored dots and lines
     private readonly dbContext: CanvasRenderingContext2D | null;
     private readonly dbCanvas: HTMLCanvasElement;
 
@@ -331,12 +69,12 @@ export class CameraSystem extends ECSUpdateSystem {
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
 
-        // visual debug canvas
+        // Create debug canvas overlay to visualize camera behavior
         const dbCanvas = document.createElement("canvas");
         dbCanvas.width = this.displayW;
         dbCanvas.height = this.displayH;
         dbCanvas.style.zIndex = "9999";
-        dbCanvas.style.border = "4px solid red";
+        dbCanvas.style.border = "2px solid red";
         dbCanvas.style.pointerEvents = "none";
         document.querySelector("#app")?.appendChild(dbCanvas);
         this.dbContext = dbCanvas.getContext("2d");
@@ -345,12 +83,206 @@ export class CameraSystem extends ECSUpdateSystem {
 
     public prerun(view: View): void {
         this.subjectPosition =
-            this.getSubjectWSlice(view, DESCRIPTORS.Position) ?? undefined;
+            this.getSubjectSlice(view, DESCRIPTORS.Position) ?? undefined;
         this.subjectVelocity =
-            this.getSubjectWSlice(view, DESCRIPTORS.Velocity) ?? undefined;
+            this.getSubjectSlice(view, DESCRIPTORS.Velocity) ?? undefined;
     }
 
-    private getSubjectWSlice(
+    public update(view: View, cmd: CommandBuffer, dt: number) {
+        if (this.subject && (!this.subjectPosition || !this.subjectVelocity))
+            return;
+
+        view.forEachChunkWith(
+            [Component.Camera, Component.Position, Component.Velocity],
+            (chunk) => {
+                const pos = chunk.views.Position;
+                const vel = chunk.views.Velocity;
+
+                // Get player position and movement
+                const px = this.getSubjectX();
+                const py = this.getSubjectY();
+                const pvx = this.getSubjectVelocityX();
+                const pvy = this.getSubjectVelocityY();
+                const s = Math.sqrt(pvx * pvx + pvy * pvy); // player speed
+
+                const {
+                    leadTime,
+                    baseDistance,
+                    speedCurveK,
+                    dirSharpness,
+                    enableSpeedEnter,
+                    enableSpeedExit,
+                    maxOffset,
+                } = cameraSettings;
+
+                // Smart look-ahead activation - prevents jittery switching
+                // Only look ahead when player is moving fast enough
+                if (!this.lookActive && s > enableSpeedEnter) {
+                    this.lookActive = 1;
+                }
+                if (this.lookActive && s < enableSpeedExit) {
+                    this.lookActive = 0;
+                }
+
+                // Calculate desired look direction based on player movement
+                let desiredDirX = this.lookDirX;
+                let desiredDirY = this.lookDirY;
+                if (this.lookActive && s > 0) {
+                    desiredDirX = pvx / s; // normalize velocity to get direction
+                    desiredDirY = pvy / s;
+                }
+                // Smoothly blend to new direction - prevents sudden camera snaps
+                const blend = 1 - Math.exp(-dirSharpness * dt);
+                this.lookDirX += (desiredDirX - this.lookDirX) * blend;
+                this.lookDirY += (desiredDirY - this.lookDirY) * blend;
+                // Keep look direction normalized (unit vector)
+                const l = Math.sqrt(
+                    this.lookDirX * this.lookDirX +
+                        this.lookDirY * this.lookDirY
+                );
+                if (l > 0) {
+                    this.lookDirX /= l;
+                    this.lookDirY /= l;
+                }
+
+                // Calculate how far ahead to look
+                const predictX = pvx * leadTime; // predict where player will be
+                const predictY = pvy * leadTime;
+                const mag = baseDistance + speedCurveK * s; // offset grows with speed
+                let offsetX = this.lookDirX * mag + predictX;
+                let offsetY = this.lookDirY * mag + predictY;
+
+                // Clamp offset to maximum distance
+                const offsetLen = Math.sqrt(
+                    offsetX * offsetX + offsetY * offsetY
+                );
+                if (offsetLen > maxOffset) {
+                    const r = maxOffset / (offsetLen || 1);
+                    offsetX *= r;
+                    offsetY *= r;
+                }
+
+                // Where the camera wants to be (player + offset)
+                let desiredX = px + offsetX;
+                let desiredY = py + offsetY;
+
+                // clamp the desired xy to the world
+                const off = chunk.views.Offset;
+                const size = chunk.views.Size;
+                const offX = off ? off[OffsetIndex.X] : 0;
+                const offY = off ? off[OffsetIndex.Y] : 0;
+                const viewW = size ? size[SizeIndex.WIDTH] : this.displayW;
+                const viewH = size ? size[SizeIndex.HEIGHT] : this.displayH;
+                const halfW = viewW * 0.5;
+                const halfH = viewH * 0.5;
+
+                const minCx = halfW - offX;
+                const maxCx = this.worldW - halfW - offX;
+                const minCy = halfH - offY;
+                const maxCy = this.worldH - halfH - offY;
+
+                if (maxCx >= minCx)
+                    desiredX = Cmath.clamp(desiredX, minCx, maxCx);
+                if (maxCy >= minCy)
+                    desiredY = Cmath.clamp(desiredY, minCy, maxCy);
+
+                // Get current camera position and velocity
+                const cx = pos[PositionIndex.X];
+                const cy = pos[PositionIndex.Y];
+                const cvx = vel[VelocityIndex.X];
+                const cvy = vel[VelocityIndex.Y];
+
+                // Add a soft dead‑zone around the target (kills micro‑jitter)
+                const deadZone = 32.0; // pixels
+                let ex = cx - desiredX; // how far off we are
+                let ey = cy - desiredY;
+                const elen = Math.hypot(ex, ey);
+                if (elen <= deadZone) {
+                    ex = 0;
+                    ey = 0;
+                } else {
+                    const k = (elen - deadZone) / (elen || 1);
+                    ex *= k;
+                    ey *= k;
+                }
+
+                // Physics-based smooth following (half-life = 0.22 seconds)
+                const followHalfLife = 0.22;
+                const lambda = Math.log(2) / followHalfLife;
+                // Calculate smooth acceleration toward desired position
+                const jx = (cvx + lambda * ex) * dt;
+                const jy = (cvy + lambda * ey) * dt;
+                let newVx = cvx - lambda * jx;
+                let newVy = cvy - lambda * jy;
+
+                // Prevent camera from moving too fast (safety limit)
+                const maxCamSpeed = 1000;
+                const vLen = Math.hypot(newVx, newVy);
+                if (vLen > maxCamSpeed) {
+                    const k = maxCamSpeed / (vLen || 1);
+                    newVx *= k;
+                    newVy *= k;
+                }
+
+                // Update camera velocity
+                vel[0] = newVx;
+                vel[1] = newVy;
+
+                // Calculate camera viewport in world space
+                const tlx = cx - viewW * 0.5 + offX;
+                const tly = cy - viewH * 0.5 + offY;
+
+                // Scale factor (1 = 1:1 pixel mapping)
+                const scale = 1;
+
+                // Convert world coordinates to screen coordinates
+                const w2sX = (wx: number) => (wx - tlx) * scale;
+                const w2sY = (wy: number) => (wy - tly) * scale;
+
+                // Debug visualization - show camera behavior
+                if (this.dbContext) {
+                    const g = this.dbContext;
+                    g.clearRect(0, 0, this.displayW, this.displayH);
+
+                    // Helper to draw colored dots
+                    const dot = (
+                        x: number,
+                        y: number,
+                        r: number,
+                        color: string
+                    ) => {
+                        g.beginPath();
+                        g.arc(x, y, r, 0, Math.PI * 2);
+                        g.fillStyle = color;
+                        g.fill();
+                    };
+                    // Draw key points: player (green), desired position (blue), camera (red)
+                    dot(w2sX(px), w2sY(py), 3, "#00c853");
+                    dot(w2sX(desiredX), w2sY(desiredY), 3, "#2962ff");
+                    dot(w2sX(cx), w2sY(cy), 3, "#d50000");
+
+                    // Draw line from camera to desired position
+                    g.beginPath();
+                    g.moveTo(w2sX(cx), w2sY(cy));
+                    g.lineTo(w2sX(desiredX), w2sY(desiredY));
+                    g.lineWidth = 1.5;
+                    g.strokeStyle = "#2962ff";
+                    g.stroke();
+
+                    // Draw player velocity vector (dashed line)
+                    g.beginPath();
+                    g.moveTo(w2sX(px), w2sY(py));
+                    g.lineTo(w2sX(px + pvx * 0.5), w2sY(py + pvy * 0.5));
+                    g.setLineDash([4, 4]);
+                    g.strokeStyle = "#9e9e9e";
+                    g.stroke();
+                    g.setLineDash([]);
+                }
+            }
+        );
+    }
+
+    private getSubjectSlice(
         view: View,
         desc: ComponentDescriptor
     ): ComponentSlice | undefined {
@@ -385,109 +317,5 @@ export class CameraSystem extends ECSUpdateSystem {
         return this.subjectVelocity!.arr[
             this.subjectVelocity!.base + VelocityIndex.Y
         ];
-    }
-
-    public update(view: View, cmd: CommandBuffer, dt: number) {
-        if (this.subject && (!this.subjectPosition || !this.subjectVelocity))
-            return;
-
-        view.forEachChunkWith(
-            [
-                Component.Camera,
-                Component.CameraSettings,
-                Component.Position,
-                Component.Offset,
-                Component.Velocity,
-            ],
-            (chunk) => {
-                const size = chunk.views.Size;
-                const pos = chunk.views.Position;
-                const off = chunk.views.Offset;
-                const vel = chunk.views.Velocity;
-
-                vel[VelocityIndex.X] = this.getSubjectVelocityX();
-                vel[VelocityIndex.Y] = this.getSubjectVelocityY();
-
-                // Only update target offset when player is moving
-                if (Math.abs(vel[VelocityIndex.X]) > 0) {
-                    this.targetOffsetX =
-                        cameraSettings.lookAheadOffsetX *
-                        Math.sign(vel[VelocityIndex.X]);
-
-                    // Smooth interpolation towards target offset only when moving
-                    const lerpFactor =
-                        1 - Math.exp(-this.interpolationSpeed * dt);
-                    this.currentOffsetX +=
-                        (this.targetOffsetX - this.currentOffsetX) * lerpFactor;
-                }
-                if (Math.abs(vel[VelocityIndex.Y]) > 0) {
-                    this.targetOffsetY =
-                        cameraSettings.lookAheadOffsetY *
-                        Math.sign(vel[VelocityIndex.Y]);
-
-                    // Smooth interpolation towards target offset only when moving
-                    const lerpFactor =
-                        1 - Math.exp(-this.interpolationSpeed * dt);
-                    this.currentOffsetY +=
-                        (this.targetOffsetY - this.currentOffsetY) * lerpFactor;
-                }
-
-                // Apply the current offset (whether interpolated or maintained)
-                off[OffsetIndex.X] = this.currentOffsetX;
-                off[OffsetIndex.Y] = this.currentOffsetY;
-
-                if (this.dbContext) {
-                    this.dbContext.clearRect(
-                        0,
-                        0,
-                        this.displayW,
-                        this.displayH
-                    );
-
-                    // Draw lookahead offset box in the center of the screen
-                    const centerX = this.displayW / 2;
-                    const centerY = this.displayH / 2;
-
-                    // Box dimensions based on lookahead offsets
-                    const boxWidth = cameraSettings.lookAheadOffsetX * 2;
-                    const boxHeight = cameraSettings.lookAheadOffsetY * 2;
-
-                    // Box position (centered)
-                    const boxX = centerX - boxWidth / 2;
-                    const boxY = centerY - boxHeight / 2;
-
-                    // Outer box dimensions (20% bigger)
-                    const outerBoxWidth = boxWidth * 1.4;
-                    const outerBoxHeight = boxHeight * 1.4;
-                    const outerBoxX = centerX - outerBoxWidth / 2;
-                    const outerBoxY = centerY - outerBoxHeight / 2;
-
-                    // Draw the outer box first
-                    this.dbContext.strokeStyle = "gray";
-                    this.dbContext.lineWidth = 1;
-                    this.dbContext.strokeRect(
-                        outerBoxX,
-                        outerBoxY,
-                        outerBoxWidth,
-                        outerBoxHeight
-                    );
-
-                    // Draw the lookahead box
-                    this.dbContext.strokeStyle = "cyan";
-                    this.dbContext.lineWidth = 2;
-                    this.dbContext.strokeRect(boxX, boxY, boxWidth, boxHeight);
-
-                    // Draw center crosshair
-                    this.dbContext.strokeStyle = "red";
-                    this.dbContext.lineWidth = 1;
-                    this.dbContext.beginPath();
-                    this.dbContext.moveTo(centerX - 10, centerY);
-                    this.dbContext.lineTo(centerX + 10, centerY);
-                    this.dbContext.moveTo(centerX, centerY - 10);
-                    this.dbContext.lineTo(centerX, centerY + 10);
-                    this.dbContext.stroke();
-                }
-            }
-        );
     }
 }

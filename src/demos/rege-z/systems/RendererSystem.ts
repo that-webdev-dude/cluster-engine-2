@@ -6,6 +6,7 @@ import {
     PositionIndex,
     SizeIndex,
     SpriteIndex,
+    OffsetIndex,
 } from "../components";
 import {
     Display,
@@ -69,10 +70,12 @@ export class SpriteRendererSystem extends ECSRenderSystem {
 
             // should I now center the camera?
             this.cameraPos[PositionIndex.X] = Math.round(
-                interpolatedX - size[SizeIndex.WIDTH] * 0.5 + off[0]
+                interpolatedX - size[SizeIndex.WIDTH] * 0.5 + off[OffsetIndex.X]
             );
             this.cameraPos[PositionIndex.Y] = Math.round(
-                interpolatedY - size[SizeIndex.HEIGHT] * 0.5 + off[1]
+                interpolatedY -
+                    size[SizeIndex.HEIGHT] * 0.5 +
+                    off[OffsetIndex.Y]
             );
         });
 
