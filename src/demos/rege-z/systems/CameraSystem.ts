@@ -57,7 +57,6 @@ export class CameraSystem extends ECSUpdateSystem {
 
     // Debug visualization - shows camera behavior with colored dots and lines
     private readonly dbContext: CanvasRenderingContext2D | null;
-    private readonly dbCanvas: HTMLCanvasElement;
 
     constructor(
         readonly store: Store,
@@ -78,7 +77,6 @@ export class CameraSystem extends ECSUpdateSystem {
         dbCanvas.style.pointerEvents = "none";
         document.querySelector("#app")?.appendChild(dbCanvas);
         this.dbContext = dbCanvas.getContext("2d");
-        this.dbCanvas = dbCanvas;
     }
 
     public prerun(view: View): void {
