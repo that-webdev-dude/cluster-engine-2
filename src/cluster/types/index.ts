@@ -17,7 +17,7 @@ export type BufferConstructor = {
  */
 export type ComponentType = number;
 
-export type ComponentValue = number[];
+export type ComponentValue = ReadonlyArray<number>;
 
 export type ComponentName = string;
 
@@ -38,15 +38,15 @@ export interface ComponentPropertyEnum {
 /**
  * Enhanced component descriptor with property documentation
  */
-export interface ComponentDescriptor {
+export type ComponentDescriptor = Readonly<{
     buffer: BufferConstructor;
     type: ComponentType;
     name: ComponentName;
     count: ComponentCount;
     default: ComponentValue;
     alignment?: ComponentAlignement;
-    fields: readonly string[];
-}
+    fields: ReadonlyArray<string>;
+}>;
 
 /**
  * Entity related types
