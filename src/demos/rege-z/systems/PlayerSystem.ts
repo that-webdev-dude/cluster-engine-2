@@ -16,6 +16,8 @@ import {
     SizeIndex,
 } from "../components";
 
+// implement dashing or teleporting here and watch the camera system behaviour
+
 export class PlayerSystem extends ECSUpdateSystem {
     private readonly worldW: number = 0;
     private readonly worldH: number = 0;

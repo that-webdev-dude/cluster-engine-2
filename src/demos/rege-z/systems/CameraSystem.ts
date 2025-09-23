@@ -26,14 +26,15 @@ import {
 const cameraSettings = {
     leadTime: 0.25, // How far ahead to look (in seconds)
     baseDistance: 64, // Base offset distance from player (3 tiles)
-    // speedCurveK: 0.6, // Extra offset based on player speed
     speedCurveK: 5, // Extra offset based on player speed
-    // dirSharpness: 10.0, // How quickly camera adjusts direction
     dirSharpness: 400, // How quickly camera adjusts direction
     enableSpeedEnter: 0.6, // Speed threshold to start looking ahead
     enableSpeedExit: 0.4, // Speed threshold to stop looking ahead
-    // maxOffset: 128, // Maximum distance camera can be from player (~5 tiles)
     maxOffset: 180, // Maximum distance camera can be from player (~5 tiles)
+    fadeOnHalfLife: 0.06, // quick fade-in of look-ahead magnitude
+    fadeOffHalfLife: 0.18, // gentle fade-out when deactivated
+    teleportThreshold: 160, // px: consider player "teleporting" if delta > this in a frame
+    snapMaxSpeed: 5000, // px/s cap used only for teleport snap
 };
 
 type ComponentSlice = { arr: Buffer; base: number };
@@ -43,6 +44,8 @@ export class CameraSystem extends ECSUpdateSystem {
     // Player position and movement data
     private subjectPosition: ComponentSlice | undefined = undefined;
     private subjectVelocity: ComponentSlice | undefined = undefined;
+    private lastSubjectX = NaN;
+    private lastSubjectY = NaN;
 
     // World and screen dimensions
     private readonly worldW: number;
@@ -54,6 +57,8 @@ export class CameraSystem extends ECSUpdateSystem {
     private lookDirX: number = 1; // current look direction (normalized)
     private lookDirY: number = 0;
     private lookActive = 0 as 0 | 1; // hysteresis flag - prevents jittery switching
+    private lookWeight = 0; // 0..1, scales look-ahead magnitude (fades in/out)
+    // private snapCooldown = 0; // frames to hold zero velocity after snap (1–2)
 
     // Debug visualization - shows camera behavior with colored dots and lines
     private readonly dbContext: CanvasRenderingContext2D | null;
@@ -87,6 +92,8 @@ export class CameraSystem extends ECSUpdateSystem {
     }
 
     public update(view: View, cmd: CommandBuffer, dt: number) {
+        if (dt <= 0) return;
+
         if (this.subject && (!this.subjectPosition || !this.subjectVelocity))
             return;
 
@@ -111,16 +118,43 @@ export class CameraSystem extends ECSUpdateSystem {
                     enableSpeedEnter,
                     enableSpeedExit,
                     maxOffset,
+                    teleportThreshold,
+                    snapMaxSpeed,
                 } = cameraSettings;
+
+                // is subject teleported?
+                let teleported = false;
+                if (
+                    Number.isNaN(this.lastSubjectX) ||
+                    Number.isNaN(this.lastSubjectY)
+                ) {
+                    this.lastSubjectX = px;
+                    this.lastSubjectY = py;
+                } else {
+                    let pdx = px - this.lastSubjectX;
+                    let pdy = py - this.lastSubjectY;
+                    if (Math.hypot(pdx, pdy) > teleportThreshold) {
+                        teleported = true;
+                    }
+                    this.lastSubjectX = px;
+                    this.lastSubjectY = py;
+                }
 
                 // Smart look-ahead activation - prevents jittery switching
                 // Only look ahead when player is moving fast enough
-                if (!this.lookActive && s > enableSpeedEnter) {
+                // Gate stays the same…
+                if (!this.lookActive && s > enableSpeedEnter)
                     this.lookActive = 1;
-                }
-                if (this.lookActive && s < enableSpeedExit) {
-                    this.lookActive = 0;
-                }
+                if (this.lookActive && s < enableSpeedExit) this.lookActive = 0;
+
+                // Smooth magnitude weight (0..1) using half-lives
+                const fadeOn = Math.log(2) / cameraSettings.fadeOnHalfLife;
+                const fadeOff = Math.log(2) / cameraSettings.fadeOffHalfLife;
+                const wLambda = this.lookActive ? fadeOn : fadeOff;
+                // Exponential decay toward target (0 or 1)
+                this.lookWeight +=
+                    ((this.lookActive ? 1 : 0) - this.lookWeight) *
+                    (1 - Math.exp(-wLambda * dt));
 
                 // Calculate desired look direction based on player movement
                 let desiredDirX = this.lookDirX;
@@ -144,9 +178,9 @@ export class CameraSystem extends ECSUpdateSystem {
                 }
 
                 // Calculate how far ahead to look
-                const predictX = pvx * leadTime; // predict where player will be
+                const predictX = pvx * leadTime;
                 const predictY = pvy * leadTime;
-                const mag = baseDistance + speedCurveK * s; // offset grows with speed
+                const mag = (baseDistance + speedCurveK * s) * this.lookWeight; // <— scaled
                 let offsetX = this.lookDirX * mag + predictX;
                 let offsetY = this.lookDirY * mag + predictY;
 
@@ -190,11 +224,33 @@ export class CameraSystem extends ECSUpdateSystem {
                 const cvx = vel[VelocityIndex.X];
                 const cvy = vel[VelocityIndex.Y];
 
+                // If teleported: set a velocity that lands us exactly on desired this frame.
+                if (teleported) {
+                    let snapVx = (desiredX - cx) / dt;
+                    let snapVy = (desiredY - cy) / dt;
+                    const snapV = Math.hypot(snapVx, snapVy);
+                    if (snapV > snapMaxSpeed) {
+                        const k = snapMaxSpeed / (snapV || 1);
+                        snapVx *= k;
+                        snapVy *= k;
+                    }
+                    vel[VelocityIndex.X] = snapVx;
+                    vel[VelocityIndex.Y] = snapVy;
+                    return;
+                }
+
+                // unused
+                // // Optional: on the frame after snap, if almost still, zero tiny residual
+                // if (this.snapCooldown > 0) {
+                //     this.snapCooldown--;
+                //     // (No special action required; spring will pick up; could zero if very tiny.)
+                // }
+
                 // Add a soft dead‑zone around the target (kills micro‑jitter)
-                const deadZone = 32.0; // pixels
                 let ex = cx - desiredX; // how far off we are
                 let ey = cy - desiredY;
                 const elen = Math.hypot(ex, ey);
+                const deadZone = 32.0; // pixels
                 if (elen <= deadZone) {
                     ex = 0;
                     ey = 0;
@@ -223,8 +279,8 @@ export class CameraSystem extends ECSUpdateSystem {
                 }
 
                 // Update camera velocity
-                vel[0] = newVx;
-                vel[1] = newVy;
+                vel[VelocityIndex.X] = newVx;
+                vel[VelocityIndex.Y] = newVy;
 
                 // Calculate camera viewport in world space
                 const tlx = cx - viewW * 0.5 + offX;
