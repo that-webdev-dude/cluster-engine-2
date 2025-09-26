@@ -23,6 +23,8 @@ export type ComponentName = string;
 
 export type ComponentCount = number;
 
+export type ComponentSlice = { arr: Buffer; base: number };
+
 export type ComponentAlignement = number;
 
 export type ComponentValueMap = Record<ComponentType, ComponentValue>;

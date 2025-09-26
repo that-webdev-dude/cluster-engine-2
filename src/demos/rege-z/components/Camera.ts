@@ -2,26 +2,55 @@ import { Component } from "./Component";
 
 /**
  * Camera component
- * - Spring camera state and look-ahead accumulators.
+ * - Camera general state.
  */
 export enum CameraIndex {
-    SPRING_FREQ_X = 0,
-    SPRING_FREQ_Y = 1,
-    LOOK_AHEAD_X = 2,
-    LOOK_AHEAD_Y = 3,
+    ENABLED = 0,
+    LEAD_TIME = 1,
+    BASE_DISTANCE = 2,
+    SPEED_CURVE_K = 3,
+    DIR_SHARPNESS = 4,
+    ENABLE_SPEED_ENTER = 5,
+    ENABLE_SPEED_EXIT = 6,
+    MAX_OFFSET = 7,
+    FADE_ON_HALF_LIFE = 8,
+    FADE_OFF_HALF_LIFE = 9,
+    TELEPORT_THRESHOLD = 10,
+    SNAP_MAX_SPEED = 11,
 }
 
 export const CameraDescriptor = {
     type: Component.Camera,
     name: "Camera",
-    count: 4,
+    count: 12,
     buffer: Float32Array,
-    default: [5, 5, 0, 0],
+    default: [
+        1, // enabled
+        0.25, // leadTime (seconds)
+        64, // baseDistance (pixels)
+        5, // speedCurveK
+        400, // dirSharpness
+        0.6, // enableSpeedEnter
+        0.4, // enableSpeedExit
+        180, // maxOffset (pixels)
+        0.06, // fadeOnHalfLife (seconds)
+        0.18, // fadeOffHalfLife (seconds)
+        160, // teleportThreshold (pixels/frame)
+        5000, // snapMaxSpeed (px/s)
+    ],
     // prettier-ignore
     fields: [
-        "springFreqX",
-        "springFreqY",
-        "lookAheadX",
-        "lookAheadY",
+        "enabled",
+        "leadTime",
+        "baseDistance",
+        "speedCurveK",
+        "dirSharpness",
+        "enableSpeedEnter",
+        "enableSpeedExit",
+        "maxOffset",
+        "fadeOnHalfLife",
+        "fadeOffHalfLife",
+        "teleportThreshold",
+        "snapMaxSpeed",
     ],
 } as const;

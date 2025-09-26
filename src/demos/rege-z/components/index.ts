@@ -1,5 +1,4 @@
 export { Component } from "./Component";
-export { CameraFlags } from "./CameraFlags";
 
 export { PositionIndex } from "./Position";
 export { OffsetIndex } from "./Offset";
