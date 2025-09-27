@@ -3,4 +3,53 @@
  */
 const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
-export { DEBUG };
+class DebugOverlay {
+    private readonly dbContext: CanvasRenderingContext2D;
+    constructor(
+        private readonly w: number,
+        private readonly h: number,
+        private readonly zOrder: number
+    ) {
+        const dbCanvas = document.createElement("canvas");
+        dbCanvas.width = w;
+        dbCanvas.height = h;
+        dbCanvas.style.zIndex = `${zOrder}`;
+        dbCanvas.style.border = "2px solid red";
+        dbCanvas.style.pointerEvents = "none";
+        document.querySelector("#app")?.appendChild(dbCanvas);
+        this.dbContext = dbCanvas.getContext("2d")!;
+    }
+
+    dot(x: number, y: number, r: number, color: string) {
+        this.dbContext.beginPath();
+        this.dbContext.arc(x, y, r, 0, Math.PI * 2);
+        this.dbContext.fillStyle = color;
+        this.dbContext.fill();
+    }
+
+    line(
+        sx: number,
+        sy: number,
+        ex: number,
+        ey: number,
+        width: number,
+        color: string,
+        lineDash: number = 0
+    ) {
+        this.dbContext.beginPath();
+        this.dbContext.moveTo(sx, sy);
+        this.dbContext.lineTo(ex, ey);
+        this.dbContext.lineWidth = width;
+        if (lineDash > 0) {
+            this.dbContext.setLineDash([lineDash, lineDash]);
+        }
+        this.dbContext.strokeStyle = `${color}`;
+        this.dbContext.stroke();
+    }
+
+    clear() {
+        this.dbContext.clearRect(0, 0, this.w, this.h);
+    }
+}
+
+export { DEBUG, DebugOverlay };

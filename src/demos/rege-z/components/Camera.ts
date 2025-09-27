@@ -17,12 +17,16 @@ export enum CameraIndex {
     FADE_OFF_HALF_LIFE = 9,
     TELEPORT_THRESHOLD = 10,
     SNAP_MAX_SPEED = 11,
+    LOOK_DIR_X = 12,
+    LOOK_DIR_Y = 13,
+    LOOK_ACTIVE = 14,
+    LOOK_WEIGHT = 15,
 }
 
 export const CameraDescriptor = {
     type: Component.Camera,
     name: "Camera",
-    count: 12,
+    count: 16,
     buffer: Float32Array,
     default: [
         1, // enabled
@@ -37,6 +41,10 @@ export const CameraDescriptor = {
         0.18, // fadeOffHalfLife (seconds)
         160, // teleportThreshold (pixels/frame)
         5000, // snapMaxSpeed (px/s)
+        1, // lookDirX
+        0, // lookDirY
+        0, // lookActive
+        0, // lookWeight
     ],
     // prettier-ignore
     fields: [
@@ -52,5 +60,9 @@ export const CameraDescriptor = {
         "fadeOffHalfLife",
         "teleportThreshold",
         "snapMaxSpeed",
+        "lookDirX",
+        "lookDirY",
+        "lookActive",
+        "lookWeight",
     ],
 } as const;

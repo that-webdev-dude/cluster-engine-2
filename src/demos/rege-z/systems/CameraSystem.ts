@@ -20,20 +20,7 @@ import {
     EntityMeta,
 } from "../../../cluster/types";
 
-// Camera behavior settings - how smart the camera follows the player
-const cameraSettings = {
-    leadTime: 0.25, // How far ahead to look (in seconds)
-    baseDistance: 64, // Base offset distance from player (3 tiles)
-    speedCurveK: 5, // Extra offset based on player speed
-    dirSharpness: 400, // How quickly camera adjusts direction
-    enableSpeedEnter: 0.6, // Speed threshold to start looking ahead
-    enableSpeedExit: 0.4, // Speed threshold to stop looking ahead
-    maxOffset: 180, // Maximum distance camera can be from player (~5 tiles)
-    fadeOnHalfLife: 0.06, // quick fade-in of look-ahead magnitude
-    fadeOffHalfLife: 0.18, // gentle fade-out when deactivated
-    teleportThreshold: 160, // px: consider player "teleporting" if delta > this in a frame
-    snapMaxSpeed: 5000, // px/s cap used only for teleport snap
-};
+// Camera behavior is now configured per-entity via Component.Camera values
 
 // Smart camera that smoothly follows a player with look-ahead prediction
 export class CameraSystem extends ECSUpdateSystem {
@@ -47,11 +34,7 @@ export class CameraSystem extends ECSUpdateSystem {
     private readonly displayW: number;
     private readonly displayH: number;
 
-    // Camera state - tracks where it's looking and if look-ahead is active
-    private lookDirX: number = 1; // current look direction (normalized)
-    private lookDirY: number = 0;
-    private lookActive = 0 as 0 | 1; // hysteresis flag - prevents jittery switching
-    private lookWeight = 0; // 0..1, scales look-ahead magnitude (fades in/out)
+    // Camera state now lives in Component.Camera per entity
 
     // Debug visualization - shows camera behavior with colored dots and lines
     private readonly dbContext: CanvasRenderingContext2D | null;
@@ -114,7 +97,7 @@ export class CameraSystem extends ECSUpdateSystem {
                 // multi camera support
                 for (let i = 0; i < chunk.count; i++) {
                     const camBase = i * camStride;
-                    if (camera[camBase + CameraIndex.ENABLED] === 0) return; // camera is not enabled so do nothing
+                    if (camera[camBase + CameraIndex.ENABLED] === 0) continue; // camera is not enabled so do nothing
 
                     // Get player position and movement
                     const px = this.getSubjectX();
@@ -125,64 +108,77 @@ export class CameraSystem extends ECSUpdateSystem {
                     const pvy = this.getSubjectVelocityY();
                     const s = Math.sqrt(pvx * pvx + pvy * pvy); // player speed
 
-                    const {
-                        leadTime,
-                        baseDistance,
-                        speedCurveK,
-                        dirSharpness,
-                        enableSpeedEnter,
-                        enableSpeedExit,
-                        maxOffset,
-                        teleportThreshold,
-                        snapMaxSpeed,
-                    } = cameraSettings;
+                    // Read per-entity camera configuration
+                    const leadTime = camera[camBase + CameraIndex.LEAD_TIME];
+                    const baseDistance =
+                        camera[camBase + CameraIndex.BASE_DISTANCE];
+                    const speedCurveK =
+                        camera[camBase + CameraIndex.SPEED_CURVE_K];
+                    const dirSharpness =
+                        camera[camBase + CameraIndex.DIR_SHARPNESS];
+                    const enableSpeedEnter =
+                        camera[camBase + CameraIndex.ENABLE_SPEED_ENTER];
+                    const enableSpeedExit =
+                        camera[camBase + CameraIndex.ENABLE_SPEED_EXIT];
+                    const maxOffset = camera[camBase + CameraIndex.MAX_OFFSET];
+                    const fadeOnHalfLife =
+                        camera[camBase + CameraIndex.FADE_ON_HALF_LIFE];
+                    const fadeOffHalfLife =
+                        camera[camBase + CameraIndex.FADE_OFF_HALF_LIFE];
+                    const teleportThreshold =
+                        camera[camBase + CameraIndex.TELEPORT_THRESHOLD];
+                    const snapMaxSpeed =
+                        camera[camBase + CameraIndex.SNAP_MAX_SPEED];
+
+                    // Read runtime state from component
+                    let lookDirX = camera[camBase + CameraIndex.LOOK_DIR_X];
+                    let lookDirY = camera[camBase + CameraIndex.LOOK_DIR_Y];
+                    let lookActive = camera[
+                        camBase + CameraIndex.LOOK_ACTIVE
+                    ] as 0 | 1;
+                    let lookWeight = camera[camBase + CameraIndex.LOOK_WEIGHT];
 
                     // Smart look-ahead activation - prevents jittery switching
                     // Only look ahead when player is moving fast enough
                     // Gate stays the same…
-                    if (!this.lookActive && s > enableSpeedEnter)
-                        this.lookActive = 1;
-                    if (this.lookActive && s < enableSpeedExit)
-                        this.lookActive = 0;
+                    if (!lookActive && s > enableSpeedEnter) lookActive = 1;
+                    if (lookActive && s < enableSpeedExit) lookActive = 0;
 
                     // Smooth magnitude weight (0..1) using half-lives
-                    const fadeOn = Math.log(2) / cameraSettings.fadeOnHalfLife;
-                    const fadeOff =
-                        Math.log(2) / cameraSettings.fadeOffHalfLife;
-                    const wLambda = this.lookActive ? fadeOn : fadeOff;
+                    const fadeOn = Math.log(2) / fadeOnHalfLife;
+                    const fadeOff = Math.log(2) / fadeOffHalfLife;
+                    const wLambda = lookActive ? fadeOn : fadeOff;
                     // Exponential decay toward target (0 or 1)
-                    this.lookWeight +=
-                        ((this.lookActive ? 1 : 0) - this.lookWeight) *
+                    lookWeight +=
+                        ((lookActive ? 1 : 0) - lookWeight) *
                         (1 - Math.exp(-wLambda * dt));
 
                     // Calculate desired look direction based on player movement
-                    let desiredDirX = this.lookDirX;
-                    let desiredDirY = this.lookDirY;
-                    if (this.lookActive && s > 0) {
+                    let desiredDirX = lookDirX;
+                    let desiredDirY = lookDirY;
+                    if (lookActive && s > 0) {
                         desiredDirX = pvx / s; // normalize velocity to get direction
                         desiredDirY = pvy / s;
                     }
                     // Smoothly blend to new direction - prevents sudden camera snaps
                     const blend = 1 - Math.exp(-dirSharpness * dt);
-                    this.lookDirX += (desiredDirX - this.lookDirX) * blend;
-                    this.lookDirY += (desiredDirY - this.lookDirY) * blend;
+                    lookDirX += (desiredDirX - lookDirX) * blend;
+                    lookDirY += (desiredDirY - lookDirY) * blend;
                     // Keep look direction normalized (unit vector)
                     const l = Math.sqrt(
-                        this.lookDirX * this.lookDirX +
-                            this.lookDirY * this.lookDirY
+                        lookDirX * lookDirX + lookDirY * lookDirY
                     );
                     if (l > 0) {
-                        this.lookDirX /= l;
-                        this.lookDirY /= l;
+                        lookDirX /= l;
+                        lookDirY /= l;
                     }
 
                     // Calculate how far ahead to look
                     const predictX = pvx * leadTime;
                     const predictY = pvy * leadTime;
-                    const mag =
-                        (baseDistance + speedCurveK * s) * this.lookWeight; // <— scaled
-                    let offsetX = this.lookDirX * mag + predictX;
-                    let offsetY = this.lookDirY * mag + predictY;
+                    const mag = (baseDistance + speedCurveK * s) * lookWeight; // <— scaled
+                    let offsetX = lookDirX * mag + predictX;
+                    let offsetY = lookDirY * mag + predictY;
 
                     // Clamp offset to maximum distance
                     const offsetLen = Math.sqrt(
@@ -249,6 +245,11 @@ export class CameraSystem extends ECSUpdateSystem {
                         }
                         vel[velBase + VelocityIndex.X] = snapVx;
                         vel[velBase + VelocityIndex.Y] = snapVy;
+                        // persist updated runtime state before returning
+                        camera[camBase + CameraIndex.LOOK_DIR_X] = lookDirX;
+                        camera[camBase + CameraIndex.LOOK_DIR_Y] = lookDirY;
+                        camera[camBase + CameraIndex.LOOK_ACTIVE] = lookActive;
+                        camera[camBase + CameraIndex.LOOK_WEIGHT] = lookWeight;
                         return;
                     }
 
@@ -287,6 +288,12 @@ export class CameraSystem extends ECSUpdateSystem {
                     // Update camera velocity
                     vel[velBase + VelocityIndex.X] = newVx;
                     vel[velBase + VelocityIndex.Y] = newVy;
+
+                    // Persist runtime state back to component
+                    camera[camBase + CameraIndex.LOOK_DIR_X] = lookDirX;
+                    camera[camBase + CameraIndex.LOOK_DIR_Y] = lookDirY;
+                    camera[camBase + CameraIndex.LOOK_ACTIVE] = lookActive;
+                    camera[camBase + CameraIndex.LOOK_WEIGHT] = lookWeight;
 
                     // Calculate camera viewport in world space
                     const tlx = cx - viewW * 0.5 + offX;

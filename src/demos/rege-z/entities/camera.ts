@@ -38,6 +38,10 @@ export function getCameraComponents(): ComponentValueMap {
             0.18, // fadeOffHalfLife (seconds)
             160, // teleportThreshold (pixels/frame)
             5000, // snapMaxSpeed (px/s)
+            1, // lookDirX
+            0, // lookDirY
+            0, // lookActive
+            0, // lookWeight
         ],
 
         // Position: [x, y, prevX, prevY, minX, minY, maxX, maxY]

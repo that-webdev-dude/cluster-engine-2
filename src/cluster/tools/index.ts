@@ -1,6 +1,6 @@
-export { Obj } from "./Obj";
+export { DEBUG, DebugOverlay } from "./Debug";
 
-export { DEBUG } from "./Debug";
+export { Obj } from "./Obj";
 
 export { Cmath } from "./Cmath";
 
