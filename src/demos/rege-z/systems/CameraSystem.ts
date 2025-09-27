@@ -1,4 +1,5 @@
 import {
+    DebugOverlay,
     ECSUpdateSystem,
     CommandBuffer,
     Cmath,
@@ -34,10 +35,7 @@ export class CameraSystem extends ECSUpdateSystem {
     private readonly displayW: number;
     private readonly displayH: number;
 
-    // Camera state now lives in Component.Camera per entity
-
-    // Debug visualization - shows camera behavior with colored dots and lines
-    private readonly dbContext: CanvasRenderingContext2D | null;
+    private readonly db: DebugOverlay;
 
     constructor(
         readonly store: Store,
@@ -48,16 +46,7 @@ export class CameraSystem extends ECSUpdateSystem {
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
-
-        // Create debug canvas overlay to visualize camera behavior
-        const dbCanvas = document.createElement("canvas");
-        dbCanvas.width = this.displayW;
-        dbCanvas.height = this.displayH;
-        dbCanvas.style.zIndex = "9999";
-        dbCanvas.style.border = "2px solid red";
-        dbCanvas.style.pointerEvents = "none";
-        document.querySelector("#app")?.appendChild(dbCanvas);
-        this.dbContext = dbCanvas.getContext("2d");
+        this.db = new DebugOverlay(this.displayW, this.displayH, 999);
     }
 
     public prerun(view: View): void {
@@ -304,43 +293,33 @@ export class CameraSystem extends ECSUpdateSystem {
                     const w2sX = (wx: number) => (wx - tlx) * scale;
                     const w2sY = (wy: number) => (wy - tly) * scale;
                     // Debug visualization - show camera behavior
-                    if (this.dbContext) {
-                        const g = this.dbContext;
-                        g.clearRect(0, 0, this.displayW, this.displayH);
-
-                        // Helper to draw colored dots
-                        const dot = (
-                            x: number,
-                            y: number,
-                            r: number,
-                            color: string
-                        ) => {
-                            g.beginPath();
-                            g.arc(x, y, r, 0, Math.PI * 2);
-                            g.fillStyle = color;
-                            g.fill();
-                        };
-                        // Draw key points: player (green), desired position (blue), camera (red)
-                        dot(w2sX(px), w2sY(py), 3, "#00c853");
-                        dot(w2sX(desiredX), w2sY(desiredY), 3, "#2962ff");
-                        dot(w2sX(cx), w2sY(cy), 3, "#d50000");
-
-                        // Draw line from camera to desired position
-                        g.beginPath();
-                        g.moveTo(w2sX(cx), w2sY(cy));
-                        g.lineTo(w2sX(desiredX), w2sY(desiredY));
-                        g.lineWidth = 1.5;
-                        g.strokeStyle = "#2962ff";
-                        g.stroke();
-
-                        // Draw player velocity vector (dashed line)
-                        g.beginPath();
-                        g.moveTo(w2sX(px), w2sY(py));
-                        g.lineTo(w2sX(px + pvx * 0.5), w2sY(py + pvy * 0.5));
-                        g.setLineDash([4, 4]);
-                        g.strokeStyle = "#9e9e9e";
-                        g.stroke();
-                        g.setLineDash([]);
+                    if (this.db) {
+                        this.db.clear();
+                        this.db.dot(w2sX(cx), w2sY(cy), 3, "#d50000");
+                        this.db.dot(w2sX(px), w2sY(py), 3, "#00c853");
+                        this.db.dot(
+                            w2sX(desiredX),
+                            w2sY(desiredY),
+                            3,
+                            "#2962ff"
+                        );
+                        this.db.line(
+                            w2sX(cx),
+                            w2sY(cy),
+                            w2sX(desiredX),
+                            w2sY(desiredY),
+                            1.5,
+                            "#2962ff"
+                        );
+                        this.db.line(
+                            w2sX(px),
+                            w2sY(py),
+                            w2sX(px + pvx * 0.5),
+                            w2sY(py + pvy * 0.5),
+                            1,
+                            "#9e9e9e",
+                            4
+                        );
                     }
                 }
             }

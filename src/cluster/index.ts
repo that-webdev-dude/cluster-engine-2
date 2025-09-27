@@ -15,26 +15,17 @@ export { GUIRenderSystem } from "./ecs/system";
 export { GUIUpdateSystem } from "./ecs/system";
 
 // gl
-export {
-    // SpritePipeline,
-    SpriteData,
-    SpritePipeline,
-} from "./gl/pipelines/sprite";
+export { SpriteData, SpritePipeline } from "./gl/pipelines/sprite";
 export { CirclePipeline, CircleData } from "./gl/pipelines/circle";
 export { MeshPipeline, MeshData } from "./gl/pipelines/mesh";
 export { RectPipeline, RectData } from "./gl/pipelines/rect";
 
 // tools
+export { DebugOverlay } from "./tools/Debug";
 export { Spritesheet } from "./tools/Spritesheet";
 export { Vector } from "./tools/Vector";
 export { Cmath } from "./tools/Cmath";
-export {
-    UniformGrid,
-    SparseGrid,
-    Quadtree,
-    LooseQuadtree,
-    BVH,
-} from "./tools/Partitioner";
+export { UniformGrid } from "./tools/Partitioner";
 
 // types
 export type { State, Action, Mutation, Getter, StoreEvent } from "./core/Store";

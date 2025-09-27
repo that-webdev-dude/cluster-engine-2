@@ -8,12 +8,12 @@ class DebugOverlay {
     constructor(
         private readonly w: number,
         private readonly h: number,
-        private readonly zOrder: number
+        private readonly zIndex: number
     ) {
         const dbCanvas = document.createElement("canvas");
         dbCanvas.width = w;
         dbCanvas.height = h;
-        dbCanvas.style.zIndex = `${zOrder}`;
+        dbCanvas.style.zIndex = `${zIndex}`;
         dbCanvas.style.border = "2px solid red";
         dbCanvas.style.pointerEvents = "none";
         document.querySelector("#app")?.appendChild(dbCanvas);
@@ -45,6 +45,7 @@ class DebugOverlay {
         }
         this.dbContext.strokeStyle = `${color}`;
         this.dbContext.stroke();
+        this.dbContext.setLineDash([]);
     }
 
     clear() {
