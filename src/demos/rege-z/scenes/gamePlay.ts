@@ -23,18 +23,21 @@ export function createGamePlay() {
 
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
 
-    // scene.createEntity(weaponArchetype, getWeaponComponents());
+    scene.createEntity(weaponArchetype, getWeaponComponents());
 
     // for (let i = 0; i < 10; i++) {
     //     scene.createEntity(zombieArchetype, getZombieComponents());
     // }
 
-    scene.createEntity(cameraArchetype, getCameraComponents());
+    let cameraMeta = scene.createEntity(cameraArchetype, getCameraComponents());
 
     // systems
     scene.useECSSystem("update", new TilemapSystem(store));
     scene.useECSSystem("update", new PlayerSystem(store));
-    scene.useECSSystem("update", new WeaponSystem(store, playerMeta));
+    scene.useECSSystem(
+        "update",
+        new WeaponSystem(store, playerMeta, cameraMeta)
+    );
     scene.useECSSystem("update", new ZombieSystem(store, playerMeta));
     scene.useECSSystem("update", new AnimationSystem(store));
     scene.useECSSystem("update", new CameraSystem(store, playerMeta));

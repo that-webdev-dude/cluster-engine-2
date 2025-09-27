@@ -8,14 +8,17 @@ class DebugOverlay {
     constructor(
         private readonly w: number,
         private readonly h: number,
-        private readonly zIndex: number
+        private readonly zIndex: number,
+        public enabled: boolean = true
     ) {
         const dbCanvas = document.createElement("canvas");
         dbCanvas.width = w;
         dbCanvas.height = h;
+        dbCanvas.style.position = "absolute";
         dbCanvas.style.zIndex = `${zIndex}`;
         dbCanvas.style.border = "2px solid red";
         dbCanvas.style.pointerEvents = "none";
+        // Allow multiple overlays to be stacked and centered
         document.querySelector("#app")?.appendChild(dbCanvas);
         this.dbContext = dbCanvas.getContext("2d")!;
     }

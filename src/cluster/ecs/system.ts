@@ -2,6 +2,7 @@ import { Store } from "../core/Store";
 import { View } from "./view";
 import { CommandBuffer } from "./cmd";
 import { GUIContainer } from "../gui/GUIbuilders";
+import { ComponentDescriptor, ComponentSlice, EntityMeta } from "../types";
 
 /**
  * Abstract base class for systems that can be updated each frame.
@@ -10,6 +11,19 @@ abstract class BaseECSSystem {
     constructor(protected store: Store) {}
     prerun(view: View): void {
         // Optional hook with only View; subclasses may override.
+    }
+
+    // Returns a slice of the given component for the specified entity, or undefined if not found.
+    protected getEntitySlice(
+        view: View,
+        meta: EntityMeta,
+        desc: ComponentDescriptor
+    ): ComponentSlice | undefined {
+        const slice = view.getSlice(meta, desc);
+        if (slice !== undefined) {
+            return slice;
+        }
+        return undefined;
     }
 }
 

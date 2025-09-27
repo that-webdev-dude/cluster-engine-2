@@ -1,3 +1,4 @@
+import { ComponentSlice, EntityMeta } from "../../../cluster/types";
 import {
     DebugOverlay,
     ECSUpdateSystem,
@@ -15,13 +16,6 @@ import {
     CameraIndex,
     SizeIndex,
 } from "../components";
-import {
-    ComponentDescriptor,
-    ComponentSlice,
-    EntityMeta,
-} from "../../../cluster/types";
-
-// Camera behavior is now configured per-entity via Component.Camera values
 
 // Smart camera that smoothly follows a player with look-ahead prediction
 export class CameraSystem extends ECSUpdateSystem {
@@ -39,34 +33,47 @@ export class CameraSystem extends ECSUpdateSystem {
 
     constructor(
         readonly store: Store,
-        readonly subject: EntityMeta | undefined = undefined
+        readonly subjectMeta: EntityMeta | undefined = undefined
     ) {
         super(store);
         this.worldW = store.get("worldW");
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
-        this.db = new DebugOverlay(this.displayW, this.displayH, 999);
+        this.db = new DebugOverlay(this.displayW, this.displayH, 100, false);
     }
 
     public prerun(view: View): void {
-        this.subjectPosition =
-            this.getSubjectSlice(view, DESCRIPTORS.Position) ?? undefined;
-        this.subjectVelocity =
-            this.getSubjectSlice(view, DESCRIPTORS.Velocity) ?? undefined;
+        if (this.subjectMeta) {
+            this.subjectPosition =
+                this.getEntitySlice(
+                    view,
+                    this.subjectMeta,
+                    DESCRIPTORS.Position
+                ) ?? undefined;
+            this.subjectVelocity =
+                this.getEntitySlice(
+                    view,
+                    this.subjectMeta,
+                    DESCRIPTORS.Velocity
+                ) ?? undefined;
+        }
     }
 
     public update(view: View, cmd: CommandBuffer, dt: number) {
         if (dt <= 0) return;
+
+        if (
+            this.subjectMeta &&
+            (!this.subjectPosition || !this.subjectVelocity)
+        )
+            return;
 
         const camStride = DESCRIPTORS.Camera.count;
         const posStride = DESCRIPTORS.Position.count;
         const velStride = DESCRIPTORS.Velocity.count;
         const offStride = DESCRIPTORS.Offset.count;
         const sizeStride = DESCRIPTORS.Size.count;
-
-        if (this.subject && (!this.subjectPosition || !this.subjectVelocity))
-            return;
 
         view.forEachChunkWith(
             [
@@ -293,7 +300,7 @@ export class CameraSystem extends ECSUpdateSystem {
                     const w2sX = (wx: number) => (wx - tlx) * scale;
                     const w2sY = (wy: number) => (wy - tly) * scale;
                     // Debug visualization - show camera behavior
-                    if (this.db) {
+                    if (this.db?.enabled) {
                         this.db.clear();
                         this.db.dot(w2sX(cx), w2sY(cy), 3, "#d50000");
                         this.db.dot(w2sX(px), w2sY(py), 3, "#00c853");
@@ -324,19 +331,6 @@ export class CameraSystem extends ECSUpdateSystem {
                 }
             }
         );
-    }
-
-    private getSubjectSlice(
-        view: View,
-        desc: ComponentDescriptor
-    ): ComponentSlice | undefined {
-        if (this.subject) {
-            const slice = view.getSlice(this.subject, desc);
-            if (slice !== undefined) {
-                return slice;
-            }
-        }
-        return undefined;
     }
 
     private getSubjectX(): number {

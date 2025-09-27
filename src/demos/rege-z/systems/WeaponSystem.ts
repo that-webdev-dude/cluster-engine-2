@@ -1,4 +1,6 @@
+import { EntityMeta, ComponentSlice } from "../../../cluster/types";
 import {
+    DebugOverlay,
     ECSUpdateSystem,
     CommandBuffer,
     Store,
@@ -6,54 +8,150 @@ import {
     Input,
     View,
 } from "../../../cluster";
-import { EntityMeta, Buffer } from "../../../cluster/types";
 import {
     Component,
     DESCRIPTORS,
     PositionIndex,
     AngleIndex,
     WeaponIndex,
+    VelocityIndex,
+    OffsetIndex,
+    SizeIndex,
+    CameraIndex,
 } from "../components";
 
 const Mouse = Input.Mouse;
 
 export class WeaponSystem extends ECSUpdateSystem {
-    private ownerPosition: Buffer | undefined = undefined;
-    private readonly worldW: number = 0;
-    private readonly worldH: number = 0;
-    private readonly displayW: number = 0;
-    private readonly displayH: number = 0;
+    private readonly weaponRotationOffset = Math.PI / 2; // 90 degrees
+    private ownerPosition: ComponentSlice | undefined = undefined;
+    private ownerVelocity: ComponentSlice | undefined = undefined;
 
-    constructor(readonly store: Store, readonly owner?: EntityMeta) {
+    private readonly db: DebugOverlay;
+
+    constructor(
+        readonly store: Store,
+        readonly ownerMeta?: EntityMeta,
+        readonly cameraMeta?: EntityMeta
+    ) {
         super(store);
-        this.worldW = store.get("worldW");
-        this.worldH = store.get("worldH");
-        this.displayW = store.get("displayW");
-        this.displayH = store.get("displayH");
+
+        this.db = new DebugOverlay(
+            store.get("displayW"),
+            store.get("displayH"),
+            200,
+            false
+        );
     }
 
     prerun(view: View): void {
-        if (this.owner && !this.ownerPosition) {
-            const slice = view.getSlice<Float32Array>(
-                this.owner,
-                DESCRIPTORS["Position"]
+        if (this.ownerMeta && !this.ownerPosition) {
+            this.ownerPosition = this.getEntitySlice(
+                view,
+                this.ownerMeta,
+                DESCRIPTORS.Position
             );
-
-            if (slice !== undefined) {
-                this.ownerPosition = slice.arr;
-                return;
-            }
-
-            this.ownerPosition = new Float32Array(2);
+        }
+        if (this.ownerMeta && !this.ownerVelocity) {
+            this.ownerVelocity = this.getEntitySlice(
+                view,
+                this.ownerMeta,
+                DESCRIPTORS.Velocity
+            );
         }
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
-        if (!this.ownerPosition)
-            console.warn("[WeaponSustem]: this weapon has no owner");
+        if (dt <= 0) return;
+
+        if (this.ownerMeta && !this.ownerPosition) {
+            console.warn("[WeaponSystem]: this weapon has no ownerMeta");
+            return;
+        }
+
+        // Get camera position for the specific camera this weapon is associated with
+        let cameraX = 0;
+        let cameraY = 0;
+        let displayW = 0;
+        let displayH = 0;
+
+        if (this.cameraMeta) {
+            // Get specific camera by entity meta
+            const cameraSlice = this.getEntitySlice(
+                view,
+                this.cameraMeta,
+                DESCRIPTORS.Camera
+            );
+            const posSlice = this.getEntitySlice(
+                view,
+                this.cameraMeta,
+                DESCRIPTORS.Position
+            );
+            const sizeSlice = this.getEntitySlice(
+                view,
+                this.cameraMeta,
+                DESCRIPTORS.Size
+            );
+            const offSlice = this.getEntitySlice(
+                view,
+                this.cameraMeta,
+                DESCRIPTORS.Offset
+            );
+
+            if (cameraSlice && posSlice) {
+                const camera = cameraSlice.arr;
+                const pos = posSlice.arr;
+                const off = offSlice?.arr;
+                const size = sizeSlice?.arr;
+
+                // Check if camera is enabled
+                if (camera[cameraSlice.base + CameraIndex.ENABLED] === 1) {
+                    cameraX = pos[posSlice.base + PositionIndex.X];
+                    cameraY = pos[posSlice.base + PositionIndex.Y];
+                    displayW = size
+                        ? size[sizeSlice.base + SizeIndex.WIDTH]
+                        : this.store.get("displayW");
+                    displayH = size
+                        ? size[sizeSlice.base + SizeIndex.HEIGHT]
+                        : this.store.get("displayH");
+
+                    // Calculate camera's top-left world position
+                    const offX = off ? off[offSlice.base + OffsetIndex.X] : 0;
+                    const offY = off ? off[offSlice.base + OffsetIndex.Y] : 0;
+                    cameraX = cameraX - displayW * 0.5 + offX;
+                    cameraY = cameraY - displayH * 0.5 + offY;
+                }
+            }
+        } else {
+            // Fallback: use first enabled camera (backward compatibility)
+            view.forEachChunkWith([Component.Camera], (chunk) => {
+                const pos = chunk.views.Position;
+                const size = chunk.views.Size;
+                const off = chunk.views.Offset;
+                const camera = chunk.views.Camera;
+
+                // Only use first enabled camera
+                if (camera[CameraIndex.ENABLED] === 1) {
+                    cameraX = pos[PositionIndex.X];
+                    cameraY = pos[PositionIndex.Y];
+                    displayW = size
+                        ? size[SizeIndex.WIDTH]
+                        : this.store.get("displayW");
+                    displayH = size
+                        ? size[SizeIndex.HEIGHT]
+                        : this.store.get("displayH");
+
+                    const offX = off ? off[OffsetIndex.X] : 0;
+                    const offY = off ? off[OffsetIndex.Y] : 0;
+                    cameraX = cameraX - displayW * 0.5 + offX;
+                    cameraY = cameraY - displayH * 0.5 + offY;
+                    return false; // Exit early after first camera
+                }
+            });
+        }
 
         view.forEachChunkWith(
-            [Component.Position, Component.Weapon, Component.Angle],
+            [Component.Weapon, Component.Position, Component.Angle],
             (chunk) => {
                 // only one player is expected
                 if (chunk.count > 1) {
@@ -65,31 +163,60 @@ export class WeaponSystem extends ECSUpdateSystem {
                 if (chunk.views.Weapon[WeaponIndex.ACTIVE] === 0) return;
 
                 const pos = chunk.views.Position;
-                if (this.ownerPosition) {
-                    pos[PositionIndex.X] = this.ownerPosition[0];
-                    pos[PositionIndex.Y] = this.ownerPosition[1];
+                const vel = chunk.views.Velocity;
+
+                if (this.ownerPosition && this.ownerVelocity) {
+                    pos[PositionIndex.X] = this.getOwnerX();
+                    pos[PositionIndex.Y] = this.getOwnerY();
+                    vel[VelocityIndex.X] = this.getOwnerVelocityX();
+                    vel[VelocityIndex.Y] = this.getOwnerVelocityY();
                 }
 
-                // 1. Center camera on player
-                let camX = pos[PositionIndex.X] - this.displayW / 2;
-                // 2. Clamp camera to world bounds
-                camX = Math.max(0, Math.min(camX, this.worldW - this.displayW));
-                // 3. Convert player's world position to screen position
-                const scrX = pos[PositionIndex.X] - camX;
-
-                // 1. Center camera on player
-                let camY = pos[PositionIndex.Y] - this.displayH / 2;
-                // 2. Clamp camera to world bounds
-                camY = Math.max(0, Math.min(camY, this.worldH - this.displayH));
-                // 3. Convert player's world position to screen position
-                const scrY = pos[PositionIndex.Y] - camY;
+                // Convert player's world position to screen coordinates using actual camera position
+                const scrX = pos[PositionIndex.X] - cameraX;
+                const scrY = pos[PositionIndex.Y] - cameraY;
 
                 const mx = Mouse.virtualPosition.x;
                 const my = Mouse.virtualPosition.y;
 
+                // Validate mouse position is within screen bounds
+                if (mx < 0 || mx >= displayW || my < 0 || my >= displayH) {
+                    return; // Don't update weapon angle if mouse is off-screen
+                }
+
                 chunk.views.Angle[AngleIndex.RADIANS] =
-                    Cmath.angle(scrX, scrY, mx, my) + Math.PI / 2;
+                    Cmath.angle(scrX, scrY, mx, my) + this.weaponRotationOffset;
+
+                // DEBUG
+                if (this.db?.enabled) {
+                    this.db.clear();
+                    this.db.line(scrX, scrY, mx, my, 1, "yellow", 4);
+                }
             }
         );
+    }
+
+    private getOwnerX(): number {
+        return this.ownerPosition!.arr[
+            this.ownerPosition!.base + PositionIndex.X
+        ];
+    }
+
+    private getOwnerY(): number {
+        return this.ownerPosition!.arr[
+            this.ownerPosition!.base + PositionIndex.Y
+        ];
+    }
+
+    private getOwnerVelocityX(): number {
+        return this.ownerVelocity!.arr[
+            this.ownerVelocity!.base + VelocityIndex.X
+        ];
+    }
+
+    private getOwnerVelocityY(): number {
+        return this.ownerVelocity!.arr[
+            this.ownerVelocity!.base + VelocityIndex.Y
+        ];
     }
 }
