@@ -20,6 +20,8 @@ import {
     CameraIndex,
 } from "../components";
 
+const DEBUG_OVERLAY = false;
+
 export class WeaponSystem extends ECSUpdateSystem {
     private readonly db: DebugOverlay;
 
@@ -30,7 +32,7 @@ export class WeaponSystem extends ECSUpdateSystem {
             store.get("displayW"),
             store.get("displayH"),
             200,
-            false
+            DEBUG_OVERLAY
         );
     }
 

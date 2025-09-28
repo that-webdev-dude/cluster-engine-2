@@ -51,6 +51,12 @@ class DebugOverlay {
         this.dbContext.setLineDash([]);
     }
 
+    text(text: string, x: number, y: number, font: string, color: string) {
+        this.dbContext.font = font;
+        this.dbContext.fillStyle = color;
+        this.dbContext.fillText(text, x, y);
+    }
+
     clear() {
         this.dbContext.clearRect(0, 0, this.w, this.h);
     }

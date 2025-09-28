@@ -15,6 +15,7 @@ import { PlayerSystem } from "../systems/PlayerSystem";
 import { CameraSystem } from "../systems/CameraSystem";
 import { WeaponSystem } from "../systems/WeaponSystem";
 import { ZombieSystem } from "../systems/ZombieSystem";
+import { BulletSystem } from "../systems/BulletSystem";
 import { Component } from "../components";
 
 export function createGamePlay() {
@@ -22,31 +23,26 @@ export function createGamePlay() {
 
     createTileMapWithObstacles(scene, {});
 
+    let cameraMeta = scene.createEntity(cameraArchetype, getCameraComponents());
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
 
     scene.createEntity(weaponArchetype, getWeaponComponents());
-
     // for (let i = 0; i < 10; i++) {
     //     scene.createEntity(zombieArchetype, getZombieComponents());
     // }
 
-    let cameraMeta = scene.createEntity(cameraArchetype, getCameraComponents());
-
-    scene.createEntity(bulletArchetype, getBulletComponents());
-
     // systems
-    scene.useECSSystem("update", new TilemapSystem(store));
-    scene.useECSSystem("update", new PlayerSystem(store));
+    const u = "update";
+    scene.useECSSystem(u, new TilemapSystem(store));
+    scene.useECSSystem(u, new PlayerSystem(store));
+    scene.useECSSystem(u, new WeaponSystem(store, playerMeta, cameraMeta));
+    scene.useECSSystem(u, new BulletSystem(store));
+    scene.useECSSystem(u, new ZombieSystem(store, playerMeta));
+    scene.useECSSystem(u, new AnimationSystem(store));
+    scene.useECSSystem(u, new CameraSystem(store, playerMeta));
+    scene.useECSSystem(u, new MotionSystem(store));
     scene.useECSSystem(
-        "update",
-        new WeaponSystem(store, playerMeta, cameraMeta)
-    );
-    scene.useECSSystem("update", new ZombieSystem(store, playerMeta));
-    scene.useECSSystem("update", new AnimationSystem(store));
-    scene.useECSSystem("update", new CameraSystem(store, playerMeta));
-    scene.useECSSystem("update", new MotionSystem(store));
-    scene.useECSSystem(
-        "update",
+        u,
         new CollisionSystem(store, [
             {
                 main: Component.Player,
@@ -73,7 +69,8 @@ export function createGamePlay() {
         ])
     );
 
-    scene.useECSSystem("render", new SpriteRendererSystem(store));
+    const r = "render";
+    scene.useECSSystem(r, new SpriteRendererSystem(store));
 
     return scene;
 }

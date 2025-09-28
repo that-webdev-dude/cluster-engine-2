@@ -35,6 +35,7 @@ export interface CollisionEvent extends StoreEvent {
 export interface FireWeaponEvent extends StoreEvent {
     type: "fire-weapon";
     data: {
+        cmd: CommandBuffer;
         position: VectorLike;
         direction: VectorLike;
     };

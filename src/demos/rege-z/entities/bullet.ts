@@ -17,20 +17,16 @@ export const bulletSchema = Archetype.register(
     DESCRIPTORS.Sprite
 );
 
-export function getBulletComponents(): ComponentValueMap {
+export function getBulletComponents(
+    x: number,
+    y: number,
+    vx: number,
+    vy: number
+): ComponentValueMap {
     return {
         [Component.Bullet]: [0],
-        [Component.Position]: [
-            worldW / 2,
-            worldH / 2,
-            worldW / 2,
-            worldH / 2,
-            0,
-            0,
-            0,
-            0,
-        ],
-        [Component.Velocity]: [0, 0],
+        [Component.Position]: [x, y, x, y, 0, 0, 0, 0],
+        [Component.Velocity]: [vx, vy],
         [Component.Offset]: [0, 0],
         [Component.Angle]: [0],
         [Component.Pivot]: [0, 0],

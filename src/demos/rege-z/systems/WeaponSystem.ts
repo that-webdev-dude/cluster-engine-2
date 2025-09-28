@@ -7,6 +7,7 @@ import {
     Cmath,
     Input,
     View,
+    Vector,
 } from "../../../cluster";
 import {
     Component,
@@ -19,6 +20,7 @@ import {
     SizeIndex,
     CameraIndex,
 } from "../components";
+import { FireWeaponEvent } from "../events";
 
 const Mouse = Input.Mouse;
 
@@ -193,7 +195,32 @@ export class WeaponSystem extends ECSUpdateSystem {
                 // for now assume infinite ammo
                 weapon[WeaponIndex.LAST_FIRED] -= dt;
                 if (weapon[WeaponIndex.LAST_FIRED] <= 0) {
-                    // fire event?
+                    // compute the muzzle position by taking the position of the weapon and shifting it by 16 along the normalised distance to the mouse cursor
+                    const positionVector = Vector.create(scrX, scrY);
+                    const targetVector = Vector.create(mx, my);
+                    const direction = Vector.connect(
+                        positionVector,
+                        targetVector
+                    ).normalize();
+                    this.store.emit<FireWeaponEvent>(
+                        {
+                            type: "fire-weapon",
+                            data: {
+                                cmd,
+                                // world position of the weapon muzzle
+                                position: {
+                                    x: pos[PositionIndex.X] + direction.x * 16,
+                                    y: pos[PositionIndex.Y] + direction.y * 16,
+                                },
+                                // normalized direction vector from weapon to mouse cursor
+                                direction: {
+                                    x: direction.x,
+                                    y: direction.y,
+                                },
+                            },
+                        },
+                        false
+                    );
                     // decrease ammo
                     if (weapon[WeaponIndex.AMMO] > 0) {
                         weapon[WeaponIndex.AMMO]--;
@@ -206,6 +233,50 @@ export class WeaponSystem extends ECSUpdateSystem {
                 if (this.db?.enabled) {
                     this.db.clear();
                     this.db.line(scrX, scrY, mx, my, 1, "yellow", 4);
+
+                    this.db.text(
+                        `Weapon Angle: ${chunk.views.Angle[
+                            AngleIndex.RADIANS
+                        ].toFixed(2)}°`,
+                        10,
+                        24,
+                        "12px Arial",
+                        "white"
+                    );
+
+                    this.db.text(
+                        `Weapon Cooldown: ${weapon[
+                            WeaponIndex.LAST_FIRED
+                        ].toFixed(2)}s`,
+                        10,
+                        40,
+                        "12px Arial",
+                        "white"
+                    );
+
+                    // position of the weapon
+                    const positionVector = Vector.create(scrX, scrY);
+                    const targetVector = Vector.create(mx, my);
+                    const direction = Vector.connect(
+                        positionVector,
+                        targetVector
+                    ).normalize();
+
+                    const muzzleVector = Vector.clone(direction)
+                        .scale(16)
+                        .add(positionVector);
+                    this.db.dot(muzzleVector.x, muzzleVector.y, 4, "red");
+
+                    // text the direction vector
+                    this.db.text(
+                        `Direction: (${direction.x.toFixed(
+                            2
+                        )}, ${direction.y.toFixed(2)})`,
+                        10,
+                        56,
+                        "12px Arial",
+                        "white"
+                    );
                 }
             }
         );

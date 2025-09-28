@@ -17,6 +17,8 @@ import {
     SizeIndex,
 } from "../components";
 
+const DEBUG_OVERLAY = false;
+
 // Smart camera that smoothly follows a player with look-ahead prediction
 export class CameraSystem extends ECSUpdateSystem {
     // Player position and movement data
@@ -40,7 +42,12 @@ export class CameraSystem extends ECSUpdateSystem {
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
-        this.db = new DebugOverlay(this.displayW, this.displayH, 100, true);
+        this.db = new DebugOverlay(
+            this.displayW,
+            this.displayH,
+            100,
+            DEBUG_OVERLAY
+        );
     }
 
     public prerun(view: View): void {
