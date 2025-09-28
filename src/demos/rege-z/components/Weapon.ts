@@ -5,14 +5,17 @@ import { Component } from "./Component";
  * - Indicates weapon state, currently only active flag.
  */
 export enum WeaponIndex {
-    ACTIVE = 0,
+    ACTIVE,
+    AMMO,
+    COOLDOWN, // in ms
+    LAST_FIRED, // timestamp in ms
 }
 
 export const WeaponDescriptor = {
     type: Component.Weapon,
     name: "Weapon",
-    count: 1,
+    count: 4,
     buffer: Uint8Array,
-    default: [1],
-    fields: ["active"],
+    default: [1, 0, 0, 0],
+    fields: ["active", "ammo", "cooldown", "last_fired"],
 } as const;

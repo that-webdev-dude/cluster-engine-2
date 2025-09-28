@@ -30,3 +30,12 @@ export interface CollisionEvent extends StoreEvent {
         tertiary?: CollisionContact;
     };
 }
+
+// fire event (carries all the info to spawn a bullet like position, direction (for now))
+export interface FireWeaponEvent extends StoreEvent {
+    type: "fire-weapon";
+    data: {
+        position: VectorLike;
+        direction: VectorLike;
+    };
+}

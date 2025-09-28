@@ -6,7 +6,6 @@ import { ComponentValueMap } from "../../../cluster/types";
 // Camera + CameraSettings + standard spatial components
 export const cameraSchema = Archetype.register(
     DESCRIPTORS.Camera,
-    DESCRIPTORS.CameraSettings,
     DESCRIPTORS.Position,
     DESCRIPTORS.Offset,
     DESCRIPTORS.Velocity,
@@ -24,7 +23,6 @@ export function getCameraComponents(): ComponentValueMap {
     const cy = wh * 0.5;
 
     return {
-        // Camera state (Float32Array):
         [Component.Camera]: [
             1, // enabled
             0.25, // leadTime (seconds)

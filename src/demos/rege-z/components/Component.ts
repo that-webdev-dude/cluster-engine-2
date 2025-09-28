@@ -13,7 +13,6 @@ export enum Component {
     Player,
     Bullet,
     Camera,
-    CameraSettings,
     CameraFlags,
     Sprite,
     Animation,

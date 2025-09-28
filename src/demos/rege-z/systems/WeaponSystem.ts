@@ -187,6 +187,21 @@ export class WeaponSystem extends ECSUpdateSystem {
                 chunk.views.Angle[AngleIndex.RADIANS] =
                     Cmath.angle(scrX, scrY, mx, my) + this.weaponRotationOffset;
 
+                // update the weapon cooldown timer
+                const weapon = chunk.views.Weapon;
+
+                // for now assume infinite ammo
+                weapon[WeaponIndex.LAST_FIRED] -= dt;
+                if (weapon[WeaponIndex.LAST_FIRED] <= 0) {
+                    // fire event?
+                    // decrease ammo
+                    if (weapon[WeaponIndex.AMMO] > 0) {
+                        weapon[WeaponIndex.AMMO]--;
+                    }
+                    weapon[WeaponIndex.LAST_FIRED] =
+                        weapon[WeaponIndex.COOLDOWN];
+                }
+
                 // DEBUG
                 if (this.db?.enabled) {
                     this.db.clear();

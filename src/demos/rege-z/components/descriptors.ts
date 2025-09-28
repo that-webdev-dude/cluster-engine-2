@@ -11,7 +11,6 @@ import { LivesDescriptor } from "./Lives";
 import { PlayerDescriptor } from "./Player";
 import { BulletDescriptor } from "./Bullet";
 import { CameraDescriptor } from "./Camera";
-import { CameraSettingsDescriptor } from "./CameraSettings";
 import { SpriteDescriptor } from "./Sprite";
 import { AnimationDescriptor } from "./Animation";
 import { TileDescriptor } from "./Tile";
@@ -35,7 +34,6 @@ export const DESCRIPTORS = {
     Player: PlayerDescriptor,
     Bullet: BulletDescriptor,
     Camera: CameraDescriptor,
-    CameraSettings: CameraSettingsDescriptor,
     Sprite: SpriteDescriptor,
     Animation: AnimationDescriptor,
     Tile: TileDescriptor,

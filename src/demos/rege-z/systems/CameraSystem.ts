@@ -40,7 +40,7 @@ export class CameraSystem extends ECSUpdateSystem {
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
-        this.db = new DebugOverlay(this.displayW, this.displayH, 100, false);
+        this.db = new DebugOverlay(this.displayW, this.displayH, 100, true);
     }
 
     public prerun(view: View): void {

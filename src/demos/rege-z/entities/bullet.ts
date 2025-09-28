@@ -5,8 +5,8 @@ import { Archetype, ComponentValueMap } from "../../../cluster";
 const worldW = store.get("worldW");
 const worldH = store.get("worldH");
 
-export const weaponSchema = Archetype.register(
-    DESCRIPTORS.Weapon,
+export const bulletSchema = Archetype.register(
+    DESCRIPTORS.Bullet,
     DESCRIPTORS.Position,
     DESCRIPTORS.Velocity,
     DESCRIPTORS.Offset,
@@ -17,9 +17,9 @@ export const weaponSchema = Archetype.register(
     DESCRIPTORS.Sprite
 );
 
-export function getWeaponComponents(): ComponentValueMap {
+export function getBulletComponents(): ComponentValueMap {
     return {
-        [Component.Weapon]: [1, 0, 40, 40],
+        [Component.Bullet]: [0],
         [Component.Position]: [
             worldW / 2,
             worldH / 2,
@@ -36,8 +36,8 @@ export function getWeaponComponents(): ComponentValueMap {
         [Component.Pivot]: [0, 0],
         [Component.Size]: [32, 32],
         [Component.Color]: [255, 255, 255, 255],
-        [Component.Sprite]: [0, 192, 32, 32],
+        [Component.Sprite]: [32, 192, 32, 32],
     } as ComponentValueMap;
 }
 
-export const weaponArchetype = Archetype.create("weapon", weaponSchema, 1);
+export const bulletArchetype = Archetype.create("bullet", bulletSchema);

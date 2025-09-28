@@ -13,7 +13,6 @@ export { LivesIndex } from "./Lives";
 export { PlayerIndex } from "./Player";
 export { BulletIndex } from "./Bullet";
 export { CameraIndex } from "./Camera";
-export { CameraSettingsIndex } from "./CameraSettings";
 export { SpriteIndex } from "./Sprite";
 export { AnimationIndex } from "./Animation";
 export { TileIndex } from "./Tile";
