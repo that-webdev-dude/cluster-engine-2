@@ -24,12 +24,18 @@ import { FireWeaponEvent } from "../events";
 
 const Mouse = Input.Mouse;
 
+const DEBUG_OVERLAY = false;
+
 export class WeaponSystem extends ECSUpdateSystem {
     private readonly weaponRotationOffset = Math.PI / 2; // 90 degrees
     private ownerPosition: ComponentSlice | undefined = undefined;
     private ownerVelocity: ComponentSlice | undefined = undefined;
 
-    private readonly db: DebugOverlay;
+    private readonly db: DebugOverlay | undefined = undefined;
+
+    private readonly cachedPosVec = new Vector();
+    private readonly cachedDirVec = new Vector();
+    private readonly cachedTargetVec = new Vector();
 
     constructor(
         readonly store: Store,
@@ -38,12 +44,14 @@ export class WeaponSystem extends ECSUpdateSystem {
     ) {
         super(store);
 
-        this.db = new DebugOverlay(
-            store.get("displayW"),
-            store.get("displayH"),
-            200,
-            false
-        );
+        if (DEBUG_OVERLAY) {
+            this.db = new DebugOverlay(
+                store.get("displayW"),
+                store.get("displayH"),
+                200,
+                DEBUG_OVERLAY
+            );
+        }
     }
 
     prerun(view: View): void {
@@ -191,17 +199,22 @@ export class WeaponSystem extends ECSUpdateSystem {
 
                 // update the weapon cooldown timer
                 const weapon = chunk.views.Weapon;
+                const size = chunk.views.Size;
 
                 // for now assume infinite ammo
                 weapon[WeaponIndex.LAST_FIRED] -= dt;
                 if (weapon[WeaponIndex.LAST_FIRED] <= 0) {
                     // compute the muzzle position by taking the position of the weapon and shifting it by 16 along the normalised distance to the mouse cursor
-                    const positionVector = Vector.create(scrX, scrY);
-                    const targetVector = Vector.create(mx, my);
-                    const direction = Vector.connect(
-                        positionVector,
-                        targetVector
-                    ).normalize();
+                    this.cachedPosVec.set(scrX, scrY);
+                    this.cachedTargetVec.set(mx, my);
+                    this.cachedDirVec
+                        .copy(this.cachedTargetVec)
+                        .connect(this.cachedPosVec)
+                        .reverse()
+                        .normalize();
+
+                    const scale = size ? size[SizeIndex.WIDTH] * 0.5 : 16;
+
                     this.store.emit<FireWeaponEvent>(
                         {
                             type: "fire-weapon",
@@ -209,13 +222,17 @@ export class WeaponSystem extends ECSUpdateSystem {
                                 cmd,
                                 // world position of the weapon muzzle
                                 position: {
-                                    x: pos[PositionIndex.X] + direction.x * 16,
-                                    y: pos[PositionIndex.Y] + direction.y * 16,
+                                    x:
+                                        pos[PositionIndex.X] +
+                                        this.cachedDirVec.x * scale,
+                                    y:
+                                        pos[PositionIndex.Y] +
+                                        this.cachedDirVec.y * scale,
                                 },
                                 // normalized direction vector from weapon to mouse cursor
                                 direction: {
-                                    x: direction.x,
-                                    y: direction.y,
+                                    x: this.cachedDirVec.x,
+                                    y: this.cachedDirVec.y,
                                 },
                             },
                         },
@@ -230,7 +247,7 @@ export class WeaponSystem extends ECSUpdateSystem {
                 }
 
                 // DEBUG
-                if (this.db?.enabled) {
+                if (DEBUG_OVERLAY && this.db?.enabled) {
                     this.db.clear();
                     this.db.line(scrX, scrY, mx, my, 1, "yellow", 4);
 
@@ -255,23 +272,18 @@ export class WeaponSystem extends ECSUpdateSystem {
                     );
 
                     // position of the weapon
-                    const positionVector = Vector.create(scrX, scrY);
-                    const targetVector = Vector.create(mx, my);
-                    const direction = Vector.connect(
-                        positionVector,
-                        targetVector
-                    ).normalize();
-
-                    const muzzleVector = Vector.clone(direction)
-                        .scale(16)
-                        .add(positionVector);
-                    this.db.dot(muzzleVector.x, muzzleVector.y, 4, "red");
+                    this.db.dot(
+                        this.cachedPosVec.x,
+                        this.cachedPosVec.y,
+                        4,
+                        "red"
+                    );
 
                     // text the direction vector
                     this.db.text(
-                        `Direction: (${direction.x.toFixed(
+                        `Direction: (${this.cachedDirVec.x.toFixed(
                             2
-                        )}, ${direction.y.toFixed(2)})`,
+                        )}, ${this.cachedDirVec.y.toFixed(2)})`,
                         10,
                         56,
                         "12px Arial",

@@ -6,19 +6,19 @@ import {
     Store,
     View,
 } from "../../../cluster";
+import { bulletArchetype, getBulletComponents } from "../entities/bullet";
 import { Component, DESCRIPTORS, PositionIndex } from "../components";
 import { FireWeaponEvent } from "../events";
-import { bulletArchetype, getBulletComponents } from "../entities/bullet";
 
 const DEBUG_OVERLAY = false;
 
 export class BulletSystem extends ECSUpdateSystem {
-    private readonly db: DebugOverlay;
-
     private readonly worldW: number;
     private readonly worldH: number;
     private readonly displayW: number;
     private readonly displayH: number;
+
+    private readonly db: DebugOverlay | undefined = undefined;
 
     constructor(readonly store: Store) {
         super(store);
@@ -28,12 +28,14 @@ export class BulletSystem extends ECSUpdateSystem {
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
 
-        this.db = new DebugOverlay(
-            store.get("displayW"),
-            store.get("displayH"),
-            200,
-            DEBUG_OVERLAY
-        );
+        if (DEBUG_OVERLAY) {
+            this.db = new DebugOverlay(
+                store.get("displayW"),
+                store.get("displayH"),
+                200,
+                DEBUG_OVERLAY
+            );
+        }
     }
 
     prerun(view: View): void {
@@ -86,11 +88,10 @@ export class BulletSystem extends ECSUpdateSystem {
                         cmd.remove(meta);
                     }
                 }
-                // DEBUG
-                if (this.db?.enabled) {
-                    this.db.clear();
 
-                    // text the bullet count
+                // DEBUG
+                if (DEBUG_OVERLAY && this.db?.enabled) {
+                    this.db.clear();
                     this.db.text(
                         `Bullets: ${chunk.count}`,
                         10,

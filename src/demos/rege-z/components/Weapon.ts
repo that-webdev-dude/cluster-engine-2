@@ -2,7 +2,7 @@ import { Component } from "./Component";
 
 /**
  * Weapon component
- * - Indicates weapon state, currently only active flag.
+ * - Holds weapon state such as ammo count and cooldown.
  */
 export enum WeaponIndex {
     ACTIVE,

@@ -8,6 +8,12 @@ import {
     UniformGrid,
 } from "../../../cluster";
 import { Component } from "../components";
+import { DESCRIPTORS } from "../components/descriptors";
+import { PositionIndex } from "../components/Position";
+import { SizeIndex } from "../components/Size";
+import { OffsetIndex } from "../components/Offset";
+import { VelocityIndex } from "../components/Velocity";
+import { AABBIndex } from "../components/AABB";
 import { CollisionEvent, CollisionContact } from "../events";
 import { ComponentType, EntityMeta } from "../../../cluster/types";
 import { BigSparseSet } from "../../../cluster/tools/SparseSet";
@@ -35,7 +41,15 @@ export interface CollisionEntity {
 export interface CollisionActiveRect {
     position: Float32Array;
     size: Float32Array;
+    offset?: Float32Array;
+    row: number;
 }
+
+const POSITION_STRIDE = DESCRIPTORS.Position.count;
+const SIZE_STRIDE = DESCRIPTORS.Size.count;
+const OFFSET_STRIDE = DESCRIPTORS.Offset.count;
+const VELOCITY_STRIDE = DESCRIPTORS.Velocity.count;
+const AABB_STRIDE = DESCRIPTORS.AABB.count;
 
 export class CollisionSystem extends ECSUpdateSystem {
     private collisionActiveRect: CollisionActiveRect | undefined = undefined;
@@ -87,6 +101,8 @@ export class CollisionSystem extends ECSUpdateSystem {
                     activeRect ??= {
                         position: chunk.views.Position,
                         size: chunk.views.Size,
+                        offset: (chunk.views as any).Offset,
+                        row: 0,
                     };
                 }
             }
@@ -95,8 +111,15 @@ export class CollisionSystem extends ECSUpdateSystem {
         // fallback to the display dimensions if no camera is found
         if (this.displayW && this.displayH) {
             activeRect ??= {
-                position: new Float32Array([0, 0]),
-                size: new Float32Array([this.displayW, this.displayH]),
+                position: new Float32Array(POSITION_STRIDE),
+                size: (() => {
+                    const arr = new Float32Array(SIZE_STRIDE);
+                    arr[SizeIndex.WIDTH] = this.displayW;
+                    arr[SizeIndex.HEIGHT] = this.displayH;
+                    return arr;
+                })(),
+                offset: new Float32Array(OFFSET_STRIDE),
+                row: 0,
             };
         }
 
@@ -115,12 +138,13 @@ export class CollisionSystem extends ECSUpdateSystem {
             row: row,
         };
 
-        let base = row * 4;
-        const x = chunk.views.Position[base + 0];
-        const y = chunk.views.Position[base + 1];
-        base = 2;
-        const w = Math.abs(chunk.views.Size[base + 0]);
-        const h = Math.abs(chunk.views.Size[base + 1]);
+        const posBase = row * POSITION_STRIDE;
+        const x = chunk.views.Position[posBase + PositionIndex.X];
+        const y = chunk.views.Position[posBase + PositionIndex.Y];
+
+        const sizeBase = row * SIZE_STRIDE;
+        const w = Math.abs(chunk.views.Size[sizeBase + SizeIndex.WIDTH]);
+        const h = Math.abs(chunk.views.Size[sizeBase + SizeIndex.HEIGHT]);
         const hw = w * 0.5;
         const hh = h * 0.5;
 
@@ -206,17 +230,16 @@ export class CollisionSystem extends ECSUpdateSystem {
         let vx = 0,
             vy = 0;
         const mv = (chunk.views as any).Velocity as Float32Array | undefined;
-        // const prev = (chunk.views as any).PreviousPosition as
-        //     | Float32Array
-        //     | undefined;
         const prev = (chunk.views as any).Position as Float32Array | undefined;
 
         if (mv) {
-            vx = mv[row * 2 + 0];
-            vy = mv[row * 2 + 1];
+            const mvBase = row * VELOCITY_STRIDE;
+            vx = mv[mvBase + VelocityIndex.X];
+            vy = mv[mvBase + VelocityIndex.Y];
         } else if (prev && dt > 0) {
-            vx = (main.x - prev[row * 4 + 2]) / dt;
-            vy = (main.y - prev[row * 4 + 3]) / dt;
+            const prevBase = row * POSITION_STRIDE;
+            vx = (main.x - prev[prevBase + PositionIndex.PREV_X]) / dt;
+            vy = (main.y - prev[prevBase + PositionIndex.PREV_Y]) / dt;
         }
 
         const collisionAttributes = AABBTools.getCollisionAttributes(
@@ -243,12 +266,30 @@ export class CollisionSystem extends ECSUpdateSystem {
         if (this.collisionActiveRect !== undefined) {
             const { aabb } = entity;
 
-            const aX =
-                this.collisionActiveRect.position[0] - this.displayW * 0.5;
-            const aY =
-                this.collisionActiveRect.position[1] - this.displayH * 0.5;
-            const aW = this.collisionActiveRect.size[0];
-            const aH = this.collisionActiveRect.size[1];
+            const { position, size, offset, row } = this.collisionActiveRect;
+
+            const posBase = row * POSITION_STRIDE;
+            const cx = position[posBase + PositionIndex.X];
+            const cy = position[posBase + PositionIndex.Y];
+
+            const sizeBase = row * SIZE_STRIDE;
+            const viewW = size[sizeBase + SizeIndex.WIDTH] || this.displayW;
+            const viewH = size[sizeBase + SizeIndex.HEIGHT] || this.displayH;
+
+            let offX = 0;
+            let offY = 0;
+            if (offset) {
+                const offsetBase = row * OFFSET_STRIDE;
+                offX = offset[offsetBase + OffsetIndex.X] || 0;
+                offY = offset[offsetBase + OffsetIndex.Y] || 0;
+            }
+
+            const halfW = viewW * 0.5;
+            const halfH = viewH * 0.5;
+            const aX = cx - (halfW - offX);
+            const aY = cy - (halfH - offY);
+            const aW = viewW;
+            const aH = viewH;
 
             // Check if entity's bounding box overlaps with the active area
             // Entity bounds: [aabb.minX, aabb.maxX] x [aabb.minY, aabb.maxY]
@@ -344,21 +385,26 @@ export class CollisionSystem extends ECSUpdateSystem {
             [Component.AABB, Component.Position, Component.Size],
             (chunk, chunkId) => {
                 for (let i = 0; i < chunk.count; i++) {
-                    let base = i * 4;
-                    const x = chunk.views.Position[base + 0];
-                    const y = chunk.views.Position[base + 1];
-                    base = i * 2;
-                    const w = Math.abs(chunk.views.Size[base + 0]);
-                    const h = Math.abs(chunk.views.Size[base + 1]);
+                    const posBase = i * POSITION_STRIDE;
+                    const x = chunk.views.Position[posBase + PositionIndex.X];
+                    const y = chunk.views.Position[posBase + PositionIndex.Y];
+
+                    const sizeBase = i * SIZE_STRIDE;
+                    const w = Math.abs(
+                        chunk.views.Size[sizeBase + SizeIndex.WIDTH]
+                    );
+                    const h = Math.abs(
+                        chunk.views.Size[sizeBase + SizeIndex.HEIGHT]
+                    );
                     const hw = w * 0.5;
                     const hh = h * 0.5;
 
-                    base = i * 4;
+                    const aabbBase = i * AABB_STRIDE;
                     // update the AABB component to make sure is aligned with the entity position
-                    chunk.views.AABB[base + 0] = x - hw;
-                    chunk.views.AABB[base + 1] = y - hh;
-                    chunk.views.AABB[base + 2] = x + hw;
-                    chunk.views.AABB[base + 3] = y + hh;
+                    chunk.views.AABB[aabbBase + AABBIndex.MIN_X] = x - hw;
+                    chunk.views.AABB[aabbBase + AABBIndex.MIN_Y] = y - hh;
+                    chunk.views.AABB[aabbBase + AABBIndex.MAX_X] = x + hw;
+                    chunk.views.AABB[aabbBase + AABBIndex.MAX_Y] = y + hh;
                 }
             }
         );
@@ -392,57 +438,100 @@ export class CollisionSystem extends ECSUpdateSystem {
             view.forEachChunkWith(
                 // loops on each main in the config
                 [main, Component.AABB, Component.Position, Component.Size],
-                (chunk, chunkId) => {
-                    for (let i = 0; i < chunk.count; i++) {
-                        // turn the main into a collision entity for processing
-                        const mainEntity: CollisionEntity =
-                            this.getCollisionEntity(chunk, chunkId, i);
-
-                        // skip if the main is out of the active area
-                        if (!this.testForActiveArea(mainEntity)) continue;
-
-                        this.collisionMap.clear();
-
-                        // use the spatial grid to get the candidates to test against the main entity
-                        const candidates =
-                            this.getCollisionCandidates(mainEntity);
-
-                        // skip if there are no candidates
-                        if (candidates.length === 0) continue;
-
-                        for (const candidateID of candidates) {
-                            const target = this.targEntities.get(candidateID);
-                            if (!target) continue;
-
-                            // Skip self when main and target component are the same
-                            if (target.entityID === mainEntity.entityID)
-                                continue;
-
-                            // AABB collision test: check if the boxes overlap
-                            if (this.detectCollision(mainEntity, target)) {
-                                // if there's a collision stores the contact into the collisionMap
-                                const contact = this.getCollisionContact(
-                                    mainEntity,
-                                    target,
-                                    chunk,
-                                    i,
-                                    dt
-                                );
-
-                                // in collisionMap we group contacts by event type directly
-                                const eventType = target.eventType || "default";
-                                if (!this.collisionMap.has(eventType)) {
-                                    this.collisionMap.set(eventType, []);
-                                }
-
-                                this.collisionMap.get(eventType)!.push(contact);
-                            }
-                        }
-
-                        this.emitCollisionEvent(mainEntity, view, cmd, dt);
-                    }
-                }
+                (chunk, chunkId) =>
+                    this.processMainCollisionChunk(
+                        view,
+                        cmd,
+                        dt,
+                        chunk,
+                        chunkId
+                    )
             );
         }
+    }
+
+    private processMainCollisionChunk(
+        view: View,
+        cmd: CommandBuffer,
+        dt: number,
+        chunk: Readonly<Chunk<any>>,
+        chunkId: number
+    ): void {
+        for (let i = 0; i < chunk.count; i++) {
+            this.processMainEntity(view, cmd, dt, chunk, chunkId, i);
+        }
+    }
+
+    private processMainEntity(
+        view: View,
+        cmd: CommandBuffer,
+        dt: number,
+        chunk: Readonly<Chunk<any>>,
+        chunkId: number,
+        row: number
+    ): void {
+        const mainEntity = this.getCollisionEntity(chunk, chunkId, row);
+        if (!this.testForActiveArea(mainEntity)) return;
+
+        this.collisionMap.clear();
+
+        const hasContacts = this.collectContacts(mainEntity, chunk, row, dt);
+
+        if (hasContacts) {
+            this.emitCollisionEvent(mainEntity, view, cmd, dt);
+        }
+    }
+
+    private collectContacts(
+        mainEntity: CollisionEntity,
+        chunk: Readonly<Chunk<any>>,
+        row: number,
+        dt: number
+    ): boolean {
+        const candidates = this.getCollisionCandidates(mainEntity);
+        if (candidates.length === 0) return false;
+
+        let recordedContact = false;
+        for (const candidateID of candidates) {
+            const contactRecorded = this.tryRecordCollision(
+                mainEntity,
+                chunk,
+                row,
+                dt,
+                candidateID
+            );
+            recordedContact ||= contactRecorded;
+        }
+
+        return recordedContact;
+    }
+
+    private tryRecordCollision(
+        mainEntity: CollisionEntity,
+        chunk: Readonly<Chunk<any>>,
+        row: number,
+        dt: number,
+        candidateID: bigint
+    ): boolean {
+        const target = this.targEntities.get(candidateID);
+        if (!target) return false;
+        if (target.entityID === mainEntity.entityID) return false;
+        if (!this.detectCollision(mainEntity, target)) return false;
+
+        const contact = this.getCollisionContact(
+            mainEntity,
+            target,
+            chunk,
+            row,
+            dt
+        );
+
+        const eventType = target.eventType || "default";
+        if (!this.collisionMap.has(eventType)) {
+            this.collisionMap.set(eventType, []);
+        }
+
+        this.collisionMap.get(eventType)!.push(contact);
+        return true;
     }
 }

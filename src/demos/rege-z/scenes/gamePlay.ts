@@ -5,7 +5,6 @@ import { playerArchetype, getPlayerComponents } from "../entities/player";
 import { cameraArchetype, getCameraComponents } from "../entities/camera";
 import { zombieArchetype, getZombieComponents } from "../entities/zombie";
 import { weaponArchetype, getWeaponComponents } from "../entities/weapon";
-import { bulletArchetype, getBulletComponents } from "../entities/bullet";
 import { SpriteRendererSystem } from "../systems/RendererSystem";
 import { AnimationSystem } from "../systems/AnimationSystem";
 import { CollisionSystem } from "../systems/CollisionSystem";
@@ -27,7 +26,7 @@ export function createGamePlay() {
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
 
     scene.createEntity(weaponArchetype, getWeaponComponents());
-    // for (let i = 0; i < 10; i++) {
+    // for (let i = 0; i < 1; i++) {
     //     scene.createEntity(zombieArchetype, getZombieComponents());
     // }
 

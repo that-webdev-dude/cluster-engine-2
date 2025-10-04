@@ -31,7 +31,7 @@ export class CameraSystem extends ECSUpdateSystem {
     private readonly displayW: number;
     private readonly displayH: number;
 
-    private readonly db: DebugOverlay;
+    private readonly db: DebugOverlay | undefined = undefined;
 
     constructor(
         readonly store: Store,
@@ -42,12 +42,15 @@ export class CameraSystem extends ECSUpdateSystem {
         this.worldH = store.get("worldH");
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
-        this.db = new DebugOverlay(
-            this.displayW,
-            this.displayH,
-            100,
-            DEBUG_OVERLAY
-        );
+
+        if (DEBUG_OVERLAY) {
+            this.db = new DebugOverlay(
+                store.get("displayW"),
+                store.get("displayH"),
+                200,
+                DEBUG_OVERLAY
+            );
+        }
     }
 
     public prerun(view: View): void {
@@ -307,7 +310,7 @@ export class CameraSystem extends ECSUpdateSystem {
                     const w2sX = (wx: number) => (wx - tlx) * scale;
                     const w2sY = (wy: number) => (wy - tly) * scale;
                     // Debug visualization - show camera behavior
-                    if (this.db?.enabled) {
+                    if (DEBUG_OVERLAY && this.db?.enabled) {
                         this.db.clear();
                         this.db.dot(w2sX(cx), w2sY(cy), 3, "#d50000");
                         this.db.dot(w2sX(px), w2sY(py), 3, "#00c853");

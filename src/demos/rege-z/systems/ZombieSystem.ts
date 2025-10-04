@@ -20,6 +20,7 @@ export class ZombieSystem extends ECSUpdateSystem {
         targPos: new Vector(),
         outVel: new Vector(),
     };
+
     private targetPos: Buffer | undefined = undefined;
 
     constructor(readonly store: Store, readonly target: EntityMeta) {
