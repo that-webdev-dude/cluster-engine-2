@@ -6,6 +6,7 @@ import {
     Store,
     Entity,
     UniformGrid,
+    DebugOverlay,
 } from "../../../cluster";
 import { Component } from "../components";
 import { DESCRIPTORS } from "../components/descriptors";
@@ -51,6 +52,11 @@ const OFFSET_STRIDE = DESCRIPTORS.Offset.count;
 const VELOCITY_STRIDE = DESCRIPTORS.Velocity.count;
 const AABB_STRIDE = DESCRIPTORS.AABB.count;
 
+const DEBUG_OVERLAY = true;
+const DEBUG_COLOR_ACTIVE = "rgba(255, 180, 0, 0.9)";
+const DEBUG_COLOR_AABB = "rgba(0, 255, 0, 0.8)";
+const DEBUG_COLOR_TEXT = "rgba(250, 250, 250, 0.95)";
+
 export class CollisionSystem extends ECSUpdateSystem {
     private collisionActiveRect: CollisionActiveRect | undefined = undefined;
     private readonly displayW: number;
@@ -58,6 +64,10 @@ export class CollisionSystem extends ECSUpdateSystem {
     private readonly collisionMap: Map<string, CollisionContact[]> = new Map();
     private readonly targEntities: BigSparseSet<bigint, CollisionEntity> =
         new BigSparseSet();
+    private readonly db: DebugOverlay | undefined = undefined;
+    private debugMainsProcessed = 0;
+    private debugCandidatesTested = 0;
+    private debugContactsFound = 0;
 
     // spatial partitioning properties
     private readonly spatialGrid: UniformGrid<bigint> = new UniformGrid(64); // for now 64 is set as default cell size
@@ -70,6 +80,15 @@ export class CollisionSystem extends ECSUpdateSystem {
         super(store);
         this.displayW = store.get("displayW");
         this.displayH = store.get("displayH");
+
+        if (DEBUG_OVERLAY) {
+            this.db = new DebugOverlay(
+                this.displayW,
+                this.displayH,
+                300,
+                DEBUG_OVERLAY
+            );
+        }
     }
 
     /**
@@ -111,7 +130,14 @@ export class CollisionSystem extends ECSUpdateSystem {
         // fallback to the display dimensions if no camera is found
         if (this.displayW && this.displayH) {
             activeRect ??= {
-                position: new Float32Array(POSITION_STRIDE),
+                position: (() => {
+                    const arr = new Float32Array(POSITION_STRIDE);
+                    arr[PositionIndex.X] = this.displayW * 0.5;
+                    arr[PositionIndex.Y] = this.displayH * 0.5;
+                    arr[PositionIndex.PREV_X] = arr[PositionIndex.X];
+                    arr[PositionIndex.PREV_Y] = arr[PositionIndex.Y];
+                    return arr;
+                })(),
                 size: (() => {
                     const arr = new Float32Array(SIZE_STRIDE);
                     arr[SizeIndex.WIDTH] = this.displayW;
@@ -124,6 +150,40 @@ export class CollisionSystem extends ECSUpdateSystem {
         }
 
         return activeRect;
+    }
+
+    private getActiveAreaBounds():
+        | { left: number; top: number; width: number; height: number }
+        | undefined {
+        if (!this.collisionActiveRect) return undefined;
+
+        const { position, size, offset, row } = this.collisionActiveRect;
+
+        const posBase = row * POSITION_STRIDE;
+        const cx = position[posBase + PositionIndex.X] || 0;
+        const cy = position[posBase + PositionIndex.Y] || 0;
+
+        const sizeBase = row * SIZE_STRIDE;
+        const viewW = size[sizeBase + SizeIndex.WIDTH] || this.displayW;
+        const viewH = size[sizeBase + SizeIndex.HEIGHT] || this.displayH;
+
+        let offX = 0;
+        let offY = 0;
+        if (offset) {
+            const offsetBase = row * OFFSET_STRIDE;
+            offX = offset[offsetBase + OffsetIndex.X] || 0;
+            offY = offset[offsetBase + OffsetIndex.Y] || 0;
+        }
+
+        const halfW = viewW * 0.5;
+        const halfH = viewH * 0.5;
+
+        return {
+            left: cx - (halfW - offX),
+            top: cy - (halfH - offY),
+            width: viewW,
+            height: viewH,
+        };
     }
 
     private getCollisionEntity(
@@ -263,60 +323,23 @@ export class CollisionSystem extends ECSUpdateSystem {
         // Camera position is the top-left corner of the viewport
         // Entity position is the center of the entity
         // We check if the entity's bounding box overlaps with the active area
-        if (this.collisionActiveRect !== undefined) {
-            const { aabb } = entity;
+        const bounds = this.getActiveAreaBounds();
+        if (!bounds) return false;
 
-            const { position, size, offset, row } = this.collisionActiveRect;
+        const { aabb } = entity;
+        const activeLeft = bounds.left;
+        const activeRight = bounds.left + bounds.width;
+        const activeTop = bounds.top;
+        const activeBottom = bounds.top + bounds.height;
 
-            const posBase = row * POSITION_STRIDE;
-            const cx = position[posBase + PositionIndex.X];
-            const cy = position[posBase + PositionIndex.Y];
-
-            const sizeBase = row * SIZE_STRIDE;
-            const viewW = size[sizeBase + SizeIndex.WIDTH] || this.displayW;
-            const viewH = size[sizeBase + SizeIndex.HEIGHT] || this.displayH;
-
-            let offX = 0;
-            let offY = 0;
-            if (offset) {
-                const offsetBase = row * OFFSET_STRIDE;
-                offX = offset[offsetBase + OffsetIndex.X] || 0;
-                offY = offset[offsetBase + OffsetIndex.Y] || 0;
-            }
-
-            const halfW = viewW * 0.5;
-            const halfH = viewH * 0.5;
-            const aX = cx - (halfW - offX);
-            const aY = cy - (halfH - offY);
-            const aW = viewW;
-            const aH = viewH;
-
-            // Check if entity's bounding box overlaps with the active area
-            // Entity bounds: [aabb.minX, aabb.maxX] x [aabb.minY, aabb.maxY]
-            // Active area bounds: [aX, aX+aW] x [aY, aY+aH]
-            const activeLeft = aX;
-            const activeRight = aX + aW;
-            const activeTop = aY;
-            const activeBottom = aY + aH;
-
-            // Check for overlap using AABB intersection test
-            if (
-                aabb.maxX >= activeLeft &&
-                aabb.minX <= activeRight &&
-                aabb.maxY >= activeTop &&
-                aabb.minY <= activeBottom
-            ) {
-                // Debug logging (uncomment to see culling in action)
-                // console.log(`Entity ${entity.entityID} inside active area:`, {
-                //     entity: { aabb, left: aabb.minX, right: aabb.maxX, top: aabb.minY, bottom: aabb.maxY },
-                //     active: { x: aX, y: aY, w: aW, h: aH, left: activeLeft, right: activeRight, top: activeTop, bottom: activeBottom }
-                // });
-
-                return true;
-            }
-            return false;
+        if (
+            aabb.maxX >= activeLeft &&
+            aabb.minX <= activeRight &&
+            aabb.maxY >= activeTop &&
+            aabb.minY <= activeBottom
+        ) {
+            return true;
         }
-
         return false;
     }
 
@@ -422,6 +445,10 @@ export class CollisionSystem extends ECSUpdateSystem {
             return;
         }
 
+        this.debugMainsProcessed = 0;
+        this.debugCandidatesTested = 0;
+        this.debugContactsFound = 0;
+
         // update all AABB components to make sure they align with the entity positions before processing
         this.updateAllAABBs(view);
 
@@ -447,6 +474,10 @@ export class CollisionSystem extends ECSUpdateSystem {
                         chunkId
                     )
             );
+        }
+
+        if (this.db?.enabled) {
+            this.renderDebugOverlay(view);
         }
     }
 
@@ -474,6 +505,7 @@ export class CollisionSystem extends ECSUpdateSystem {
         if (!this.testForActiveArea(mainEntity)) return;
 
         this.collisionMap.clear();
+        this.debugMainsProcessed++;
 
         const hasContacts = this.collectContacts(mainEntity, chunk, row, dt);
 
@@ -489,6 +521,7 @@ export class CollisionSystem extends ECSUpdateSystem {
         dt: number
     ): boolean {
         const candidates = this.getCollisionCandidates(mainEntity);
+        this.debugCandidatesTested += candidates.length;
         if (candidates.length === 0) return false;
 
         let recordedContact = false;
@@ -532,6 +565,119 @@ export class CollisionSystem extends ECSUpdateSystem {
         }
 
         this.collisionMap.get(eventType)!.push(contact);
+        this.debugContactsFound++;
         return true;
+    }
+
+    private renderDebugOverlay(view: View): void {
+        if (!this.db?.enabled) return;
+
+        const bounds = this.getActiveAreaBounds();
+        if (!bounds) return;
+
+        this.db.clear();
+
+        const toScreenX = (worldX: number) => worldX - bounds.left;
+        const toScreenY = (worldY: number) => worldY - bounds.top;
+
+        const viewportWidth = Math.min(bounds.width, this.displayW);
+        const viewportHeight = Math.min(bounds.height, this.displayH);
+
+        this.drawRect(
+            0,
+            0,
+            viewportWidth,
+            viewportHeight,
+            DEBUG_COLOR_ACTIVE,
+            2,
+            6
+        );
+
+        view.forEachChunkWith([Component.AABB], (chunk) => {
+            const count = chunk.count;
+            if (count === 0) return;
+
+            const aabb = chunk.views.AABB;
+
+            for (let i = 0; i < count; i++) {
+                const base = i * AABB_STRIDE;
+                const minX = toScreenX(aabb[base + AABBIndex.MIN_X]);
+                const minY = toScreenY(aabb[base + AABBIndex.MIN_Y]);
+                const maxX = toScreenX(aabb[base + AABBIndex.MAX_X]);
+                const maxY = toScreenY(aabb[base + AABBIndex.MAX_Y]);
+
+                if (
+                    maxX < 0 ||
+                    maxY < 0 ||
+                    minX > this.displayW ||
+                    minY > this.displayH
+                ) {
+                    continue;
+                }
+
+                this.drawRect(minX, minY, maxX, maxY, DEBUG_COLOR_AABB, 1, 0);
+            }
+        });
+
+        this.renderDebugText(bounds);
+    }
+
+    private drawRect(
+        minX: number,
+        minY: number,
+        maxX: number,
+        maxY: number,
+        color: string,
+        width: number,
+        dash: number
+    ) {
+        if (!this.db) return;
+        this.db.line(minX, minY, maxX, minY, width, color, dash);
+        this.db.line(maxX, minY, maxX, maxY, width, color, dash);
+        this.db.line(maxX, maxY, minX, maxY, width, color, dash);
+        this.db.line(minX, maxY, minX, minY, width, color, dash);
+    }
+
+    private renderDebugText(bounds: {
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+    }): void {
+        if (!this.db) return;
+
+        const boxWidth = 240;
+        const boxHeight = 112;
+        const margin = 16;
+        const left = this.displayW - boxWidth - margin;
+        const top = this.displayH - boxHeight - margin;
+        const right = left + boxWidth;
+        const bottom = top + boxHeight;
+
+        this.drawRect(left, top, right, bottom, DEBUG_COLOR_ACTIVE, 1, 4);
+
+        const textLines = [
+            "CollisionSystem Debug",
+            `Camera: (${bounds.left.toFixed(1)}, ${bounds.top.toFixed(1)})`,
+            `Viewport: ${bounds.width.toFixed(1)} x ${bounds.height.toFixed(
+                1
+            )}`,
+            `Mains processed: ${this.debugMainsProcessed}`,
+            `Candidates tested: ${this.debugCandidatesTested}`,
+            `Contacts found: ${this.debugContactsFound}`,
+            `Targets cached: ${this.targEntities.size()}`,
+        ];
+
+        let textY = top + 20;
+        for (const line of textLines) {
+            this.db.text(
+                line,
+                left + 12,
+                textY,
+                "12px monospace",
+                DEBUG_COLOR_TEXT
+            );
+            textY += 16;
+        }
     }
 }

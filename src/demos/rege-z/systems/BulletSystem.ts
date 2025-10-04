@@ -8,7 +8,7 @@ import {
 } from "../../../cluster";
 import { bulletArchetype, getBulletComponents } from "../entities/bullet";
 import { Component, DESCRIPTORS, PositionIndex } from "../components";
-import { FireWeaponEvent } from "../events";
+import { CollisionEvent, FireWeaponEvent } from "../events";
 
 const DEBUG_OVERLAY = false;
 
@@ -52,6 +52,24 @@ export class BulletSystem extends ECSUpdateSystem {
             },
             false
         );
+
+        this.store.on<CollisionEvent>(
+            "bullet-wall-collision",
+            (e) => {
+                const { cmd, mainMeta } = e.data;
+                if (!cmd) return;
+
+                const meta: EntityMeta = {
+                    archetype: bulletArchetype,
+                    chunkId: mainMeta.chunkId,
+                    row: mainMeta.row,
+                    generation: mainMeta.generation,
+                };
+
+                cmd.remove(meta);
+            },
+            false
+        );
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
@@ -79,6 +97,7 @@ export class BulletSystem extends ECSUpdateSystem {
                         py < -64 ||
                         py > this.worldH + 64
                     ) {
+                        // logic to remove the bullet entity
                         const meta: EntityMeta = {
                             generation: chunk.getGeneration(i),
                             archetype: bulletArchetype,

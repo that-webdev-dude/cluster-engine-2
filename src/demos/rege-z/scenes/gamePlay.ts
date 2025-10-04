@@ -9,7 +9,7 @@ import { SpriteRendererSystem } from "../systems/RendererSystem";
 import { AnimationSystem } from "../systems/AnimationSystem";
 import { CollisionSystem } from "../systems/CollisionSystem";
 import { TilemapSystem } from "../systems/TilemapSystem";
-import { MotionSystem } from "../systems/MotionStstem";
+import { MotionSystem } from "../systems/MotionSystem";
 import { PlayerSystem } from "../systems/PlayerSystem";
 import { CameraSystem } from "../systems/CameraSystem";
 import { WeaponSystem } from "../systems/WeaponSystem";
@@ -26,9 +26,9 @@ export function createGamePlay() {
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
 
     scene.createEntity(weaponArchetype, getWeaponComponents());
-    // for (let i = 0; i < 1; i++) {
-    //     scene.createEntity(zombieArchetype, getZombieComponents());
-    // }
+    for (let i = 0; i < 10; i++) {
+        scene.createEntity(zombieArchetype, getZombieComponents());
+    }
 
     // systems
     const u = "update";
@@ -60,8 +60,21 @@ export function createGamePlay() {
                 main: Component.Zombie,
                 targets: [
                     {
-                        target: Component.Zombie,
-                        eventType: "zombie-zombie-collision",
+                        target: Component.Wall,
+                        eventType: "zombie-wall-collision",
+                    },
+                    {
+                        target: Component.Bullet,
+                        eventType: "zombie-bullet-collision",
+                    },
+                ],
+            },
+            {
+                main: Component.Bullet,
+                targets: [
+                    {
+                        target: Component.Wall,
+                        eventType: "bullet-wall-collision",
                     },
                 ],
             },

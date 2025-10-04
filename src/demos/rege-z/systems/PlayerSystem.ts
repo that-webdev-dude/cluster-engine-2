@@ -19,6 +19,7 @@ import {
 // implement dashing or teleporting here and watch the camera system behaviour
 
 export class PlayerSystem extends ECSUpdateSystem {
+    private currentView: View | undefined = undefined;
     private readonly worldW: number = 0;
     private readonly worldH: number = 0;
     private readonly displayW: number = 0;
@@ -36,7 +37,30 @@ export class PlayerSystem extends ECSUpdateSystem {
         this.store.on<CollisionEvent>(
             "player-zombie-collision",
             (e) => {
-                // ... do something when the player collides with a zombie
+                const { view: collisionView, primary } = e.data;
+                if (!primary) return;
+
+                const activeView = collisionView ?? this.currentView;
+                if (!activeView) return;
+
+                const otherMeta = primary.otherMeta;
+                if (!otherMeta) return;
+
+                const posSlice = activeView.getSlice(
+                    otherMeta,
+                    DESCRIPTORS.Position
+                );
+                if (!posSlice) return;
+
+                const { arr, base } = posSlice;
+                const push = 16;
+                const nx = primary.normal.x;
+                const ny = primary.normal.y;
+
+                if (nx !== 0 || ny !== 0) {
+                    arr[base + PositionIndex.X] -= nx * push;
+                    arr[base + PositionIndex.Y] -= ny * push;
+                }
             },
             false
         );
@@ -77,8 +101,8 @@ export class PlayerSystem extends ECSUpdateSystem {
                         }
                     }
 
-                    arr[base + VelocityIndex.X] = 0;
-                    arr[base + VelocityIndex.Y] = 0;
+                    arr[base + VelocityIndex.X] = vx;
+                    arr[base + VelocityIndex.Y] = vy;
                 }
             },
             false
@@ -86,6 +110,7 @@ export class PlayerSystem extends ECSUpdateSystem {
     }
 
     update(view: View, cmd: CommandBuffer, dt: number) {
+        this.currentView = view;
         view.forEachChunkWith(
             [
                 Component.Player,
