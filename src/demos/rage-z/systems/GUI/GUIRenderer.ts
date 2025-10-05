@@ -1,8 +1,11 @@
-import { GUIRenderSystem } from "../../../cluster/ecs/system";
-import { Display } from "../../../cluster/core/Display";
-import { GUIContainer, GUIElement } from "../../../cluster/gui/GUIbuilders";
+import {
+    GUIRenderSystem,
+    GUIContainer,
+    GUIElement,
+    Display,
+} from "../../../../cluster";
 
-export class GUISystem extends GUIRenderSystem {
+export class GUIRendererSystem extends GUIRenderSystem {
     private readonly dynamicLayer =
         Display.getInstance().createCPURenderingLayer();
     private readonly context = this.dynamicLayer.getContext();

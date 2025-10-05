@@ -1,6 +1,7 @@
 // NOSONAR
 import { Display, Game } from "../../cluster";
 import { createGamePlay } from "./scenes/gamePlay";
+import { createGameTitle } from "./scenes/gameTitle";
 import store from "./stores/store";
 
 const width = store.get("displayW");
@@ -18,8 +19,26 @@ const display = Display.getInstance({
     },
 });
 
-const game = new Game(store, display);
 export function app() {
-    game.setScene(createGamePlay());
+    const game = new Game(store, display);
+
+    store.on(
+        "gamePlay",
+        (e) => {
+            store.dispatch("resetGame");
+            game.setScene(createGamePlay());
+        },
+        false
+    );
+
+    store.on(
+        "gameTitle",
+        (e) => {
+            game.setScene(createGameTitle());
+        },
+        false
+    );
+
+    game.setScene(createGameTitle());
     game.start();
 }

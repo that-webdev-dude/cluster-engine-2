@@ -1,4 +1,4 @@
-import { EntityMeta, ComponentSlice } from "../../../cluster/types";
+import { EntityMeta, ComponentSlice } from "../../../../cluster/types";
 import {
     DebugOverlay,
     ECSUpdateSystem,
@@ -7,7 +7,7 @@ import {
     Cmath,
     Input,
     View,
-} from "../../../cluster";
+} from "../../../../cluster";
 import {
     Component,
     DESCRIPTORS,
@@ -18,7 +18,7 @@ import {
     OffsetIndex,
     SizeIndex,
     CameraIndex,
-} from "../components";
+} from "../../components";
 
 const DEBUG_OVERLAY = false;
 

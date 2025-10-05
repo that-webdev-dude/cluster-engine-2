@@ -16,15 +16,18 @@ import { WeaponSystem } from "../systems/WeaponSystem";
 import { ZombieSystem } from "../systems/ZombieSystem";
 import { BulletSystem } from "../systems/BulletSystem";
 import { Component } from "../components";
+import { createGamePlayGUI } from "../entities/GUI";
+import { GUIRendererSystem } from "../systems/GUI/GUIRenderer";
+import { GUITimerSystem } from "../systems/GUI/GUITimer";
+import { GUILivesSystem } from "../systems/GUI/GUILives";
 
 export function createGamePlay() {
     const scene = new Scene();
 
+    // entities
     createTileMapWithObstacles(scene, {});
-
     let cameraMeta = scene.createEntity(cameraArchetype, getCameraComponents());
     let playerMeta = scene.createEntity(playerArchetype, getPlayerComponents());
-
     scene.createEntity(weaponArchetype, getWeaponComponents());
     for (let i = 0; i < 10; i++) {
         scene.createEntity(zombieArchetype, getZombieComponents());
@@ -32,6 +35,7 @@ export function createGamePlay() {
 
     // systems
     const u = "update";
+    const r = "render";
     scene.useECSSystem(u, new TilemapSystem(store));
     scene.useECSSystem(u, new PlayerSystem(store));
     scene.useECSSystem(u, new WeaponSystem(store, playerMeta, cameraMeta));
@@ -81,8 +85,13 @@ export function createGamePlay() {
         ])
     );
 
-    const r = "render";
     scene.useECSSystem(r, new SpriteRendererSystem(store));
+
+    // gui
+    scene.gui = createGamePlayGUI();
+    scene.useGUISystem(u, new GUITimerSystem(store));
+    scene.useGUISystem(u, new GUILivesSystem(store));
+    scene.useGUISystem(r, new GUIRendererSystem());
 
     return scene;
 }

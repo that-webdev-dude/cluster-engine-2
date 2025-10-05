@@ -1,5 +1,4 @@
-import { CommandBuffer, StoreEvent, View } from "../../../cluster";
-import { AABB } from "../../../cluster/tools/aabb";
+import { CommandBuffer, StoreEvent, View, AABB } from "../../../cluster";
 import { EntityMeta } from "../../../cluster/types";
 
 export type VectorLike = { x: number; y: number };
@@ -39,4 +38,31 @@ export interface FireWeaponEvent extends StoreEvent {
         position: VectorLike;
         direction: VectorLike;
     };
+}
+
+/**
+ * game events
+ */
+export interface ScoreEvent extends StoreEvent {
+    type: "scoreEvent";
+}
+
+export interface GamePlayEvent extends StoreEvent {
+    type: "gamePlay";
+}
+
+export interface GameTitleEvent extends StoreEvent {
+    type: "gameTitle";
+}
+
+export interface GameOverEvent extends StoreEvent {
+    type: "gameOver";
+}
+
+export interface GamePauseEvent extends StoreEvent {
+    type: "gamePause";
+}
+
+export interface GameResumeEvent extends StoreEvent {
+    type: "gameResume";
 }

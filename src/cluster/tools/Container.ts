@@ -10,13 +10,21 @@ export class Container<T> {
     }
 
     get empty(): boolean {
-        return this.children.length > 0 ? false : true;
+        return this.children.length === 0;
     }
 
     add(child: T | Container<T>) {
         this.children.push(child);
         return child;
     }
+
+    insert(...children: ReadonlyArray<T | Container<T>>) {
+        for (const child of children) {
+            this.children.push(child);
+        }
+        return children;
+    }
+
     remove(child: T | Container<T>): boolean {
         let removed = false;
 

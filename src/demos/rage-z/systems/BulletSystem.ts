@@ -80,8 +80,6 @@ export class BulletSystem extends ECSUpdateSystem {
             (chunk, chunkId) => {
                 if (chunk.count === 0) return;
 
-                console.log(`BulletSystem: count ${chunk.count}`);
-
                 // if the bullets go off world for now, destroy them
                 // need to convert world to screen coords
                 const pos = chunk.views.Position;

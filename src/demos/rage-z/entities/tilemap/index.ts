@@ -14,7 +14,7 @@ import {
     getWallComponents,
     floorArchetype,
     getFloorComponents,
-} from "../../entities/tile";
+} from "../tile";
 
 const worldW = store.get("worldW");
 const worldH = store.get("worldH");

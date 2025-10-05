@@ -5,7 +5,7 @@ import {
     CommandBuffer,
     ECSUpdateSystem,
 } from "../../../cluster";
-import { CollisionEvent } from "../events";
+import { CollisionEvent, GameTitleEvent } from "../events";
 import {
     Component,
     DESCRIPTORS,
@@ -60,6 +60,19 @@ export class PlayerSystem extends ECSUpdateSystem {
                 if (nx !== 0 || ny !== 0) {
                     arr[base + PositionIndex.X] -= nx * push;
                     arr[base + PositionIndex.Y] -= ny * push;
+                }
+
+                // reduce player's lifes
+                let lives = this.store.get("lives");
+                if (lives > 0) {
+                    this.store.dispatch("decrementLives", 1);
+                } else {
+                    this.store.emit<GameTitleEvent>(
+                        {
+                            type: "gameTitle",
+                        },
+                        false
+                    );
                 }
             },
             false

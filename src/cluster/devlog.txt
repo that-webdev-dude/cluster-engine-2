@@ -28,13 +28,10 @@ TODO next (xshooter):
 
 TODO next (rage-z)
 - need a local to world coords converter
-- make a boundary system
-- collision system should work on hitbox component
 - FX system could be made of multiple subsystems
 - every component have an active flag
 - culling sub system
 - the gui storage needs to be an actual storage
-- add a dryrun in the systems
 - the collision system should probably collect the target entities once and not per-main entity
 
 

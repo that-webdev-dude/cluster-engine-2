@@ -7,6 +7,8 @@ import {
     Entity,
     UniformGrid,
     DebugOverlay,
+    AABB,
+    AABBTools,
 } from "../../../cluster";
 import { Component } from "../components";
 import { DESCRIPTORS } from "../components/descriptors";
@@ -18,7 +20,6 @@ import { AABBIndex } from "../components/AABB";
 import { CollisionEvent, CollisionContact } from "../events";
 import { ComponentType, EntityMeta } from "../../../cluster/types";
 import { BigSparseSet } from "../../../cluster/tools/SparseSet";
-import { AABB, AABBTools } from "./AABB";
 
 export interface CollisionPairs {
     main: ComponentType;
@@ -104,7 +105,12 @@ export class CollisionSystem extends ECSUpdateSystem {
         let activeRect = undefined;
 
         view.forEachChunkWith(
-            [Component.Camera, Component.Position, Component.Size],
+            [
+                Component.Camera,
+                Component.Position,
+                Component.Offset,
+                Component.Size,
+            ],
             (chunk) => {
                 if (chunk.count > 1)
                     console.warn(
@@ -115,12 +121,13 @@ export class CollisionSystem extends ECSUpdateSystem {
                 if (
                     chunk.count > 0 &&
                     chunk.views.Position &&
+                    chunk.views.Offset &&
                     chunk.views.Size
                 ) {
                     activeRect ??= {
                         position: chunk.views.Position,
+                        offset: chunk.views.Offset,
                         size: chunk.views.Size,
-                        offset: (chunk.views as any).Offset,
                         row: 0,
                     };
                 }
@@ -419,15 +426,26 @@ export class CollisionSystem extends ECSUpdateSystem {
                     const h = Math.abs(
                         chunk.views.Size[sizeBase + SizeIndex.HEIGHT]
                     );
-                    const hw = w * 0.5;
-                    const hh = h * 0.5;
 
                     const aabbBase = i * AABB_STRIDE;
+                    const aabbW = Math.abs(
+                        chunk.views.AABB[aabbBase + AABBIndex.MAX_X] -
+                            chunk.views.AABB[aabbBase + AABBIndex.MIN_X]
+                    );
+                    const aabbH = Math.abs(
+                        chunk.views.AABB[aabbBase + AABBIndex.MAX_Y] -
+                            chunk.views.AABB[aabbBase + AABBIndex.MIN_Y]
+                    );
+
                     // update the AABB component to make sure is aligned with the entity position
-                    chunk.views.AABB[aabbBase + AABBIndex.MIN_X] = x - hw;
-                    chunk.views.AABB[aabbBase + AABBIndex.MIN_Y] = y - hh;
-                    chunk.views.AABB[aabbBase + AABBIndex.MAX_X] = x + hw;
-                    chunk.views.AABB[aabbBase + AABBIndex.MAX_Y] = y + hh;
+                    chunk.views.AABB[aabbBase + AABBIndex.MIN_X] =
+                        x - aabbW * 0.5;
+                    chunk.views.AABB[aabbBase + AABBIndex.MIN_Y] =
+                        y - aabbH * 0.5;
+                    chunk.views.AABB[aabbBase + AABBIndex.MAX_X] =
+                        x + aabbW * 0.5;
+                    chunk.views.AABB[aabbBase + AABBIndex.MAX_Y] =
+                        y + aabbH * 0.5;
                 }
             }
         );
@@ -646,8 +664,8 @@ export class CollisionSystem extends ECSUpdateSystem {
     }): void {
         if (!this.db) return;
 
-        const boxWidth = 240;
-        const boxHeight = 112;
+        const boxWidth = 192;
+        const boxHeight = 128;
         const margin = 16;
         const left = this.displayW - boxWidth - margin;
         const top = this.displayH - boxHeight - margin;

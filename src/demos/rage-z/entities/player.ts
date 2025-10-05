@@ -37,7 +37,7 @@ export function getPlayerComponents(): ComponentValueMap {
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [0, 0, w, h],
         [Component.Animation]: [4, 5, 4, 0.2, 0, 1],
-        [Component.AABB]: [x - w * 0.5, y - h * 0.5, x + w * 0.5, y + y * 0.5],
+        [Component.AABB]: [x - w * 0.5, y - h * 0.5, x + w * 0.5, y + h * 0.5],
     } as ComponentValueMap;
 }
 

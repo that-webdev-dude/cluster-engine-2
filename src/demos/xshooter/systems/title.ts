@@ -12,7 +12,6 @@ export class TitleSystem extends GUIUpdateSystem {
         // press enter to start the game
         if (Keyboard.key("Enter")) {
             Keyboard.active = false;
-
             this.store.emit({ type: "gamePlay" }, false);
         }
     }

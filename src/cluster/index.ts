@@ -1,32 +1,72 @@
-// core exports
-export { Assets, Display, Input, Store, Sound, Audio } from "./core";
+/**
+ * Cluster Engine 2 — public API barrel.
+ * Grouped exports keep the surface area tidy and easy to scan.
+ */
 
-// ecs
-export type { CommandBuffer } from "./ecs/cmd";
-export type { View } from "./ecs/view";
+// ── Core ────────────────────────────────────────────────────────────────────
+export { Assets, Audio, Display, Input, Sound, Store } from "./core";
+export type { Action, Getter, Mutation, State, StoreEvent } from "./core/Store";
+
+// ── ECS (Entity Component System) ───────────────────────────────────────────
 export { Archetype } from "./ecs/archetype";
 export { Chunk } from "./ecs/chunk";
+export { Entity } from "./ecs/entity";
 export { Game } from "./ecs/game";
 export { Scene } from "./ecs/scene";
-export { Entity } from "./ecs/entity";
-export { ECSRenderSystem } from "./ecs/system";
-export { ECSUpdateSystem } from "./ecs/system";
-export { GUIRenderSystem } from "./ecs/system";
-export { GUIUpdateSystem } from "./ecs/system";
+export {
+    ECSRenderSystem,
+    ECSUpdateSystem,
+    GUIRenderSystem,
+    GUIUpdateSystem,
+} from "./ecs/system";
+export type { CommandBuffer } from "./ecs/cmd";
+export type { View } from "./ecs/view";
 
-// gl
+// ── GL Pipelines ───────────────────────────────────────────────────────────
+export { CircleData, CirclePipeline } from "./gl/pipelines/circle";
+export { MeshData, MeshPipeline } from "./gl/pipelines/mesh";
+export { RectData, RectPipeline } from "./gl/pipelines/rect";
 export { SpriteData, SpritePipeline } from "./gl/pipelines/sprite";
-export { CirclePipeline, CircleData } from "./gl/pipelines/circle";
-export { MeshPipeline, MeshData } from "./gl/pipelines/mesh";
-export { RectPipeline, RectData } from "./gl/pipelines/rect";
 
-// tools
+// ── Tools & Utilities ──────────────────────────────────────────────────────
+export { Cmath } from "./tools/Cmath";
 export { DebugOverlay } from "./tools/Debug";
 export { Spritesheet } from "./tools/Spritesheet";
-export { Vector } from "./tools/Vector";
-export { Cmath } from "./tools/Cmath";
 export { UniformGrid } from "./tools/Partitioner";
+export { Vector } from "./tools/Vector";
+export { AABB, AABBTools } from "./tools/AABB";
 
-// types
-export type { State, Action, Mutation, Getter, StoreEvent } from "./core/Store";
+// ── GUI Helpers ────────────────────────────────────────────────────────────
+export {
+    GUIContainer,
+    composeGUI,
+    createGUIRect,
+    createGUIText,
+    withAlign,
+    withAlpha,
+    withAngle,
+    withBaseline,
+    withDeadState,
+    withFill,
+    withFont,
+    withHeight,
+    withIndex,
+    withOffset,
+    withPivot,
+    withPosition,
+    withScale,
+    withTag,
+    withText,
+    withVisibility,
+    withWidth,
+} from "./gui/GUIbuilders";
+export type {
+    GUIBuilder,
+    GUIContainerOptions,
+    GUIElement,
+    GUIRectElement,
+    GUITextElement,
+} from "./gui/GUIbuilders";
+
+// ── Shared Types ───────────────────────────────────────────────────────────
 export type { ComponentValueMap } from "./types";

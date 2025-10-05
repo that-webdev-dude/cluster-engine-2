@@ -33,10 +33,10 @@ export function getBulletComponents(
         [Component.Offset]: [0, 0],
         [Component.Angle]: [0],
         [Component.Pivot]: [0, 0],
-        [Component.Size]: [w, h],
+        [Component.Size]: [32, 32],
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [32, 192, 32, 32],
-        [Component.AABB]: [x - w * 0.5, y - h * 0.5, x + w * 0.5, y + h * 0.5],
+        [Component.AABB]: [x - 4, y - 4, x + 4, y + 4],
     } as ComponentValueMap;
 }
 
