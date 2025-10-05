@@ -31,7 +31,7 @@ export class WeaponSystem extends ECSUpdateSystem {
     private ownerPosition: ComponentSlice | undefined = undefined;
     private ownerVelocity: ComponentSlice | undefined = undefined;
 
-    private readonly db: DebugOverlay | undefined = undefined;
+    private db: DebugOverlay | undefined = undefined;
 
     private readonly cachedPosVec = new Vector();
     private readonly cachedDirVec = new Vector();
@@ -316,5 +316,15 @@ export class WeaponSystem extends ECSUpdateSystem {
         return this.ownerVelocity!.arr[
             this.ownerVelocity!.base + VelocityIndex.Y
         ];
+    }
+
+    public dispose(): void {
+        this.ownerPosition = undefined;
+        this.ownerVelocity = undefined;
+        this.cachedPosVec.set(0, 0);
+        this.cachedDirVec.set(0, 0);
+        this.cachedTargetVec.set(0, 0);
+        this.db?.dispose();
+        this.db = undefined;
     }
 }

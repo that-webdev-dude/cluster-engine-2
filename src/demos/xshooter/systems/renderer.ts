@@ -1,24 +1,27 @@
 import { Component } from "../components";
-import { ECSRenderSystem } from "../../../cluster";
-import { View } from "../../../cluster";
-import { Chunk } from "../../../cluster";
-import { MeshPipeline, MeshData } from "../../../cluster";
+import {
+    ECSRenderSystem,
+    View,
+    Chunk,
+    MeshPipeline,
+    MeshData,
+    Display,
+} from "../../../cluster";
 import { ComponentDescriptor } from "../../../cluster/types";
-import { Display } from "../../../cluster";
 
 export class RendererSystem extends ECSRenderSystem {
-    private renderer = Display.getInstance().createGPURenderingLayer();
+    private readonly renderer = Display.getInstance().createGPURenderingLayer();
 
-    private trianglePipe = MeshPipeline.create(this.renderer, 3);
-    private hexagonPipe = MeshPipeline.create(this.renderer, 6);
+    private readonly trianglePipe = MeshPipeline.create(this.renderer, 3);
+    private readonly hexagonPipe = MeshPipeline.create(this.renderer, 6);
 
     // cached attributes
-    private positions = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private offsets = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private angles = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
-    private pivots = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private sizes = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
-    private colors = new Uint8Array(Chunk.DEFAULT_CAPACITY * 4);
+    private readonly positions = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private readonly offsets = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private readonly angles = new Float32Array(Chunk.DEFAULT_CAPACITY * 1);
+    private readonly pivots = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private readonly sizes = new Float32Array(Chunk.DEFAULT_CAPACITY * 2);
+    private readonly colors = new Uint8Array(Chunk.DEFAULT_CAPACITY * 4);
 
     // cached camera position
     private cameraPos = [0, 0];
@@ -28,23 +31,13 @@ export class RendererSystem extends ECSRenderSystem {
         alpha: number
     ) {
         const { count } = chunk;
-        if (chunk.views.PreviousPosition) {
+        const prev = chunk.views.PreviousPosition;
+        if (prev) {
             for (let i = 0; i < count * 2; i++) {
                 this.positions[i] =
-                    chunk.views.PreviousPosition![i] +
-                    (chunk.views.Position[i] -
-                        chunk.views.PreviousPosition![i]) *
-                        alpha;
+                    prev[i] + (chunk.views.Position[i] - prev[i]) * alpha;
             }
         } else {
-            // chunk.full
-            //     ? (this.positions = chunk.views.Position as Float32Array)
-            //     : this.positions.set(
-            //           chunk.views.Position.subarray(0, count * 2),
-            //           0
-            //       );
-
-            // chunk.views.Position.subarray(0, count * 2);
             this.positions.set(chunk.views.Position.subarray(0, count * 2), 0);
         }
     }
@@ -55,20 +48,20 @@ export class RendererSystem extends ECSRenderSystem {
     ) {
         const { count } = chunk;
 
-        if (chunk.views.Angle) {
+        const angle = chunk.views.Angle;
+        if (angle) {
             /**
              * @warning
              * Interpolation must be performed in degrees here.
              */
-            if (chunk.views.PreviousAngle) {
+            const prevAngle = chunk.views.PreviousAngle;
+            if (prevAngle) {
                 for (let i = 0; i < count * 1; i++) {
                     this.angles[i] =
-                        chunk.views.PreviousAngle![i] +
-                        (chunk.views.Angle[i] - chunk.views.PreviousAngle![i]) *
-                            alpha;
+                        prevAngle[i] + (angle[i] - prevAngle[i]) * alpha;
                 }
             } else {
-                this.angles.set(chunk.views.Angle.subarray(0, count * 1), 0);
+                this.angles.set(angle.subarray(0, count * 1), 0);
             }
         } else {
             this.angles.fill(0, 0, count);
@@ -197,5 +190,19 @@ export class RendererSystem extends ECSRenderSystem {
             );
             this.hexagonPipe.draw(gl, data, count);
         });
+    }
+
+    public dispose(): void {
+        this.trianglePipe.destroy();
+        this.hexagonPipe.destroy();
+        this.renderer.destroy();
+        this.positions.fill(0);
+        this.offsets.fill(0);
+        this.angles.fill(0);
+        this.pivots.fill(0);
+        this.sizes.fill(0);
+        this.colors.fill(0);
+        this.cameraPos[0] = 0;
+        this.cameraPos[1] = 0;
     }
 }

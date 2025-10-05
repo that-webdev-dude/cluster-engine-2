@@ -29,4 +29,8 @@ export class MotionSystem extends ECSUpdateSystem {
             }
         );
     }
+
+    public dispose(): void {
+        // stateless system
+    }
 }

@@ -67,4 +67,8 @@ export class MotionSystem extends ECSUpdateSystem {
             }
         );
     }
+
+    public dispose(): void {
+        // no cached state to clear for now
+    }
 }

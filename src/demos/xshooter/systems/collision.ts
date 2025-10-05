@@ -171,4 +171,8 @@ export class CollisionSystem extends ECSUpdateSystem {
             }
         );
     }
+
+    public dispose(): void {
+        // stateless system
+    }
 }

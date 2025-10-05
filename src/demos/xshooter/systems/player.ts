@@ -1,11 +1,10 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
-import { View } from "../../../cluster";
+import { View, Store } from "../../../cluster";
 import { Cmath } from "../../../cluster/tools";
 import { Mouse } from "../input";
 import { Component } from "../components";
 import { bulletArchetype, getBulletComponents } from "../entities/bullet";
-import { Store } from "../../../cluster";
 import { PlayerHitEvent, GameTitleEvent } from "../events";
 
 const State = {
@@ -60,5 +59,9 @@ export class PlayerSystem extends ECSUpdateSystem {
                 chunk.views.Angle[i] = Cmath.angle(px, py, mx, my) + Math.PI;
             }
         });
+    }
+
+    public dispose(): void {
+        this.counter = State.shotInterval;
     }
 }

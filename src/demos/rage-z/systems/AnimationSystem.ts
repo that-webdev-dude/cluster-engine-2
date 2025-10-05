@@ -263,4 +263,8 @@ export class AnimationSystem extends ECSUpdateSystem {
         sprite[sprBase + SpriteIndex.FRAME_WIDTH] = r[2];
         sprite[sprBase + SpriteIndex.FRAME_HEIGHT] = r[3];
     }
+
+    public dispose(): void {
+        this.rect4.fill(0);
+    }
 }

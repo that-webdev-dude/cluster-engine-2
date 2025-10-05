@@ -35,7 +35,7 @@ const DEBUG_OVERLAY = true;
 export class CullingSystem extends ECSUpdateSystem {
     private readonly displayW: number;
     private readonly displayH: number;
-    private readonly db: DebugOverlay | undefined;
+    private db: DebugOverlay | undefined;
 
     constructor(store: Store, private readonly margin = 64) {
         super(store);
@@ -272,5 +272,10 @@ export class CullingSystem extends ECSUpdateSystem {
         } else {
             this.db.text("Camera: unavailable", 12, 52, fontSmall, "#FF8888");
         }
+    }
+
+    public dispose(): void {
+        this.db?.dispose();
+        this.db = undefined;
     }
 }

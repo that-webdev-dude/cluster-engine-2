@@ -271,4 +271,18 @@ export class SpriteRendererSystem extends ECSRenderSystem {
         this.uvRects[dest4 + 2] = (fx + fw) / img.width;
         this.uvRects[dest4 + 3] = (fy + fh) / img.height;
     }
+
+    public dispose(): void {
+        this.pipeline?.destroy();
+        this.pipeline = null;
+        this.positions.fill(0);
+        this.offsets.fill(0);
+        this.pivots.fill(0);
+        this.scales.fill(0);
+        this.angles.fill(0);
+        this.colors.fill(0);
+        this.uvRects.fill(0);
+        this.cameraPos[0] = 0;
+        this.cameraPos[1] = 0;
+    }
 }

@@ -38,4 +38,8 @@ export class GUILivesSysten extends GUIUpdateSystem {
             }
         }
     }
+
+    public dispose(): void {
+        // GUI system currently stateless
+    }
 }

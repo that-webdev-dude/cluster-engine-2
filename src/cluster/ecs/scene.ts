@@ -60,6 +60,11 @@ export class Scene {
         // Clear the cmd
         this.cmd.clear();
 
+        // Dispose all systems
+        for (const system of this.ECSUpdateSystems) {
+            system.dispose();
+        }
+
         // Clear all systems (optional if scene won't be reused)
         this.ECSUpdateSystems.length = 0;
         this.ECSRenderSystems.length = 0;

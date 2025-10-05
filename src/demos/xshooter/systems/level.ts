@@ -1,9 +1,7 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
-import { View } from "../../../cluster";
+import { View, Store, Input } from "../../../cluster";
 import { meteorArchetype, getMeteorComponents } from "../entities/meteor";
-import { Store } from "../../../cluster";
-import { Input } from "../../../cluster";
 import { MeteorDiedEvent, GamePauseEvent } from "../events";
 
 const State = {
@@ -19,7 +17,6 @@ export class LevelSystem extends ECSUpdateSystem {
         store.on<MeteorDiedEvent>(
             "meteorDied",
             (e) => {
-                // console.log("should dispach a score increase");
                 store.dispatch("incrementScores", 1);
             },
             false
@@ -44,5 +41,9 @@ export class LevelSystem extends ECSUpdateSystem {
 
             this.store.emit<GamePauseEvent>(gamePauseEvent, false);
         }
+    }
+
+    public dispose(): void {
+        this.counter = State.spawnInterval;
     }
 }

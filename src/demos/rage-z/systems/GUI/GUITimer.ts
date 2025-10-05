@@ -47,4 +47,8 @@ export class GUITimerSystem extends GUIUpdateSystem {
             }
         }
     }
+
+    public dispose(): void {
+        this.timer = 0;
+    }
 }

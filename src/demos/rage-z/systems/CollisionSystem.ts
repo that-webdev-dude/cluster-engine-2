@@ -65,7 +65,7 @@ export class CollisionSystem extends ECSUpdateSystem {
     private readonly collisionMap: Map<string, CollisionContact[]> = new Map();
     private readonly targEntities: BigSparseSet<bigint, CollisionEntity> =
         new BigSparseSet();
-    private readonly db: DebugOverlay | undefined = undefined;
+    private db: DebugOverlay | undefined = undefined;
     private debugMainsProcessed = 0;
     private debugCandidatesTested = 0;
     private debugContactsFound = 0;
@@ -697,5 +697,18 @@ export class CollisionSystem extends ECSUpdateSystem {
             );
             textY += 16;
         }
+    }
+
+    public dispose(): void {
+        this.collisionActiveRect = undefined;
+        this.collisionMap.clear();
+        this.targEntities.clear();
+        this.spatialGrid.clear();
+        this.spatialGridQueryCache.length = 0;
+        this.debugMainsProcessed = 0;
+        this.debugCandidatesTested = 0;
+        this.debugContactsFound = 0;
+        this.db?.dispose();
+        this.db = undefined;
     }
 }

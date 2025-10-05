@@ -38,4 +38,8 @@ export class GUILivesSystem extends GUIUpdateSystem {
             }
         }
     }
+
+    public dispose(): void {
+        // GUI system has no cached state to release currently
+    }
 }

@@ -1,11 +1,10 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
-import { View } from "../../../cluster";
+import { View, Store } from "../../../cluster";
 import { Cmath } from "../../../cluster/tools";
 import { Component } from "../components";
 import { bulletArchetype } from "../entities/bullet";
 import { GLOBALS } from "../globals";
-import { Store } from "../../../cluster";
 import { BulletHitEvent } from "../events";
 
 const { worldW, worldH } = GLOBALS;
@@ -55,5 +54,9 @@ export class BulletSystem extends ECSUpdateSystem {
                 }
             }
         });
+    }
+
+    public dispose(): void {
+        // stateless system
     }
 }

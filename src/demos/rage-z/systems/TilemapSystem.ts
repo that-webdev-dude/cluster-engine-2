@@ -85,4 +85,8 @@ export class TilemapSystem extends ECSUpdateSystem {
             }
         );
     }
+
+    public dispose(): void {
+        this.currentView = undefined;
+    }
 }

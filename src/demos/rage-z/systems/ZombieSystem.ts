@@ -189,4 +189,12 @@ export class ZombieSystem extends ECSUpdateSystem {
             }
         );
     }
+
+    public dispose(): void {
+        this.currentView = undefined;
+        this.targetPos = undefined;
+        this.scratch.mainPos.set(0, 0);
+        this.scratch.targPos.set(0, 0);
+        this.scratch.outVel.set(0, 0);
+    }
 }

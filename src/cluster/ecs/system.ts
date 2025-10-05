@@ -13,6 +13,11 @@ abstract class BaseECSSystem {
         // Optional hook with only View; subclasses may override.
     }
 
+    // dispose the system
+    public dispose(): void {
+        // Optional hook; subclasses may override.
+    }
+
     // Returns a slice of the given component for the specified entity, or undefined if not found.
     protected getEntitySlice(
         view: View,

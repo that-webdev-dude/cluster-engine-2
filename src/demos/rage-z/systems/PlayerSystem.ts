@@ -221,4 +221,8 @@ export class PlayerSystem extends ECSUpdateSystem {
             }
         );
     }
+
+    public dispose(): void {
+        this.currentView = undefined;
+    }
 }

@@ -5,6 +5,8 @@ const DEBUG: boolean = process.env.CLUSTER_ENGINE_DEBUG === "true";
 
 class DebugOverlay {
     private readonly dbContext: CanvasRenderingContext2D;
+    private readonly canvas: HTMLCanvasElement;
+    private disposed = false;
     constructor(
         private readonly w: number,
         private readonly h: number,
@@ -20,6 +22,7 @@ class DebugOverlay {
         dbCanvas.style.pointerEvents = "none";
         // Allow multiple overlays to be stacked and centered
         document.querySelector("#app")?.appendChild(dbCanvas);
+        this.canvas = dbCanvas;
         this.dbContext = dbCanvas.getContext("2d")!;
     }
 
@@ -59,6 +62,16 @@ class DebugOverlay {
 
     clear() {
         this.dbContext.clearRect(0, 0, this.w, this.h);
+    }
+
+    dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        this.clear();
+        this.enabled = false;
+        if (this.canvas.parentElement) {
+            this.canvas.parentElement.removeChild(this.canvas);
+        }
     }
 }
 

@@ -125,4 +125,8 @@ export class GUISystem extends GUIRenderSystem {
 
         this.renderContainer(gui);
     }
+
+    public dispose(): void {
+        this.dynamicLayer.destroy();
+    }
 }

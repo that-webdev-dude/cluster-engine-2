@@ -1,17 +1,16 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
 import { CommandBuffer } from "../../../cluster/ecs/cmd";
 import { Cmath } from "../../../cluster/tools";
-import { View } from "../../../cluster";
+import { View, Store } from "../../../cluster";
 import { Component } from "../components";
-import { Store } from "../../../cluster";
 import { Keyboard } from "../input";
 import { PlayerHitEvent } from "../events";
 
 export class CameraSystem extends ECSUpdateSystem {
     private shakeTime = 0;
     private shakeElapsed = 0;
-    private shakeDuration = 0.5;
-    private maxShakeIntensity = 2;
+    private readonly shakeDuration = 0.5;
+    private readonly maxShakeIntensity = 2;
     private shakeSeedX: number = 0;
     private shakeSeedY: number = 0;
     private basePosition: [number, number] = [0, 0];
@@ -23,8 +22,6 @@ export class CameraSystem extends ECSUpdateSystem {
             if (this.shakeTime <= 0) {
                 this.shakeTime = this.shakeDuration;
                 this.shakeElapsed = 0;
-                // this.shakeSeedX = Math.random() * 1000;
-                // this.shakeSeedY = Math.random() * 1000;
                 this.basePosition[0] = 0;
                 this.basePosition[1] = 0;
             }
@@ -41,12 +38,10 @@ export class CameraSystem extends ECSUpdateSystem {
     }
 
     private smoothNoiseX(t: number): number {
-        // return Math.sin(t * 30 + this.shakeSeedX);
         return Cmath.randf(-this.maxShakeIntensity, this.maxShakeIntensity);
     }
 
     private smoothNoiseY(t: number): number {
-        // return Math.sin(t * 30 + this.shakeSeedY);
         return Cmath.randf(-this.maxShakeIntensity, this.maxShakeIntensity);
     }
 
@@ -98,5 +93,14 @@ export class CameraSystem extends ECSUpdateSystem {
                 }
             }
         );
+    }
+
+    public dispose(): void {
+        this.shakeTime = 0;
+        this.shakeElapsed = 0;
+        this.shakeSeedX = 0;
+        this.shakeSeedY = 0;
+        this.basePosition[0] = 0;
+        this.basePosition[1] = 0;
     }
 }

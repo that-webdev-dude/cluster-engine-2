@@ -13,4 +13,8 @@ export class GUITitleSystem extends GUIUpdateSystem {
             this.store.emit({ type: "gamePlay" }, false);
         }
     }
+
+    public dispose(): void {
+        // nothing to cleanup for title GUI
+    }
 }

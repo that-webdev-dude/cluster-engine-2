@@ -1,7 +1,5 @@
 import { ECSUpdateSystem } from "../../../cluster/ecs/system";
-import { Store } from "../../../cluster";
-import { Input } from "../../../cluster";
-import { GLOBALS } from "../globals";
+import { Store, Input } from "../../../cluster";
 import { GameResumeEvent } from "../events";
 
 export class PauseSystem extends ECSUpdateSystem {
@@ -13,5 +11,9 @@ export class PauseSystem extends ECSUpdateSystem {
         if (Input.Keyboard.key("KeyR")) {
             this.store.emit<GameResumeEvent>({ type: "gameResume" }, false);
         }
+    }
+
+    public dispose(): void {
+        // stateless system
     }
 }

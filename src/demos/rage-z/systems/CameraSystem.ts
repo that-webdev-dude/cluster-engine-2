@@ -31,7 +31,7 @@ export class CameraSystem extends ECSUpdateSystem {
     private readonly displayW: number;
     private readonly displayH: number;
 
-    private readonly db: DebugOverlay | undefined = undefined;
+    private db: DebugOverlay | undefined = undefined;
 
     constructor(
         readonly store: Store,
@@ -377,5 +377,12 @@ export class CameraSystem extends ECSUpdateSystem {
         return this.subjectVelocity!.arr[
             this.subjectVelocity!.base + VelocityIndex.Y
         ];
+    }
+
+    public dispose(): void {
+        this.subjectPosition = undefined;
+        this.subjectVelocity = undefined;
+        this.db?.dispose();
+        this.db = undefined;
     }
 }

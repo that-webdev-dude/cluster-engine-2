@@ -64,4 +64,8 @@ export class MeteorSystem extends ECSUpdateSystem {
             }
         });
     }
+
+    public dispose(): void {
+        // stateless system
+    }
 }

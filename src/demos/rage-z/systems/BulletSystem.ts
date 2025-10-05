@@ -18,7 +18,7 @@ export class BulletSystem extends ECSUpdateSystem {
     private readonly displayW: number;
     private readonly displayH: number;
 
-    private readonly db: DebugOverlay | undefined = undefined;
+    private db: DebugOverlay | undefined = undefined;
 
     constructor(readonly store: Store) {
         super(store);
@@ -119,5 +119,10 @@ export class BulletSystem extends ECSUpdateSystem {
                 }
             }
         );
+    }
+
+    public dispose(): void {
+        this.db?.dispose();
+        this.db = undefined;
     }
 }
