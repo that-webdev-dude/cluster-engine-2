@@ -14,7 +14,8 @@ export const weaponSchema = Archetype.register(
     DESCRIPTORS.Pivot,
     DESCRIPTORS.Size,
     DESCRIPTORS.Color,
-    DESCRIPTORS.Sprite
+    DESCRIPTORS.Sprite,
+    DESCRIPTORS.Visibility
 );
 
 export function getWeaponComponents(): ComponentValueMap {
@@ -37,6 +38,7 @@ export function getWeaponComponents(): ComponentValueMap {
         [Component.Size]: [32, 32],
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [0, 192, 32, 32],
+        [Component.Visibility]: [0],
     } as ComponentValueMap;
 }
 

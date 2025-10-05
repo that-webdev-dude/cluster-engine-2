@@ -7,6 +7,10 @@ import {
     SizeIndex,
     SpriteIndex,
     OffsetIndex,
+    ColorIndex,
+    PivotIndex,
+    AngleIndex,
+    VisibilityIndex,
 } from "../components";
 import {
     Display,
@@ -40,8 +44,6 @@ export class SpriteRendererSystem extends ECSRenderSystem {
     }
 
     render(view: View, alpha: number) {
-        const gl = this.renderer.gl;
-
         const spritesheetImg = spritesheet.img;
 
         // — lazy init pipeline
@@ -86,113 +88,187 @@ export class SpriteRendererSystem extends ECSRenderSystem {
                 Component.Position,
                 Component.Color,
                 Component.Size,
+                Component.Visibility,
             ],
             (chunk) => {
-                const count = chunk.count;
-                if (count === 0) return;
-
-                const sizeStride = DESCRIPTORS.Size.count;
-                this.scales.set(
-                    chunk.views.Size.subarray(0, count * sizeStride),
-                    0
-                );
-
-                const colorsStride = DESCRIPTORS.Color.count;
-                this.colors.set(
-                    chunk.views.Color.subarray(0, count * colorsStride),
-                    0
-                );
-
-                // copy over Angle (radians) instead of zeroes:
-                const angleStride = DESCRIPTORS.Angle.count;
-                if (chunk.views.Angle) {
-                    // if you have PreviousAngle and want interpolation you can do that here
-                    this.angles.set(
-                        chunk.views.Angle.subarray(0, count * angleStride),
-                        0
-                    );
-                } else {
-                    this.angles.fill(0, 0, count);
-                }
-
-                // copy Offset (if you intend to use it) or zero:
-                const offsetStride = DESCRIPTORS.Offset.count;
-                if (chunk.views.Offset) {
-                    this.offsets.set(
-                        chunk.views.Offset.subarray(0, count * offsetStride),
-                        0
-                    );
-                } else {
-                    this.offsets.fill(0);
-                }
-
-                // copy Pivot (so your rotation center isn’t always top-left)
-                const pivotStride = DESCRIPTORS.Pivot.count;
-                if (chunk.views.Pivot) {
-                    this.pivots.set(
-                        chunk.views.Pivot.subarray(0, count * pivotStride),
-                        0
-                    );
-                } else {
-                    this.pivots.fill(0);
-                }
-
-                // Dynamic UVs from the Sprite component
-                const s = chunk.views.Sprite; // [frameX,frameY,frameW,frameH] in px
-                const img = spritesheetImg;
-
-                for (let i = 0; i < count; i++) {
-                    const pos = chunk.views.Position;
-
-                    const posBase = i * DESCRIPTORS.Position.count;
-                    let posX =
-                        pos[posBase + PositionIndex.PREV_X] +
-                        (pos[posBase + PositionIndex.X] -
-                            pos[posBase + PositionIndex.PREV_X]) *
-                            alpha;
-                    let posY =
-                        pos[posBase + PositionIndex.PREV_Y] +
-                        (pos[posBase + PositionIndex.Y] -
-                            pos[posBase + PositionIndex.PREV_Y]) *
-                            alpha;
-                    this.positions[i * 2 + PositionIndex.X] = Math.floor(posX);
-                    this.positions[i * 2 + PositionIndex.Y] = Math.floor(posY);
-
-                    const spriteBase = i * DESCRIPTORS.Sprite.count;
-                    const fx = s[spriteBase + SpriteIndex.FRAME_X];
-                    const fy = s[spriteBase + SpriteIndex.FRAME_Y];
-                    const fw = s[spriteBase + SpriteIndex.FRAME_WIDTH];
-                    const fh = s[spriteBase + SpriteIndex.FRAME_HEIGHT];
-
-                    // normalize the uv's
-                    const u0 = fx / img.width;
-                    const v0 = fy / img.height;
-                    const u1 = (fx + fw) / img.width;
-                    const v1 = (fy + fh) / img.height;
-
-                    this.uvRects.set([u0, v0, u1, v1], i * 4);
-                }
-
-                const data: SpriteData = {
-                    a_position: this.positions,
-                    a_offset: this.offsets,
-                    a_pivot: this.pivots,
-                    a_scale: this.scales,
-                    a_angle: this.angles,
-                    a_color: this.colors,
-                    a_uvRect: this.uvRects,
-                };
-
-                if (this.pipeline) {
-                    this.pipeline.bind(gl);
-                    this.pipeline.setCamera(
-                        gl,
-                        this.cameraPos[0],
-                        this.cameraPos[1]
-                    );
-                    this.pipeline.draw(gl, data, count);
-                }
+                this.renderSpriteChunk(chunk, alpha, spritesheetImg);
             }
         );
+    }
+
+    private renderSpriteChunk(
+        chunk: Readonly<Chunk<any>>,
+        alpha: number,
+        spritesheetImg: HTMLImageElement
+    ): void {
+        const count = chunk.count;
+        if (!count) return;
+
+        const gl = this.renderer.gl;
+
+        const vis = chunk.views.Visibility;
+        const pos = chunk.views.Position;
+        const size = chunk.views.Size;
+        const color = chunk.views.Color;
+        const sprite = chunk.views.Sprite;
+        const angle = chunk.views.Angle;
+        const offset = chunk.views.Offset;
+        const pivot = chunk.views.Pivot;
+
+        const posStride = DESCRIPTORS.Position.count;
+        const sizeStride = DESCRIPTORS.Size.count;
+        const colorStride = DESCRIPTORS.Color.count;
+        const spriteStride = DESCRIPTORS.Sprite.count;
+        const angleStride = DESCRIPTORS.Angle.count;
+        const offsetStride = DESCRIPTORS.Offset.count;
+        const pivotStride = DESCRIPTORS.Pivot.count;
+        const visStride = DESCRIPTORS.Visibility.count;
+
+        let out = 0;
+        for (let i = 0; i < count; i++) {
+            if (vis && vis[i * visStride + VisibilityIndex.VISIBLE] === 0) {
+                continue;
+            }
+
+            const dest2 = out * 2;
+            const dest4 = out * 4;
+
+            this.copyPosition(pos, i, posStride, dest2, alpha);
+            this.copySize(size, i, sizeStride, dest2);
+            this.copyColor(color, i, colorStride, dest4);
+            this.copyAngle(angle, i, angleStride, out);
+            this.copyOffset(offset, i, offsetStride, dest2);
+            this.copyPivot(pivot, i, pivotStride, dest2);
+            this.copyUV(sprite, i, spriteStride, dest4, spritesheetImg);
+
+            out++;
+        }
+
+        if (out === 0 || !this.pipeline) return;
+
+        const data: SpriteData = {
+            a_position: this.positions,
+            a_offset: this.offsets,
+            a_pivot: this.pivots,
+            a_scale: this.scales,
+            a_angle: this.angles,
+            a_color: this.colors,
+            a_uvRect: this.uvRects,
+        };
+
+        this.pipeline.bind(gl);
+        this.pipeline.setCamera(gl, this.cameraPos[0], this.cameraPos[1]);
+        this.pipeline.draw(gl, data, out);
+    }
+
+    private copyPosition(
+        pos: Float32Array,
+        index: number,
+        stride: number,
+        dest2: number,
+        alpha: number
+    ): void {
+        const posBase = index * stride;
+        const interpX =
+            pos[posBase + PositionIndex.PREV_X] +
+            (pos[posBase + PositionIndex.X] -
+                pos[posBase + PositionIndex.PREV_X]) *
+                alpha;
+        const interpY =
+            pos[posBase + PositionIndex.PREV_Y] +
+            (pos[posBase + PositionIndex.Y] -
+                pos[posBase + PositionIndex.PREV_Y]) *
+                alpha;
+
+        this.positions[dest2 + PositionIndex.X] = Math.floor(interpX);
+        this.positions[dest2 + PositionIndex.Y] = Math.floor(interpY);
+    }
+
+    private copySize(
+        size: Float32Array,
+        index: number,
+        stride: number,
+        dest2: number
+    ): void {
+        const base = index * stride;
+        this.scales[dest2 + SizeIndex.WIDTH] = size[base + SizeIndex.WIDTH];
+        this.scales[dest2 + SizeIndex.HEIGHT] = size[base + SizeIndex.HEIGHT];
+    }
+
+    private copyColor(
+        color: Uint8Array,
+        index: number,
+        stride: number,
+        dest4: number
+    ): void {
+        const base = index * stride;
+        this.colors[dest4 + ColorIndex.R] = color[base + ColorIndex.R];
+        this.colors[dest4 + ColorIndex.G] = color[base + ColorIndex.G];
+        this.colors[dest4 + ColorIndex.B] = color[base + ColorIndex.B];
+        this.colors[dest4 + ColorIndex.A] = color[base + ColorIndex.A];
+    }
+
+    private copyAngle(
+        angle: Float32Array | undefined,
+        index: number,
+        stride: number,
+        dest: number
+    ): void {
+        if (!angle) {
+            this.angles[dest] = 0;
+            return;
+        }
+        this.angles[dest] = angle[index * stride + AngleIndex.RADIANS];
+    }
+
+    private copyOffset(
+        offset: Float32Array | undefined,
+        index: number,
+        stride: number,
+        dest2: number
+    ): void {
+        if (!offset) {
+            this.offsets[dest2 + OffsetIndex.X] = 0;
+            this.offsets[dest2 + OffsetIndex.Y] = 0;
+            return;
+        }
+        const base = index * stride;
+        this.offsets[dest2 + OffsetIndex.X] = offset[base + OffsetIndex.X];
+        this.offsets[dest2 + OffsetIndex.Y] = offset[base + OffsetIndex.Y];
+    }
+
+    private copyPivot(
+        pivot: Float32Array | undefined,
+        index: number,
+        stride: number,
+        dest2: number
+    ): void {
+        if (!pivot) {
+            this.pivots[dest2 + PivotIndex.X] = 0;
+            this.pivots[dest2 + PivotIndex.Y] = 0;
+            return;
+        }
+        const base = index * stride;
+        this.pivots[dest2 + PivotIndex.X] = pivot[base + PivotIndex.X];
+        this.pivots[dest2 + PivotIndex.Y] = pivot[base + PivotIndex.Y];
+    }
+
+    private copyUV(
+        sprite: Float32Array,
+        index: number,
+        stride: number,
+        dest4: number,
+        img: HTMLImageElement
+    ): void {
+        const base = index * stride;
+        const fx = sprite[base + SpriteIndex.FRAME_X];
+        const fy = sprite[base + SpriteIndex.FRAME_Y];
+        const fw = sprite[base + SpriteIndex.FRAME_WIDTH];
+        const fh = sprite[base + SpriteIndex.FRAME_HEIGHT];
+
+        this.uvRects[dest4 + 0] = fx / img.width;
+        this.uvRects[dest4 + 1] = fy / img.height;
+        this.uvRects[dest4 + 2] = (fx + fw) / img.width;
+        this.uvRects[dest4 + 3] = (fy + fh) / img.height;
     }
 }

@@ -21,5 +21,6 @@ export { FloorIndex } from "./Floor";
 export { ZombieIndex } from "./Zombie";
 export { WeaponIndex } from "./Weapon";
 export { AABBIndex } from "./AABB";
+export { VisibilityIndex } from "./Visibility";
 
 export { DESCRIPTORS } from "./descriptors";

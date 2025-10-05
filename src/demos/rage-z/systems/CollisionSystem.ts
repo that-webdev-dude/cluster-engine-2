@@ -53,7 +53,7 @@ const OFFSET_STRIDE = DESCRIPTORS.Offset.count;
 const VELOCITY_STRIDE = DESCRIPTORS.Velocity.count;
 const AABB_STRIDE = DESCRIPTORS.AABB.count;
 
-const DEBUG_OVERLAY = true;
+const DEBUG_OVERLAY = false;
 const DEBUG_COLOR_ACTIVE = "rgba(255, 180, 0, 0.9)";
 const DEBUG_COLOR_AABB = "rgba(0, 255, 0, 0.8)";
 const DEBUG_COLOR_TEXT = "rgba(250, 250, 250, 0.95)";

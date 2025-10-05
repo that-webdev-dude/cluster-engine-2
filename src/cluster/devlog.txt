@@ -27,10 +27,13 @@ TODO next (xshooter):
 - special weapon
 
 TODO next (rage-z)
+- a proper cleanup when switching scene (remove all the debug overlays)
 - need a local to world coords converter
 - FX system could be made of multiple subsystems
+- fix the camera swing 
+- add system docs 
+- chnk mutator idea?
 - every component have an active flag
-- culling sub system
 - the gui storage needs to be an actual storage
 - the collision system should probably collect the target entities once and not per-main entity
 

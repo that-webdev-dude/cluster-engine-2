@@ -18,7 +18,8 @@ export const zombieSchema = Archetype.register(
     DESCRIPTORS.Color,
     DESCRIPTORS.Sprite,
     DESCRIPTORS.Animation,
-    DESCRIPTORS.AABB
+    DESCRIPTORS.AABB,
+    DESCRIPTORS.Visibility
 );
 
 export function getZombieComponents(): ComponentValueMap {
@@ -40,6 +41,7 @@ export function getZombieComponents(): ComponentValueMap {
         [Component.Sprite]: [0, 2 * 32, 32, 32],
         [Component.Animation]: [6, 9, 6, 0.2, 0, 1],
         [Component.AABB]: [x - w * 0.5, y - h * 0.5, x + w * 0.5, y + h * 0.5],
+        [Component.Visibility]: [0],
     } as ComponentValueMap;
 }
 

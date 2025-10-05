@@ -15,7 +15,8 @@ export const bulletSchema = Archetype.register(
     DESCRIPTORS.Size,
     DESCRIPTORS.Color,
     DESCRIPTORS.Sprite,
-    DESCRIPTORS.AABB
+    DESCRIPTORS.AABB,
+    DESCRIPTORS.Visibility
 );
 
 export function getBulletComponents(
@@ -24,8 +25,6 @@ export function getBulletComponents(
     vx: number,
     vy: number
 ): ComponentValueMap {
-    const w = 4;
-    const h = 4;
     return {
         [Component.Bullet]: [0],
         [Component.Position]: [x, y, x, y, 0, 0, 0, 0],
@@ -37,6 +36,7 @@ export function getBulletComponents(
         [Component.Color]: [255, 255, 255, 255],
         [Component.Sprite]: [32, 192, 32, 32],
         [Component.AABB]: [x - 4, y - 4, x + 4, y + 4],
+        [Component.Visibility]: [0],
     } as ComponentValueMap;
 }
 

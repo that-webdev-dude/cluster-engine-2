@@ -1,5 +1,10 @@
 import { View, Store, CommandBuffer, ECSUpdateSystem } from "../../../cluster";
-import { Component, DESCRIPTORS, ColorIndex } from "../components";
+import {
+    Component,
+    DESCRIPTORS,
+    ColorIndex,
+    VisibilityIndex,
+} from "../components";
 import { CollisionEvent } from "../events";
 
 export class TilemapSystem extends ECSUpdateSystem {
@@ -51,22 +56,33 @@ export class TilemapSystem extends ECSUpdateSystem {
         // cache the view for this update cycle
         this.currentView = view;
 
-        view.forEachChunkWith([Component.Wall], (chunk) => {
-            const count = chunk.count;
-            if (count === 0) return;
+        view.forEachChunkWith(
+            [Component.Wall, Component.Visibility],
+            (chunk) => {
+                const count = chunk.count;
+                if (count === 0) return;
 
-            if (chunk.views.Wall[0] !== 1) return; // Ensure this is the player entity
+                if (chunk.views.Wall[0] !== 1) return; // Ensure this is the player entity
 
-            const colStride = DESCRIPTORS.Color.count;
-            for (let i = 0; i < count; i++) {
-                const col = chunk.views.Color;
+                const colStride = DESCRIPTORS.Color.count;
+                const vis = chunk.views.Visibility;
+                const visStride = DESCRIPTORS.Visibility.count;
+                for (let i = 0; i < count; i++) {
+                    if (
+                        vis &&
+                        vis[i * visStride + VisibilityIndex.VISIBLE] === 0
+                    ) {
+                        continue;
+                    }
+                    const col = chunk.views.Color;
 
-                // reset the color each frame
-                col[i * colStride + ColorIndex.R] = 255;
-                col[i * colStride + ColorIndex.G] = 255;
-                col[i * colStride + ColorIndex.B] = 255;
-                col[i * colStride + ColorIndex.A] = 255;
+                    // reset the color each frame
+                    col[i * colStride + ColorIndex.R] = 255;
+                    col[i * colStride + ColorIndex.G] = 255;
+                    col[i * colStride + ColorIndex.B] = 255;
+                    col[i * colStride + ColorIndex.A] = 255;
+                }
             }
-        });
+        );
     }
 }

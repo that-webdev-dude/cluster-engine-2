@@ -19,6 +19,7 @@ import { FloorDescriptor } from "./Floor";
 import { ZombieDescriptor } from "./Zombie";
 import { WeaponDescriptor } from "./Weapon";
 import { AABBDescriptor } from "./AABB";
+import { VisibilityDescriptor } from "./Visibility";
 
 export const DESCRIPTORS = {
     Position: PositionDescriptor,
@@ -42,4 +43,5 @@ export const DESCRIPTORS = {
     Zombie: ZombieDescriptor,
     Weapon: WeaponDescriptor,
     AABB: AABBDescriptor,
+    Visibility: VisibilityDescriptor,
 } as const;

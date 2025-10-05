@@ -20,6 +20,7 @@ import { createGamePlayGUI } from "../entities/GUI";
 import { GUIRendererSystem } from "../systems/GUI/GUIRenderer";
 import { GUITimerSystem } from "../systems/GUI/GUITimer";
 import { GUILivesSystem } from "../systems/GUI/GUILives";
+import { CullingSystem } from "../systems/CullingSystem";
 
 export function createGamePlay() {
     const scene = new Scene();
@@ -36,6 +37,7 @@ export function createGamePlay() {
     // systems
     const u = "update";
     const r = "render";
+    scene.useECSSystem(u, new CullingSystem(store));
     scene.useECSSystem(u, new TilemapSystem(store));
     scene.useECSSystem(u, new PlayerSystem(store));
     scene.useECSSystem(u, new WeaponSystem(store, playerMeta, cameraMeta));

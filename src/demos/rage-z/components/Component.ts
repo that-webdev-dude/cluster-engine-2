@@ -22,4 +22,5 @@ export enum Component {
     Zombie,
     Weapon,
     AABB,
+    Visibility,
 }

@@ -6,7 +6,8 @@ export const tileSchema = Archetype.register(
     DESCRIPTORS.Position,
     DESCRIPTORS.Size,
     DESCRIPTORS.Color,
-    DESCRIPTORS.Sprite
+    DESCRIPTORS.Sprite,
+    DESCRIPTORS.Visibility
 );
 
 export const wallSchema = Archetype.register(
@@ -15,7 +16,8 @@ export const wallSchema = Archetype.register(
     DESCRIPTORS.Size,
     DESCRIPTORS.Color,
     DESCRIPTORS.Sprite,
-    DESCRIPTORS.AABB
+    DESCRIPTORS.AABB,
+    DESCRIPTORS.Visibility
 );
 
 export const floorSchema = Archetype.register(
@@ -23,7 +25,8 @@ export const floorSchema = Archetype.register(
     DESCRIPTORS.Position,
     DESCRIPTORS.Size,
     DESCRIPTORS.Color,
-    DESCRIPTORS.Sprite
+    DESCRIPTORS.Sprite,
+    DESCRIPTORS.Visibility
 );
 
 export function getTileComponents(
@@ -39,6 +42,7 @@ export function getTileComponents(
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
+        [Component.Visibility]: [0],
     } as ComponentValueMap;
 }
 export function getWallComponents(
@@ -60,6 +64,7 @@ export function getWallComponents(
             x + tileSize / 2,
             y + tileSize / 2,
         ],
+        [Component.Visibility]: [0],
     } as ComponentValueMap;
 }
 export function getFloorComponents(
@@ -75,6 +80,7 @@ export function getFloorComponents(
         [Component.Size]: [tileSize, tileSize],
         [Component.Color]: color,
         [Component.Sprite]: frame, // [fx, fy, fw, fh] from atlas
+        [Component.Visibility]: [0],
     } as ComponentValueMap;
 }
 
