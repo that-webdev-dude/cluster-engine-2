@@ -81,42 +81,43 @@ export class PlayerSystem extends ECSUpdateSystem {
         this.store.on<CollisionEvent>(
             "player-wall-collision",
             (e) => {
-                const { mainMeta, view, primary, secondary, tertiary } = e.data;
-                if (!primary || !view) return;
+                console.log("player-wall-collision");
+                // const { mainMeta, view, primary, secondary, tertiary } = e.data;
+                // if (!primary || !view) return;
 
-                // Move the player out of collision using the MTV
-                const posSlice = view.getSlice(mainMeta, DESCRIPTORS.Position);
-                if (posSlice) {
-                    const { arr, base } = posSlice;
-                    arr[base + PositionIndex.X] += primary.mtv.x;
-                    arr[base + PositionIndex.Y] += primary.mtv.y;
-                }
+                // // Move the player out of collision using the MTV
+                // const posSlice = view.getSlice(mainMeta, DESCRIPTORS.Position);
+                // if (posSlice) {
+                //     const { arr, base } = posSlice;
+                //     arr[base + PositionIndex.X] += primary.mtv.x;
+                //     arr[base + PositionIndex.Y] += primary.mtv.y;
+                // }
 
-                // Prepare contacts (dedupe by axis)
-                const contacts = [primary];
-                if (secondary) contacts.push(secondary);
-                if (tertiary) contacts.push(tertiary);
+                // // Prepare contacts (dedupe by axis)
+                // const contacts = [primary];
+                // if (secondary) contacts.push(secondary);
+                // if (tertiary) contacts.push(tertiary);
 
-                const velSlice = view.getSlice(mainMeta, DESCRIPTORS.Velocity);
-                if (velSlice) {
-                    const { arr, base } = velSlice;
-                    let vx = arr[base + VelocityIndex.X];
-                    let vy = arr[base + VelocityIndex.Y];
+                // const velSlice = view.getSlice(mainMeta, DESCRIPTORS.Velocity);
+                // if (velSlice) {
+                //     const { arr, base } = velSlice;
+                //     let vx = arr[base + VelocityIndex.X];
+                //     let vy = arr[base + VelocityIndex.Y];
 
-                    for (const c of contacts) {
-                        const nx = c.normal.x;
-                        const ny = c.normal.y;
-                        const ndv = vx * nx + vy * ny; // velocity along normal (after previous projections)
-                        if (ndv > 0) {
-                            // subtract only if moving into the surface
-                            vx -= ndv * nx;
-                            vy -= ndv * ny;
-                        }
-                    }
+                //     for (const c of contacts) {
+                //         const nx = c.normal.x;
+                //         const ny = c.normal.y;
+                //         const ndv = vx * nx + vy * ny; // velocity along normal (after previous projections)
+                //         if (ndv > 0) {
+                //             // subtract only if moving into the surface
+                //             vx -= ndv * nx;
+                //             vy -= ndv * ny;
+                //         }
+                //     }
 
-                    arr[base + VelocityIndex.X] = vx;
-                    arr[base + VelocityIndex.Y] = vy;
-                }
+                //     arr[base + VelocityIndex.X] = vx;
+                //     arr[base + VelocityIndex.Y] = vy;
+                // }
             },
             false
         );

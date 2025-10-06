@@ -27,7 +27,7 @@ interface Bounds {
     maxY: number;
 }
 
-const DEBUG_OVERLAY = true;
+const DEBUG_OVERLAY = false;
 
 /**
  * Marks entities as visible when they intersect the active camera rectangle.

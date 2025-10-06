@@ -1,5 +1,6 @@
-import { ComponentValueMap, EntityId, EntityMeta } from "../types";
+import { ComponentValueMap, EntityMeta } from "../types";
 import { Archetype } from "./archetype";
+import { Entity } from "./entity";
 import { Scene } from "./scene";
 
 export type Command =
@@ -19,7 +20,10 @@ export type Command =
       };
 
 export class CommandBuffer {
-    private commands: Command[] = [];
+    private readonly commands: Command[] = [];
+
+    private readonly updateQueue = new Map<bigint, number>();
+    private readonly removeQueue = new Set<bigint>();
 
     constructor(private readonly scene: Scene) {}
 
@@ -28,36 +32,28 @@ export class CommandBuffer {
     }
 
     update(meta: EntityMeta, comps: ComponentValueMap) {
-        const duplicateCommand = this.commands.find((c) => {
-            return (
-                c.type === "updateEntity" &&
-                c.meta.archetype === meta.archetype &&
-                c.meta.chunkId === meta.chunkId &&
-                c.meta.row === meta.row
-            );
-        });
-        if (duplicateCommand === undefined)
-            this.commands.push({ type: "updateEntity", meta, comps });
+        const entityID = Entity.createMetaID(meta);
+        const existingIndex = this.updateQueue.get(entityID);
+        if (existingIndex !== undefined) {
+            const existingCommand = this.commands[existingIndex];
+            if (existingCommand.type === "updateEntity") {
+                Object.assign(existingCommand.comps, comps);
+            }
+            return;
+        }
+        const commandIndex =
+            this.commands.push({ type: "updateEntity", meta, comps }) - 1;
+        this.updateQueue.set(entityID, commandIndex);
     }
 
     remove(meta: EntityMeta) {
-        const duplicateCommand = this.commands.find((c) => {
-            return (
-                c.type === "removeEntity" &&
-                c.meta.archetype === meta.archetype &&
-                c.meta.chunkId === meta.chunkId &&
-                c.meta.row === meta.row
-            );
-        });
-        if (duplicateCommand === undefined)
-            this.commands.push({ type: "removeEntity", meta });
+        const entityID = Entity.createMetaID(meta);
+        if (this.removeQueue.has(entityID)) return;
+        this.removeQueue.add(entityID);
+        this.commands.push({ type: "removeEntity", meta });
     }
 
     flush() {
-        // if (DEBUG) {
-        //     console.log("Flushing", this.commands.length, "commands");
-        // }
-
         for (const cmd of this.commands) {
             switch (cmd.type) {
                 case "createEntity":
@@ -73,10 +69,12 @@ export class CommandBuffer {
                     break;
             }
         }
-        this.commands.length = 0;
+        this.clear();
     }
 
     clear() {
         this.commands.length = 0;
+        this.updateQueue.clear();
+        this.removeQueue.clear();
     }
 }

@@ -209,9 +209,13 @@ export class CollisionSystem extends ECSUpdateSystem {
         const x = chunk.views.Position[posBase + PositionIndex.X];
         const y = chunk.views.Position[posBase + PositionIndex.Y];
 
-        const sizeBase = row * SIZE_STRIDE;
-        const w = Math.abs(chunk.views.Size[sizeBase + SizeIndex.WIDTH]);
-        const h = Math.abs(chunk.views.Size[sizeBase + SizeIndex.HEIGHT]);
+        const aabbBase = row * AABB_STRIDE;
+        const minX = chunk.views.AABB[aabbBase + AABBIndex.MIN_X];
+        const minY = chunk.views.AABB[aabbBase + AABBIndex.MIN_Y];
+        const maxX = chunk.views.AABB[aabbBase + AABBIndex.MAX_X];
+        const maxY = chunk.views.AABB[aabbBase + AABBIndex.MAX_Y];
+        const w = Math.abs(maxX - minX);
+        const h = Math.abs(maxY - minY);
         const hw = w * 0.5;
         const hh = h * 0.5;
 
@@ -418,14 +422,6 @@ export class CollisionSystem extends ECSUpdateSystem {
                     const posBase = i * POSITION_STRIDE;
                     const x = chunk.views.Position[posBase + PositionIndex.X];
                     const y = chunk.views.Position[posBase + PositionIndex.Y];
-
-                    const sizeBase = i * SIZE_STRIDE;
-                    const w = Math.abs(
-                        chunk.views.Size[sizeBase + SizeIndex.WIDTH]
-                    );
-                    const h = Math.abs(
-                        chunk.views.Size[sizeBase + SizeIndex.HEIGHT]
-                    );
 
                     const aabbBase = i * AABB_STRIDE;
                     const aabbW = Math.abs(

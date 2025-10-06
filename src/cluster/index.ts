@@ -34,7 +34,7 @@ export { DebugOverlay } from "./tools/Debug";
 export { Spritesheet } from "./tools/Spritesheet";
 export { UniformGrid } from "./tools/Partitioner";
 export { Vector } from "./tools/Vector";
-export { AABB, AABBTools } from "./tools/AABB";
+export { AABB, AABBTools } from "./tools/aabb";
 
 // ── GUI Helpers ────────────────────────────────────────────────────────────
 export {
